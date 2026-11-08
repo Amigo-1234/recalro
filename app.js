@@ -24,6 +24,12 @@ function goLanding(){
   app.classList.add("hidden");marketing.classList.remove("hidden");updateHeroMotion();window.scrollTo(0,0);
 }
 ["navStart","heroStart","storyStart"].forEach(id=>$("#"+id)?.addEventListener("click",()=>openApp("Dashboard")));
+const productDemoDialog=$("#productDemoDialog");
+
+$(".product-demo-close").addEventListener("click",()=>productDemoDialog.close());
+productDemoDialog.addEventListener("click",event=>{if(event.target===productDemoDialog)productDemoDialog.close()});
+productDemoDialog.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();productDemoDialog.close()}});
+$("#productDemoStart").addEventListener("click",()=>{productDemoDialog.close();openApp("Dashboard")});
 $("#navLogin")?.addEventListener("click",()=>{openApp("Dashboard");toast("This is a demo workspace; account sign-in is not connected.")});
 $("#brandHome").addEventListener("click",e=>{e.preventDefault();render("Dashboard")});
 const roadmapShortcut=$(".roadmap-mini");
@@ -33,20 +39,38 @@ $("#marketing").addEventListener("click",event=>{
   if(appLink){openApp(appLink.dataset.page||"Dashboard");return}
   if(event.target.closest(".roadmap-mini")){openApp("Roadmap");return}
   if(event.target.closest(".site-links a")){
-    $(".site-links").classList.remove("show-mobile");
+    $("#mobileNavPanel").classList.remove("open");
     $("#mobileMenu").setAttribute("aria-expanded","false");
   }
 });
 $("#marketing").addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&event.target.closest(".roadmap-mini")){event.preventDefault();openApp("Roadmap")}});
 document.addEventListener("click",event=>{
   if(!event.target.closest(".site-nav")){
-    $(".site-links").classList.remove("show-mobile");
+    $("#mobileNavPanel").classList.remove("open");
     $("#mobileMenu").setAttribute("aria-expanded","false");
   }
 });
 $("#mobileMenu").addEventListener("click",event=>{
-  const menu=$(".site-links"),open=menu.classList.toggle("show-mobile");
+  const menu=$("#mobileNavPanel"),open=menu.classList.toggle("open");
   event.currentTarget.setAttribute("aria-expanded",String(open));
+  event.currentTarget.setAttribute("aria-label",open?"Close menu":"Open menu");
+});
+const footerGroups=$$(".footer-group"),footerBreakpoint=window.matchMedia("(max-width: 600px)");
+function setFooterGroupState(event){footerGroups.forEach(group=>{group.open=!event.matches})}
+setFooterGroupState(footerBreakpoint);
+footerBreakpoint.addEventListener("change",setFooterGroupState);
+$("#newsletterForm").addEventListener("submit",event=>{
+  event.preventDefault();
+  const email=$("#newsletterEmail"),status=$("#newsletterStatus");
+  status.textContent="";
+  email.setAttribute("aria-invalid","false");
+  if(!email.checkValidity()){
+    email.setAttribute("aria-invalid","true");
+    status.textContent="Enter a valid email address.";
+    email.reportValidity();
+    return;
+  }
+  status.textContent="Newsletter sign-up is unavailable because no subscription service is connected. Your email has not been sent or saved.";
 });
 $("#appMenu").addEventListener("click",event=>{
   const open=$("#sidebar").classList.toggle("open");

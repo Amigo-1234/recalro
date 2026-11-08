@@ -15,9 +15,11 @@
   <div id="marketing" class="marketing">
     <nav class="site-nav wrap" aria-label="Main navigation">
       <a class="brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" alt="Recalro graduation cap R logo"><span>recal<span class="brand-orange">ro</span></span></a>
-      <div class="site-links"><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#stories">Student stories</a></div>
-      <div class="nav-actions"><button class="btn btn-quiet" id="navLogin">Log in</button><button class="btn btn-primary" id="navStart">Get started <span>↗</span></button></div>
-      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu" aria-expanded="false">☰</button>
+      <div class="mobile-nav-panel" id="mobileNavPanel">
+        <div class="site-links"><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#stories">Student stories</a></div>
+        <div class="nav-actions"><button class="btn btn-quiet" id="navLogin">Log in</button><button class="btn btn-primary" id="navStart">Get started <span>↗</span></button></div>
+      </div>
+      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavPanel">☰</button>
     </nav>
 
     <header class="hero">
@@ -29,13 +31,56 @@
         <div class="eyebrow light"><span class="eyebrow-dot"></span> THE LEARNING SYSTEM THAT STICKS</div>
         <h1>Learn it today.<br><em>Own it tomorrow.</em></h1>
         <p class="hero-copy">Turn study time into lasting understanding. Recalro brings your notes, AI tutor, smart revision and exam practice into one focused learning space.</p>
-        <div class="hero-actions"><button class="btn btn-primary btn-large" id="heroStart">Start learning free <span>↗</span></button><a class="watch-link" href="#platform"><span class="play">▶</span> Explore the platform</a></div>
-        <div class="hero-proof"><div class="avatar-stack"><i>O</i><i>A</i><i>M</i><i>+</i></div><span>Built for ambitious learners<br><b>Study smarter, at your own pace.</b></span></div>
+        <div class="hero-actions">
+          <div class="hero-primary-action">
+            <button class="btn btn-primary btn-large" id="heroStart">Start learning free <span>↗</span></button>
+            <span class="hero-cta-note">No complicated setup. Start learning in minutes.</span>
+          </div>
+          
+        </div>
+        <p class="hero-proof">One workspace. Every part of your learning journey.</p>
+        <aside class="hero-demo-card" aria-label="Illustrative learning dashboard preview">
+          <div class="hero-demo-heading">
+            <span>YOUR LEARNING OVERVIEW</span>
+            <span class="demo-label">ILLUSTRATIVE DEMO</span>
+          </div>
+          <div class="hero-demo-metrics">
+            <div><strong>12</strong><span>Flashcards due</span></div>
+            <div><strong>85%</strong><span>Recent accuracy</span></div>
+            <div><strong>5 days</strong><span>Learning streak</span></div>
+          </div>
+          <div class="hero-demo-progress"><span></span></div>
+          <span class="hero-demo-caption">A sample snapshot of your study progress</span>
+        </aside>
       </div>
       <div class="hero-note"><span class="note-line"></span> A clearer way to make knowledge yours</div>
     </header>
+    <dialog class="product-demo-dialog" id="productDemoDialog" aria-labelledby="productDemoTitle" aria-describedby="productDemoDescription">
+      <div class="product-demo-header">
+        <div>
+          <span class="demo-label">A QUICK PRODUCT TOUR</span>
+          <h2 id="productDemoTitle">One workspace. A clearer way to learn.</h2>
+        </div>
+        <button class="product-demo-close" type="button" aria-label="Close product tour">×</button>
+      </div>
+      <p id="productDemoDescription">Bring your materials together, make sense of difficult topics, then revisit what matters with focused practice.</p>
+      <div class="product-demo-steps">
+        <article><span>01</span><h3>Understand</h3><p>Explore your notes with an AI tutor and clear summaries.</p></article>
+        <article><span>02</span><h3>Remember</h3><p>Use flashcards and spaced review to revisit key ideas.</p></article>
+        <article><span>03</span><h3>Prepare</h3><p>Practise with exam simulations and see what to focus on next.</p></article>
+      </div>
+      <button class="btn btn-primary product-demo-start" id="productDemoStart" type="button">Start learning free <span>↗</span></button>
+    </dialog>
 
-    <section class="trust-strip wrap"><span>ONE CONNECTED LEARNING WORKSPACE</span><div><b>Understand</b><i>✳</i><b>Remember</b><i>✳</i><b>Practice</b><i>✳</i><b>Improve</b></div></section>
+    <section class="trust-strip wrap" aria-label="One connected learning workspace">
+      <span>ONE CONNECTED LEARNING WORKSPACE</span>
+      <div class="trust-strip-track" aria-live="polite">
+        <div class="trust-strip-items">
+          <span class="trust-strip-group" aria-hidden="true"><b>Understand</b><i>✦</i><b>Remember</b><i>✦</i><b>Practice</b><i>✦</i><b>Improve</b></span>
+          <span class="trust-strip-group" aria-hidden="true"><b>Understand</b><i>✦</i><b>Remember</b><i>✦</i><b>Practice</b><i>✦</i><b>Improve</b></span>
+        </div>
+      </div>
+    </section>
 
     <section class="section intro wrap" id="platform">
       <div class="section-kicker">YOUR LEARNING, CONNECTED</div>
@@ -46,7 +91,7 @@
       </div>
     </section>
 
-    <section class="section dark-section" id="how"><div class="wrap"><div class="section-kicker light-kicker">A BETTER WAY TO STUDY</div><h2>From first read to<br><span class="orange-text">exam-day confidence.</span></h2><div class="steps-grid"><article><span>01</span><div class="step-icon"><img src="assets/notebook-3d.webp" alt="" width="200" height="200" loading="lazy"></div><h3>Bring your materials</h3><p>Upload notes, PDFs and documents. Turn what you already study into structured learning resources.</p></article><article><span>02</span><div class="step-icon"><img src="assets/computer-3d.webp" alt="" width="200" height="200" loading="lazy"></div><h3>Understand the hard parts</h3><p>Ask your AI tutor, explore clear summaries and explain concepts in your own words.</p></article><article><span>03</span><div class="step-icon"><img src="assets/calendar-3d.webp" alt="" width="200" height="200" loading="lazy"></div><h3>Make knowledge stick</h3><p>Review at the right time, find weak spots and practise with focused exam simulations.</p></article><article><span>04</span><div class="step-icon"><img src="assets/trophy-3d.webp" alt="" width="200" height="200" loading="lazy"></div><h3>See your progress</h3><p>Follow your roadmap, build consistency and know what to work on next.</p></article></div></div></section>
+    <section class="section dark-section" id="how"><div class="wrap"><div class="section-kicker light-kicker">A BETTER WAY TO STUDY</div><h2>From first read to<br><span class="orange-text">exam-day confidence.</span></h2><div class="steps-grid"><article><span>01</span><h3>Bring your materials</h3><p>Upload notes, PDFs and documents. Turn what you already study into structured learning resources.</p></article><article><span>02</span><h3>Understand the hard parts</h3><p>Ask your AI tutor, explore clear summaries and explain concepts in your own words.</p></article><article><span>03</span><h3>Make knowledge stick</h3><p>Review at the right time, find weak spots and practise with focused exam simulations.</p></article><article><span>04</span><h3>See your progress</h3><p>Follow your roadmap, build consistency and know what to work on next.</p></article></div></div></section>
 
     <section class="section wrap" id="features"><div class="section-kicker">BUILT AROUND HOW YOU LEARN</div><div class="intro-grid"><h2>One platform.<br><span class="teal-text">A whole lot of clarity.</span></h2><p>Every tool has a role. Together, they create a learning loop that helps you make sense of complex topics and keep the important things within reach.</p></div><div class="landing-feature-grid">
       <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-tutor.jpg" alt="Student focused studying on laptop in library" width="1200" height="800" loading="lazy"></div><h3>AI learning workspace</h3><p>Ask better questions, get unstuck and build understanding with subject-aware help.</p></article>
@@ -62,46 +107,79 @@
     <section class="section story-section" id="stories"><div class="wrap story-inner"><div><div class="section-kicker">MAKE EVERY SESSION COUNT</div><h2>Less second-guessing.<br><span class="teal-text">More forward motion.</span></h2><p>Know what you understand, what needs another look and where your next focused session should begin.</p><button class="btn btn-primary" id="storyStart">Build your learning rhythm ↗</button></div><div class="story-stat"><strong>01</strong><span>Clear next action</span><div class="stat-divider"></div><strong>∞</strong><span>Room to keep improving</span></div></div></section>
 
     <footer class="site-footer">
-      <div class="wrap site-footer-inner">
-        <div class="footer-brand-block">
-          <a class="brand" href="#"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="brand-orange">ro</span></span></a>
-          <p>Learn with purpose. Remember for life.</p>
-          <div class="footer-badges" aria-label="Recalro highlights">
-            <span>AI tutor</span>
-            <span>Revision</span>
-            <span>Exam prep</span>
+      <div class="site-footer-content wrap">
+        <div class="site-footer-intro">
+          <div class="footer-main">
+            <a class="brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="brand-orange">ro</span></span></a>
+            <p>Learn with purpose. Remember for life. Recalro helps you understand more, remember longer and prepare smarter.</p>
           </div>
+          <section class="footer-newsletter" aria-labelledby="footer-newsletter-title">
+            <h2 id="footer-newsletter-title">Make every study session count.</h2>
+            <p>Get practical learning tips, academic resources and product updates delivered to your inbox.</p>
+            <p class="newsletter-notice">Newsletter sign-ups are not active yet; an email service integration is required.</p>
+            <form id="newsletterForm" novalidate>
+              <label class="sr-only" for="newsletterEmail">Email address</label>
+              <input id="newsletterEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="newsletterStatus" required>
+              <button type="submit">Subscribe</button>
+            </form>
+            <p id="newsletterStatus" class="newsletter-status" role="status" aria-live="polite"></p>
+          </section>
         </div>
-        <div class="footer-links" aria-label="Footer navigation">
-          <div>
-            <h4>Platform</h4>
-            <a href="#platform">Overview</a>
-            <a href="#how">How it works</a>
-            <a href="#features">Features</a>
-            <a href="#stories">Student stories</a>
-          </div>
-          <div>
-            <h4>Resources</h4>
-            <a href="#">Study planner</a>
-            <a href="#">Flashcards</a>
-            <a href="#">Knowledge vault</a>
-            <a href="#">Progress reports</a>
-          </div>
-          <div>
-            <h4>Company</h4>
-            <a href="#">About</a>
-            <a href="#">Careers</a>
-            <a href="#">Help center</a>
-            <a href="#">Contact</a>
-          </div>
-        </div>
+        <nav class="footer-navigation" aria-label="Footer navigation">
+          <details class="footer-group" open>
+            <summary>Platform</summary>
+            <div class="footer-group-links">
+              <button type="button" data-page="Dashboard" data-open-app>Dashboard</button>
+              <button type="button" data-page="AI Tutor" data-open-app>AI Tutor</button>
+              <button type="button" data-page="Flashcards" data-open-app>Flashcards</button>
+              <button type="button" data-page="Exam Simulator" data-open-app>Exam Simulator</button>
+              <button type="button" data-page="Roadmap" data-open-app>Learning Roadmap</button>
+              <button type="button" data-page="Knowledge Vault" data-open-app>Knowledge Vault</button>
+              <button type="button" data-page="Memory Center" data-open-app>Memory Center</button>
+              <button type="button" data-page="Study Planner" data-open-app>Study Planner</button>
+            </div>
+          </details>
+          <details class="footer-group" open>
+            <summary>Resources</summary>
+            <div class="footer-group-links">
+              <a href="#how">How It Works</a>
+              <a href="#features">Learning Features</a>
+              <span>Study Guides <small>Coming soon</small></span>
+              <span>Learning Tips <small>Coming soon</small></span>
+              <span>Help Center <small>Coming soon</small></span>
+              <span>Frequently Asked Questions <small>Coming soon</small></span>
+            </div>
+          </details>
+          <details class="footer-group" open>
+            <summary>Company</summary>
+            <div class="footer-group-links">
+              <span>About Recalro <small>Coming soon</small></span>
+              <span>Contact Us <small>Coming soon</small></span>
+              <span>Our Mission <small>Coming soon</small></span>
+              <span>Blog <small>Coming soon</small></span>
+              <span>Careers <small>Coming soon</small></span>
+            </div>
+          </details>
+          <details class="footer-group" open>
+            <summary>Legal</summary>
+            <div class="footer-group-links">
+              <span>Privacy Policy <small>Coming soon</small></span>
+              <span>Terms of Service <small>Coming soon</small></span>
+              <span>Cookie Policy <small>Coming soon</small></span>
+              <span>Acceptable Use Policy <small>Coming soon</small></span>
+            </div>
+          </details>
+        </nav>
       </div>
-      <div class="site-footer-bottom wrap">
-        <span>© 2026 Recalro</span>
-        <div class="footer-meta">
-          <a href="#">Privacy</a>
-          <a href="#">Terms</a>
-          <a href="#">Accessibility</a>
+      <div class="site-footer-bottom">
+        <div class="wrap footer-meta">
+          <span>© 2026 Recalro. All rights reserved.</span>
+          <span class="footer-motto">Built for better learning.</span>
+          <div class="footer-legal">
+            <span>Privacy <small>Coming soon</small></span>
+            <span>Terms <small>Coming soon</small></span>
+            <span>Cookies <small>Coming soon</small></span>
+          </div>
         </div>
       </div>
     </footer>
