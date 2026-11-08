@@ -1,0 +1,11 @@
+{
+  "name": "recalro",
+  "version": "1.0.0",
+  "description": "Recalro — standalone product prototype",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": ["learning", "education", "prototype"],
+  "license": "MIT"
+}
