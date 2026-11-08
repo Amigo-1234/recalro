@@ -1,6 +1,44 @@
 const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const marketing=$("#marketing"), app=$("#app"), pageContainer=$("#pageContainer");
+
+function decorateArrows(root){
+  const textNodes=[];
+  if(root.nodeType===Node.TEXT_NODE)textNodes.push(root);
+  else{
+    const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+    while(walker.nextNode())if(/[↗→↑↓⌄]/.test(walker.currentNode.nodeValue))textNodes.push(walker.currentNode);
+  }
+  textNodes.forEach(node=>{
+    const fragment=document.createDocumentFragment();
+    node.nodeValue.split(/([↗→↑↓⌄])/).forEach(part=>{
+      if(!part)return;
+      if("↗→↑↓⌄".includes(part)){
+        const icon=document.createElement("span");
+        icon.className="arrow-icon";
+        icon.setAttribute("aria-hidden","true");
+        const paths={
+          "↗":"M7 17 17 7M8 7h9v9",
+          "→":"M4 10h12M11 5l5 5-5 5",
+          "↑":"M10 16V4M5 9l5-5 5 5",
+          "↓":"M10 4v12M5 11l5 5 5-5",
+          "⌄":"m5 7 5 5 5-5"
+        };
+        icon.innerHTML=`<svg viewBox="0 0 20 20"><path d="${paths[part]}"/></svg>`;
+        fragment.append(icon);
+      }else fragment.append(document.createTextNode(part));
+    });
+    node.replaceWith(fragment);
+  });
+}
+decorateArrows(marketing);
+decorateArrows(app);
+new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(decorateArrows)))
+  .observe(app,{childList:true,subtree:true});
+
+// Always load at top on refresh / back navigation
+if("scrollRestoration"in history)history.scrollRestoration="manual";
+window.scrollTo(0,0);
 let currentPage="Dashboard", cardIndex=0, flipped=false, toastTimer;
 const heroVideo=$(".hero-video"), heroMotionPreference=window.matchMedia("(prefers-reduced-motion: reduce)");
 function updateHeroMotion(){
