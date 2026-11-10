@@ -9,9 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="marketing.css" />
   <link rel="stylesheet" href="auth.css" />
+  <link rel="stylesheet" href="app/app.css" />
 </head>
 <body>
   <div id="marketing" class="mk">
@@ -390,41 +390,15 @@
     </main>
   </div>
 
-  <div id="app" class="app-shell hidden">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand app-brand" href="#" id="brandHome"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="brand-orange">ro</span></span></a>
-      <div class="workspace-label">WORKSPACE</div>
-      <nav class="side-nav" id="sideNav" aria-label="Learning workspace">
-        <button class="side-link active" data-page="Dashboard"><span>⌂</span>Overview</button>
-        <button class="side-link" data-page="Subjects"><span><img src="assets/notebook-3d.webp" alt=""></span>My subjects</button>
-        <button class="side-link" data-page="Roadmap"><span><img src="assets/roadmap-3d.webp" alt=""></span>Learning roadmap</button>
-        <button class="side-link" data-page="Flashcards"><span><img src="assets/notebook-3d.webp" alt=""></span>Flashcards <b class="nav-count">24</b></button>
-        <button class="side-link" data-page="Memory Center"><span><img src="assets/calendar-3d.webp" alt=""></span>Memory center</button>
-        <button class="side-link" data-page="Knowledge Vault"><span><img src="assets/notebook-3d.webp" alt=""></span>Knowledge vault</button>
-        <button class="side-link" data-page="AI Tutor"><span><img src="assets/computer-3d.webp" alt=""></span>AI tutor</button>
-        <button class="side-link" data-page="Exam Simulator"><span><img src="assets/target-3d.webp" alt=""></span>Exam simulator</button>
-        <button class="side-link" data-page="Summaries"><span>≡</span>AI summaries</button>
-        <button class="side-link" data-page="Read Aloud"><span>◖</span>Read aloud</button>
-        <div class="workspace-label side-gap">GROW & CONNECT</div>
-        <button class="side-link" data-page="Weakness Detector"><span>⌖</span>Weakness detector</button>
-        <button class="side-link" data-page="Study Planner"><span><img src="assets/calendar-3d.webp" alt=""></span>Study planner</button>
-        <button class="side-link" data-page="Exam Readiness"><span><img src="assets/target-3d.webp" alt=""></span>Exam readiness</button>
-        <button class="side-link" data-page="Daily Quests"><span><img src="assets/trophy-3d.webp" alt=""></span>Daily quests</button>
-        <button class="side-link" data-page="Leaderboards"><span><img src="assets/trophy-3d.webp" alt=""></span>Leaderboards</button>
-        <button class="side-link" data-page="Study Groups"><span>♧</span>Study groups</button>
-        <button class="side-link" data-page="Rewards Store"><span>◇</span>Rewards store</button>
-        <button class="side-link" data-page="Explain It to Me"><span>❝</span>Explain it to me</button>
-        <button class="side-link" data-page="Weekly Reports"><span>▧</span>Weekly reports</button>
-      </nav>
-      <div class="sidebar-bottom"><div class="upgrade-card"><span class="upgrade-spark">✦</span><b>Your next breakthrough<br>starts with one session.</b><small>Keep your learning momentum going.</small><button id="upgradeBtn">Explore your progress ↗</button></div><button class="side-link" data-page="Settings"><span>⚙</span>Settings</button><div class="profile-mini"><div class="profile-avatar">AC</div><div><b>Alex Carter</b><small>Free learner</small></div><button aria-label="Profile options">···</button></div></div>
-    </aside>
-
-    <main class="main-area">
-      <header class="app-topbar"><button class="mobile-menu app-menu" id="appMenu" aria-label="Toggle navigation" aria-expanded="false">☰</button><div class="breadcrumbs"><span>Workspace</span><b>/</b><strong id="crumb">Overview</strong></div><div class="top-actions"><button class="icon-btn" id="themeToggle" aria-label="Toggle theme">◐</button><button class="icon-btn notification-btn" aria-label="Notifications">♧<i></i></button><div class="top-avatar">AC</div></div></header>
-      <div class="page-container" id="pageContainer"></div>
-    </main>
-  </div>
-  <div id="toast" class="toast" role="status"></div>
+  <div id="app" class="hidden"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app/core.js"></script>
+  <script src="app/ui.js"></script>
+  <script src="app/shell.js"></script>
+  <script src="app/pages-home.js"></script>
+  <script src="app/pages-learn.js"></script>
+  <script src="app/pages-study.js"></script>
+  <script src="app/pages-social.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

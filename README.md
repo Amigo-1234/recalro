@@ -10,21 +10,38 @@ No build step or package installation is required.
    - Visit `http://localhost:8000`
 
 ## Brand system
-- Teal: `#4A9E9E` (primary)
-- Orange: `#E77D31` (secondary)
-- Neutral backgrounds and surfaces
-- Manrope headings, DM Sans interface text
-- Official Recalro graduation-cap R artwork is in `assets/recalro-logo.png`.
+- App (signed-in experience): teal `#14A09F` (primary actions, progress, navigation), orange `#F77503` (XP, streaks, achievements, rewards), light background `#F8FAFA`, dark background `#151C20`, secondary text `#899395`. Tokens live at the top of `app/app.css`.
+- Contrast: white text on `#14A09F` is 3.2:1 and `#F77503` text on white is 2.8:1, both below WCAG AA for body text. Buttons therefore use the deeper `--teal-600` (`#0B7C7B`, 5.0:1), small orange text uses `--orange-ink` (`#B85500`), and `#899395` is reserved for non-essential meta text.
+- Subject colours are a validated colour-blind-safe categorical palette (`--s0`–`--s3`), with separate light and dark values.
+- Marketing and auth pages still use the earlier `#4A9E9E` / `#E77D31` values in `marketing.css` and `auth.css`.
+- Manrope headings, DM Sans interface text. Logo: `assets/recalro-logo.png`.
 
-The exact color values are sampled from the supplied brand reference image. If you have official brand hex values, update the CSS custom properties at the top of `styles.css`.
+## Signed-in application
+The app is plain JavaScript modules with no build step, loaded in order from `index.html`:
 
-## Included experience
-- Marketing homepage with the requested locally hosted Pexels hero video, a matching poster, sticky navigation, and responsive sections.
-- Responsive desktop/mobile navigation and workspace.
-- Dashboard, subjects, roadmap, flashcards, memory center, knowledge vault, AI tutor, exam simulator, summaries, read-aloud, weakness detector, planner, readiness, quests, leaderboards, study groups, reward store, explain-it-to-me, weekly reports and settings.
-- Working UI interactions: responsive navigation, dark/light toggle, flashcard review, knowledge search/filter/favorites, multi-question timed or untimed demo exams, browser speech synthesis, local summary drafts, explanation practice feedback, chat prototype, quests, study groups, rewards, and workspace exports.
-- Add subjects, milestones, study blocks, vault notes, quests, and groups with in-page forms. Demo progress and preferences persist in this browser using local storage.
-- Responsive checks cover the marketing site and workspace pages at 320, 375, 425, 768, 1024, 1280, 1440, and 1920 pixels; no horizontal overflow was found after refinement.
+| File | Responsibility |
+|---|---|
+| `app/core.js` | Sample course content, local store (`recalro-app-v2`, migrates the old `recalro-demo-v1` data), local SM-2 scheduler, XP/levels/streaks, daily quests, weekly challenges, achievements, insights and recommendations |
+| `app/ui.js` | Icons, components, dialogs, toasts, tooltips, charts and reward animations (Web Animations API, respects reduced motion) |
+| `app/shell.js` | Grouped, collapsible navigation, hash router (`#/app/<page>`), top bar with streak/gem/XP chips, notifications, command palette (Ctrl/⌘ K), theme, mobile tab bar |
+| `app/pages-*.js` | Pages: home & insights, learning, study tools, community/rewards/account |
+| `app.js` | Marketing page, demo authentication, bridge into the app, deep links |
+
+Navigation groups: Overview · My Learning (Subjects, Roadmap, Planner, Vault) · Study Tools (Flashcards, Review Center, Quick Practice, Exam Simulator, AI Tutor with Explain-it-to-me, Summaries with Read-aloud) · Insights (Analytics, Weakness Detector, Memory Center, Exam Readiness, Weekly Reports) · Community (Groups, Challenges, Leaderboards) · Rewards (Daily Quests, Achievements, Store) · Account (Profile, Settings).
+
+### What is real vs. sample
+- **Computed from your activity in this browser:** XP, level, streak, accuracy, study time (estimated per activity), mastery, review schedule, forgetting curve, readiness, weak topics, recommendations, quests, challenges, achievements, weekly reports.
+- **Sample content (labelled in the UI):** the three starter subjects with their cards, vault items and questions; study-group members and activity; league peers.
+- **Not connected:** AI provider (the tutor searches your own cards and vault instead), document processing (only `.txt`/`.md` files are read locally), email, real accounts and sync, server-verified rewards.
+
+### Integration points
+- Authentication: `app.js` (`readSession`, `writeSession`, `signOut`, exposed as `window.RecalroAuth`).
+- Persistence: `R.save` / `R.state` in `app/core.js`. Swap for API calls per entity.
+- SM-2: `nextState` / `R.rateCard` in `app/core.js`. Replace with the backend scheduler.
+- AI tutor: `reply` in the tutor page (`app/pages-study.js`). Stream provider output into `stream()`.
+- Summaries: `summarize()` in `app/pages-study.js`.
+- Exam questions and pass threshold: `R.content.questions` and the 70% practice target in `app/pages-study.js`.
+- Leagues, groups and reward payouts: `R.league`, `C.groups`, `C.peers` in `app/core.js`.
 
 ## Marketing media
 The hero video, its poster, and marketing photos are bundled under `assets/`, so the page does not depend on third-party media hosts at runtime. The hero video is the Pexels clip by Kampus Production, served locally as optimized 1080p H.264 (the original 4K download was 8.6 MB; the optimized clip is about 3.5 MB):
@@ -57,7 +74,8 @@ Before production:
 8. Add automated tests, accessibility audit and cross-device QA.
 
 ## Files
-- `index.html` — marketing site and app shell
-- `styles.css` — responsive design system and components
-- `app.js` — navigation, demo data and interactions
+- `index.html` — marketing site, auth screen and app mount point
+- `marketing.css`, `auth.css` — marketing and auth styles
+- `app/` — signed-in application (see above)
+- `app.js` — marketing interactions, demo auth and app bridge
 - `assets/recalro-logo.png` — supplied logo artwork
