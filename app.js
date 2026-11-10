@@ -3,11 +3,14 @@ const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
 const marketing=$("#marketing"), app=$("#app"), pageContainer=$("#pageContainer");
 
 function decorateArrows(root){
+  // Only touch text that actually contains an arrow. Replacing arrow-free text nodes
+  // re-triggers the MutationObserver below on its own output and freezes the page.
+  const hasArrow=node=>/[↗→↑↓⌄]/.test(node.nodeValue)&&!node.parentElement?.closest(".arrow-icon,input,textarea,script,style");
   const textNodes=[];
-  if(root.nodeType===Node.TEXT_NODE)textNodes.push(root);
-  else{
+  if(root.nodeType===Node.TEXT_NODE){if(hasArrow(root))textNodes.push(root)}
+  else if(root.nodeType===Node.ELEMENT_NODE||root.nodeType===Node.DOCUMENT_FRAGMENT_NODE){
     const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
-    while(walker.nextNode())if(/[↗→↑↓⌄]/.test(walker.currentNode.nodeValue))textNodes.push(walker.currentNode);
+    while(walker.nextNode())if(hasArrow(walker.currentNode))textNodes.push(walker.currentNode);
   }
   textNodes.forEach(node=>{
     const fragment=document.createDocumentFragment();
@@ -40,7 +43,7 @@ new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(
 if("scrollRestoration"in history)history.scrollRestoration="manual";
 window.scrollTo(0,0);
 let currentPage="Dashboard", cardIndex=0, flipped=false, toastTimer;
-const heroVideo=$(".hero-video"), heroMotionPreference=window.matchMedia("(prefers-reduced-motion: reduce)");
+const heroVideo=$(".mk-hero-video"), heroMotionPreference=window.matchMedia("(prefers-reduced-motion: reduce)");
 function updateHeroMotion(){
   if(!heroVideo)return;
   if(heroMotionPreference.matches||marketing.classList.contains("hidden")||document.visibilityState!=="visible")heroVideo.pause();
@@ -55,35 +58,193 @@ const subjects=[{name:"Thermodynamics",sub:"Mechanical Engineering",progress:68,
 const vaultItems=[["Brayton cycle efficiency","THERMODYNAMICS","η = 1 − (1 / rₚ^((γ−1)/γ))","Formula"],["First law of thermodynamics","THERMODYNAMICS","Energy can neither be created nor destroyed; it changes form.","Principle"],["Bernoulli's equation","FLUID MECHANICS","P + ½ρv² + ρgh = constant","Equation"],["Euler's identity","MATHEMATICS","e^(iπ) + 1 = 0","Identity"],["Entropy","THERMODYNAMICS","A measure of energy dispersal and the number of possible microscopic arrangements.","Definition"],["Continuity equation","FLUID MECHANICS","A₁v₁ = A₂v₂ for incompressible steady flow.","Equation"]];
 const cards=[["What does the first law of thermodynamics state?","Energy cannot be created or destroyed. It can only be transferred or transformed from one form to another."],["Define entropy in thermodynamics.","A thermodynamic property that measures energy dispersal and the number of microscopic configurations available to a system."],["What is the continuity equation for incompressible flow?","A₁v₁ = A₂v₂. The volumetric flow rate remains constant along a streamline."]];
 function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),2500)}
-function openApp(page="Dashboard"){marketing.classList.add("hidden");app.classList.remove("hidden");updateHeroMotion();render(page);window.scrollTo(0,0)}
+function openApp(page="Dashboard"){marketing.classList.add("hidden");$("#auth").classList.add("hidden");app.classList.remove("hidden");updateHeroMotion();render(page);window.scrollTo(0,0)}
 function goLanding(){
   if(examTimer){clearInterval(examTimer);examTimer=null;examSession=null}
   if("speechSynthesis"in window)speechSynthesis.cancel();
-  app.classList.add("hidden");marketing.classList.remove("hidden");updateHeroMotion();window.scrollTo(0,0);
+  app.classList.add("hidden");$("#auth").classList.add("hidden");marketing.classList.remove("hidden");updateHeroMotion();window.scrollTo(0,0);
 }
-["navStart","heroStart","storyStart"].forEach(id=>$("#"+id)?.addEventListener("click",()=>openApp("Dashboard")));
+
+/* ---------- Authentication UI (demo) ----------
+   Front-end only: no account service is connected. A signed-in "session" is just the
+   person's name and email kept in this browser. Passwords are never stored. */
+const SESSION_KEY="recalro-demo-session";
+const authScreen=$("#auth"),authForm=$("#authForm"),authCard=$(".au-card");
+const authCopy={
+  login:{title:"Welcome back",subtitle:"Log in to pick up where you left off.",submit:"Log in",switchText:"New to Recalro?",switchLabel:"Create an account",switchTo:"signup"},
+  signup:{title:"Create your account",subtitle:"Start learning free. It only takes a minute.",submit:"Create account",switchText:"Already have an account?",switchLabel:"Log in",switchTo:"login"},
+  forgot:{title:"Reset your password",subtitle:"Enter the email you signed up with and we'll send you a reset link.",submit:"Send reset link",switchText:"Remembered it?",switchLabel:"Back to log in",switchTo:"login"}
+};
+function readSession(){
+  for(const store of [localStorage,sessionStorage]){
+    try{const raw=store.getItem(SESSION_KEY);if(raw){const user=JSON.parse(raw);if(user&&user.name)return user}}catch(error){console.error("Could not read the demo session.",error)}
+  }
+  return null;
+}
+function writeSession(user,remember){
+  clearSession();
+  try{(remember?localStorage:sessionStorage).setItem(SESSION_KEY,JSON.stringify(user))}
+  catch(error){console.error("Could not save the demo session.",error)}
+}
+function clearSession(){[localStorage,sessionStorage].forEach(store=>{try{store.removeItem(SESSION_KEY)}catch(error){console.error("Could not clear the demo session.",error)}})}
+function currentUser(){return readSession()||{name:"Alex Carter",email:""}}
+function firstName(){return currentUser().name.split(/\s+/)[0]}
+function initials(name){return name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0].toUpperCase()).join("")||"R"}
+function nameFromEmail(email){return email.split("@")[0].split(/[._-]+/).filter(Boolean).map(part=>part[0].toUpperCase()+part.slice(1)).join(" ")||"Learner"}
+function timeGreeting(){const hour=new Date().getHours();return hour<12?"Good morning":hour<18?"Good afternoon":"Good evening"}
+function applyUser(){
+  const {name}=currentUser();
+  const profileName=$(".profile-mini b");if(profileName)profileName.textContent=name;
+  [$(".profile-avatar"),$(".top-avatar")].forEach(el=>{if(el)el.textContent=initials(name)});
+}
+
+function setAuthMode(mode){
+  const copy=authCopy[mode];
+  authScreen.dataset.mode=mode;authForm.dataset.mode=mode;
+  $$("[data-modes]",authScreen).forEach(el=>{
+    const visible=el.dataset.modes.split(" ").includes(mode);
+    el.hidden=!visible;
+    // Hidden fields must not block validation or submit stale values
+    $$("input",el).forEach(input=>input.disabled=!visible);
+    if(el.matches("input"))el.disabled=!visible;
+  });
+  $$(".au-tabs [role=tab]").forEach(tab=>{const selected=tab.dataset.authMode===mode;tab.setAttribute("aria-selected",String(selected));tab.tabIndex=selected?0:-1});
+  $("#authTitle").textContent=copy.title;
+  $("#authSubtitle").textContent=copy.subtitle;
+  $(".au-submit-label",authForm).textContent=copy.submit;
+  $("#authSwitch").innerHTML=`${copy.switchText} <button type="button" class="au-link" data-auth-mode="${copy.switchTo}">${copy.switchLabel}</button>`;
+  $("#authPassword").autocomplete=mode==="signup"?"new-password":"current-password";
+  $("#authPassword").placeholder=mode==="signup"?"Create a password":"Enter your password";
+  $("#authFormView").hidden=false;$("#authResetSent").hidden=true;
+  clearAuthErrors();setAuthBusy(false);
+  authCard.classList.remove("is-switching");void authCard.offsetWidth;authCard.classList.add("is-switching");
+}
+function openAuth(mode="login"){
+  if(readSession()){openApp("Dashboard");return}
+  if(productDemoDialog.open)productDemoDialog.close();
+  marketing.classList.add("hidden");app.classList.add("hidden");authScreen.classList.remove("hidden");
+  updateHeroMotion();setAuthMode(mode);window.scrollTo(0,0);
+  $(mode==="signup"?"#authName":"#authEmail").focus({preventScroll:true});
+}
+function setFieldError(input,message){
+  const error=$("#"+input.id+"Error");
+  input.setAttribute("aria-invalid",message?"true":"false");
+  if(error)error.textContent=message||"";
+}
+function clearAuthErrors(){$$("input",authForm).forEach(input=>setFieldError(input,""))}
+function setAuthBusy(busy){
+  const submit=$("#authSubmit");
+  submit.setAttribute("aria-busy",String(busy));
+  submit.disabled=busy;
+}
+function passwordScore(value){
+  if(!value)return 0;
+  let score=0;
+  if(value.length>=8)score++;
+  if(/[a-z]/.test(value)&&/[A-Z]/.test(value))score++;
+  if(/\d/.test(value))score++;
+  if(/[^A-Za-z0-9]/.test(value)||value.length>=14)score++;
+  return Math.max(1,score);
+}
+function updateStrength(){
+  const value=$("#authPassword").value,meter=$(".au-strength"),score=passwordScore(value);
+  meter.dataset.score=String(score);
+  $("#authStrengthLabel").textContent=value?`Password strength: ${["","Weak","Fair","Good","Strong"][score]}`:"Use 8+ characters with a letter and a number.";
+}
+function validateAuth(mode){
+  clearAuthErrors();
+  const name=$("#authName"),email=$("#authEmail"),password=$("#authPassword"),terms=$("#authTerms");
+  const invalid=[];
+  const fail=(input,message)=>{setFieldError(input,message);invalid.push(input)};
+  if(mode==="signup"&&name.value.trim().length<2)fail(name,"Enter your full name.");
+  const emailValue=email.value.trim();
+  if(!emailValue)fail(email,"Enter your email address.");
+  else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailValue))fail(email,"Enter a valid email address, like you@example.com.");
+  if(mode==="login"&&!password.value)fail(password,"Enter your password.");
+  if(mode==="signup"){
+    if(password.value.length<8||!/[A-Za-z]/.test(password.value)||!/\d/.test(password.value))fail(password,"Use at least 8 characters, including a letter and a number.");
+    if(!terms.checked)fail(terms,"Please accept the terms to continue.");
+  }
+  if(invalid.length)invalid[0].focus();
+  return !invalid.length;
+}
+authForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const mode=authForm.dataset.mode;
+  if($("#authSubmit").getAttribute("aria-busy")==="true"||!validateAuth(mode))return;
+  setAuthBusy(true);
+  try{
+    // Stand-in for a network request so the loading state is visible
+    await new Promise(resolve=>setTimeout(resolve,700));
+    const email=$("#authEmail").value.trim();
+    if(mode==="forgot"){
+      $("#authResetMessage").textContent=`If an account exists for ${email}, a reset link would be sent there. This demo doesn't send email yet.`;
+      $("#authFormView").hidden=true;$("#authResetSent").hidden=false;$("#authResetSent").focus();
+      return;
+    }
+    const name=mode==="signup"?$("#authName").value.trim().replace(/\s+/g," "):nameFromEmail(email);
+    writeSession({name,email},mode==="signup"||$("#authRemember").checked);
+    authForm.reset();updateStrength();
+    applyUser();
+    openApp("Dashboard");
+    toast(mode==="signup"?`Welcome to Recalro, ${firstName()}! This is a demo account.`:`Welcome back, ${firstName()}.`);
+  }catch(error){
+    console.error("Demo sign-in failed.",error);
+    toast("Something went wrong. Please try again.");
+  }finally{
+    setAuthBusy(false);
+  }
+});
+authForm.addEventListener("input",event=>{
+  if(event.target.id==="authPassword"&&authForm.dataset.mode==="signup")updateStrength();
+  if(event.target.getAttribute("aria-invalid")==="true")setFieldError(event.target,"");
+});
+authForm.addEventListener("change",event=>{if(event.target.id==="authTerms"&&event.target.checked)setFieldError(event.target,"")});
+authScreen.addEventListener("click",event=>{
+  const modeButton=event.target.closest("[data-auth-mode]");
+  if(modeButton){setAuthMode(modeButton.dataset.authMode);(modeButton.dataset.authMode==="signup"?$("#authName"):$("#authEmail")).focus();return}
+});
+$(".au-tabs").addEventListener("keydown",event=>{
+  if(!["ArrowLeft","ArrowRight"].includes(event.key))return;
+  event.preventDefault();
+  const next=authForm.dataset.mode==="signup"?"login":"signup";
+  setAuthMode(next);$(`.au-tabs [data-auth-mode="${next}"]`).focus();
+});
+$("#authTogglePassword").addEventListener("click",event=>{
+  const input=$("#authPassword"),show=input.type==="password";
+  input.type=show?"text":"password";
+  event.currentTarget.setAttribute("aria-pressed",String(show));
+  event.currentTarget.setAttribute("aria-label",show?"Hide password":"Show password");
+});
+$("#authGoogle").addEventListener("click",()=>toast("Google sign-in isn't connected in this prototype yet. Use email instead."));
+$("#authBack").addEventListener("click",goLanding);
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!authScreen.classList.contains("hidden")&&!$("#authSubmit").disabled)goLanding()});
+applyUser();
+
+["navStart","heroStart","storyStart"].forEach(id=>$("#"+id)?.addEventListener("click",()=>openAuth("signup")));
 const productDemoDialog=$("#productDemoDialog");
 
-$(".product-demo-close").addEventListener("click",()=>productDemoDialog.close());
+$(".mk-dialog-close").addEventListener("click",()=>productDemoDialog.close());
+$("#heroTour")?.addEventListener("click",()=>productDemoDialog.showModal());
 productDemoDialog.addEventListener("click",event=>{if(event.target===productDemoDialog)productDemoDialog.close()});
 productDemoDialog.addEventListener("keydown",event=>{if(event.key==="Escape"){event.preventDefault();productDemoDialog.close()}});
-$("#productDemoStart").addEventListener("click",()=>{productDemoDialog.close();openApp("Dashboard")});
-$("#navLogin")?.addEventListener("click",()=>{openApp("Dashboard");toast("This is a demo workspace; account sign-in is not connected.")});
+$("#productDemoStart").addEventListener("click",()=>{productDemoDialog.close();openAuth("signup")});
+$("#navLogin")?.addEventListener("click",()=>openAuth("login"));
 $("#brandHome").addEventListener("click",e=>{e.preventDefault();render("Dashboard")});
-const roadmapShortcut=$(".roadmap-mini");
+const roadmapShortcut=$(".mk-roadmap-card");
 if(roadmapShortcut){roadmapShortcut.setAttribute("role","button");roadmapShortcut.setAttribute("tabindex","0");roadmapShortcut.setAttribute("aria-label","Continue to the Thermodynamics learning roadmap")}
 $("#marketing").addEventListener("click",event=>{
   const appLink=event.target.closest("[data-open-app]");
   if(appLink){openApp(appLink.dataset.page||"Dashboard");return}
-  if(event.target.closest(".roadmap-mini")){openApp("Roadmap");return}
-  if(event.target.closest(".site-links a")){
+  if(event.target.closest(".mk-roadmap-card")){openApp("Roadmap");return}
+  if(event.target.closest(".mk-links a")){
     $("#mobileNavPanel").classList.remove("open");
     $("#mobileMenu").setAttribute("aria-expanded","false");
   }
 });
-$("#marketing").addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&event.target.closest(".roadmap-mini")){event.preventDefault();openApp("Roadmap")}});
+$("#marketing").addEventListener("keydown",event=>{if((event.key==="Enter"||event.key===" ")&&event.target.closest(".mk-roadmap-card")){event.preventDefault();openApp("Roadmap")}});
 document.addEventListener("click",event=>{
-  if(!event.target.closest(".site-nav")){
+  if(!event.target.closest(".mk-nav")){
     $("#mobileNavPanel").classList.remove("open");
     $("#mobileMenu").setAttribute("aria-expanded","false");
   }
@@ -93,10 +254,25 @@ $("#mobileMenu").addEventListener("click",event=>{
   event.currentTarget.setAttribute("aria-expanded",String(open));
   event.currentTarget.setAttribute("aria-label",open?"Close menu":"Open menu");
 });
-const footerGroups=$$(".footer-group"),footerBreakpoint=window.matchMedia("(max-width: 600px)");
+const footerGroups=$$(".mk-footer-group"),footerBreakpoint=window.matchMedia("(max-width: 600px)");
 function setFooterGroupState(event){footerGroups.forEach(group=>{group.open=!event.matches})}
 setFooterGroupState(footerBreakpoint);
 footerBreakpoint.addEventListener("change",setFooterGroupState);
+// Footer groups only collapse on small screens
+footerGroups.forEach(group=>group.querySelector("summary").addEventListener("click",event=>{if(!footerBreakpoint.matches)event.preventDefault()}));
+// Marketing nav: stronger shadow once the page scrolls
+const mkNavWrap=$("#mkNavWrap");
+function updateNavState(){mkNavWrap?.classList.toggle("is-scrolled",window.scrollY>8)}
+updateNavState();
+window.addEventListener("scroll",updateNavState,{passive:true});
+// Fade marketing sections in as they enter the viewport
+if("IntersectionObserver"in window&&!heroMotionPreference.matches){
+  marketing.classList.add("mk-js");
+  const revealObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{
+    if(entry.isIntersecting){entry.target.classList.add("is-visible");revealObserver.unobserve(entry.target)}
+  }),{rootMargin:"0px 0px -8% 0px",threshold:.12});
+  $$(".mk-reveal",marketing).forEach(el=>revealObserver.observe(el));
+}else $$(".mk-reveal",marketing).forEach(el=>el.classList.add("is-visible"));
 $("#newsletterForm").addEventListener("submit",event=>{
   event.preventDefault();
   const email=$("#newsletterEmail"),status=$("#newsletterStatus");
@@ -125,7 +301,7 @@ function panel(title,content,action=""){return `<section class="panel"><div clas
 function stat(label,value,sub,icon,trend=""){return `<div class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><strong>${value}</strong><small class="${trend?'trend':''}">${sub}</small></div>`}
 function chart(){return `<div class="activity-chart">${[42,67,48,79,57,94,70].map((v,i)=>`<div><i style="height:${v*.65}%"></i><i class="${i===5?'orange-bar':''}" style="height:${v}%"></i></div>`).join("")}</div><div class="chart-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>`}
 function task(title,meta,xp,done=false){return `<div class="task-row"><button class="task-check ${done?'checked':''}" data-action="check">${done?'✓':''}</button><div class="task-info"><b>${title}</b><small>${meta}</small></div><span class="task-xp">+${xp} XP</span></div>`}
-function dashboard(){return `${head("Good morning, Alex 👋","You're building a strong learning rhythm. Here's your progress at a glance.",'<button class="btn btn-outline btn-small" data-page="Weekly Reports">Weekly report ↗</button><button class="btn btn-primary btn-small" data-page="Flashcards">Start a review →</button>')}
+function dashboard(){return `${head(`${timeGreeting()}, ${escapeHtml(firstName())} 👋`,"You're building a strong learning rhythm. Here's your progress at a glance.",'<button class="btn btn-outline btn-small" data-page="Weekly Reports">Weekly report ↗</button><button class="btn btn-primary btn-small" data-page="Flashcards">Start a review →</button>')}
 <div class="welcome-banner"><div class="welcome-text"><small>MONDAY, NOVEMBER 9 · YOUR DAILY MOMENTUM</small><h2>Make today a little more understood.</h2><p>You have 24 cards waiting and one recommended topic to tackle.</p></div><div class="welcome-mark">✳</div><button class="btn btn-primary btn-small" data-page="Flashcards">Review 24 cards ↗</button></div>
 <div class="stats-grid">${stat("Study streak","12 days","You're on a roll","♨","true")}${stat("Cards due","24","Across 3 subjects","▣")}${stat("Weekly accuracy","86%","↑ 8% from last week","◎","true")}${stat("Total study time","8.4h","This week","◷")}</div>
 <div class="dashboard-grid"><div><section class="panel"><div class="panel-head"><h3>Learning activity</h3><button data-page="Weekly Reports">Full analytics ↗</button></div>${chart()}</section>${panel("Continue learning",`<div class="subject-list">${subjects.map(s=>`<article class="subject-card"><div class="subject-icon">${s.icon}</div><h4>${s.name}</h4><p>${s.sub}</p><div class="mini-progress"><i style="width:${s.progress}%"></i></div><div class="subject-meta"><span>${s.progress}% mastered</span><span>${s.cards} cards</span></div></article>`).join("")}</div>`,"Subjects")}</div>
@@ -519,7 +695,7 @@ function runPageAction(button){
   if(action==="edit"){
     openDemoDialog({title:"Daily study goal",description:"Choose a daily target between 5 minutes and 24 hours.",fields:[{name:"minutes",label:"Minutes per day",type:"number",value:demoState.dailyGoal,min:5,max:1440,step:5,required:true}],submitLabel:"Save goal",onSubmit:values=>{const minutes=Number(values.minutes);if(!Number.isInteger(minutes)||minutes<5||minutes>1440){toast("Enter a whole number between 5 and 1,440 minutes.");return}demoState.dailyGoal=minutes;saveDemoState();render("Settings");toast("Daily study goal saved on this device.")}});return;
   }
-  if(action==="signout"){goLanding();return}
+  if(action==="signout"){clearSession();applyUser();goLanding();toast("You've been signed out.");return}
   if(action==="open"){
     const label=button.closest(".tool-card")?.querySelector("h3")?.textContent;
     render(label==="Recommendations"?"Weakness Detector":label==="History"?"Weekly Reports":"Dashboard");return;

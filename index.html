@@ -10,124 +10,219 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="marketing.css" />
+  <link rel="stylesheet" href="auth.css" />
 </head>
 <body>
-  <div id="marketing" class="marketing">
-    <nav class="site-nav wrap" aria-label="Main navigation">
-      <a class="brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" alt="Recalro graduation cap R logo"><span>recal<span class="brand-orange">ro</span></span></a>
-      <div class="mobile-nav-panel" id="mobileNavPanel">
-        <div class="site-links"><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#stories">Student stories</a></div>
-        <div class="nav-actions"><button class="btn btn-quiet" id="navLogin">Log in</button><button class="btn btn-primary" id="navStart">Get started <span>↗</span></button></div>
-      </div>
-      <button class="mobile-menu" id="mobileMenu" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavPanel">☰</button>
-    </nav>
-
-    <header class="hero">
-      <video class="hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/hero-study-poster.jpg" aria-hidden="true">
-        <source src="assets/hero-study-video-optimized.mp4" type="video/mp4">
-      </video>
-      <div class="hero-shade"></div>
-      <div class="hero-content wrap">
-        <div class="eyebrow light"><span class="eyebrow-dot"></span> THE LEARNING SYSTEM THAT STICKS</div>
-        <h1>Learn it today.<br><em>Own it tomorrow.</em></h1>
-        <p class="hero-copy">Turn study time into lasting understanding. Recalro brings your notes, AI tutor, smart revision and exam practice into one focused learning space.</p>
-        <div class="hero-actions">
-          <div class="hero-primary-action">
-            <button class="btn btn-primary btn-large" id="heroStart">Start learning free <span>↗</span></button>
-            <span class="hero-cta-note">No complicated setup. Start learning in minutes.</span>
-          </div>
-          
+  <div id="marketing" class="mk">
+    <header class="mk-nav-wrap" id="mkNavWrap">
+      <nav class="mk-nav" aria-label="Main navigation">
+        <a class="mk-brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="mk-orange">ro</span></span></a>
+        <div class="mk-nav-panel" id="mobileNavPanel">
+          <div class="mk-links"><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#stories">Student stories</a></div>
+          <div class="mk-nav-actions"><button class="mk-btn mk-btn-ghost" id="navLogin" type="button">Log in</button><button class="mk-btn mk-btn-primary" id="navStart" type="button">Get started <span>↗</span></button></div>
         </div>
-        <p class="hero-proof">One workspace. Every part of your learning journey.</p>
-        <aside class="hero-demo-card" aria-label="Illustrative learning dashboard preview">
-          <div class="hero-demo-heading">
-            <span>YOUR LEARNING OVERVIEW</span>
-            <span class="demo-label">ILLUSTRATIVE DEMO</span>
-          </div>
-          <div class="hero-demo-metrics">
-            <div><strong>12</strong><span>Flashcards due</span></div>
-            <div><strong>85%</strong><span>Recent accuracy</span></div>
-            <div><strong>5 days</strong><span>Learning streak</span></div>
-          </div>
-          <div class="hero-demo-progress"><span></span></div>
-          <span class="hero-demo-caption">A sample snapshot of your study progress</span>
-        </aside>
-      </div>
-      <div class="hero-note"><span class="note-line"></span> A clearer way to make knowledge yours</div>
+        <button class="mk-menu" id="mobileMenu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavPanel"><span></span><span></span></button>
+      </nav>
     </header>
-    <dialog class="product-demo-dialog" id="productDemoDialog" aria-labelledby="productDemoTitle" aria-describedby="productDemoDescription">
-      <div class="product-demo-header">
+
+    <section class="mk-hero" aria-labelledby="heroTitle">
+      <div class="mk-hero-bg" aria-hidden="true"></div>
+      <div class="mk-wrap mk-hero-grid">
+        <div class="mk-hero-copy">
+          <div class="mk-pill"><span class="mk-dot"></span> THE LEARNING SYSTEM THAT STICKS</div>
+          <h1 id="heroTitle">Learn it today.<br><em>Own it tomorrow.</em></h1>
+          <p class="mk-lead">Turn study time into lasting understanding. Recalro brings your notes, AI tutor, smart revision and exam practice into one focused learning space.</p>
+          <div class="mk-hero-actions">
+            <button class="mk-btn mk-btn-primary mk-btn-lg" id="heroStart" type="button">Start learning free <span>↗</span></button>
+            <button class="mk-btn mk-btn-outline mk-btn-lg" id="heroTour" type="button"><span class="mk-play" aria-hidden="true"></span>Take the tour</button>
+          </div>
+          <p class="mk-hero-note">No complicated setup. Start learning in minutes.</p>
+          <div class="mk-hero-proof">
+            <div class="mk-proof-icons" aria-hidden="true"><img src="assets/notebook-3d.webp" alt=""><img src="assets/computer-3d.webp" alt=""><img src="assets/target-3d.webp" alt=""><img src="assets/trophy-3d.webp" alt=""></div>
+            <span>One workspace. Every part of your learning journey.</span>
+          </div>
+        </div>
+
+        <div class="mk-hero-visual">
+          <div class="mk-hero-media">
+            <video class="mk-hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/hero-study-poster.jpg" aria-hidden="true">
+              <source src="assets/hero-study-video-optimized.mp4" type="video/mp4">
+            </video>
+            <div class="mk-hero-media-shade"></div>
+            <div class="mk-float mk-float-note"><span class="mk-note-line"></span>A clearer way to make knowledge yours</div>
+          </div>
+          <aside class="mk-float mk-demo-card" aria-label="Illustrative learning dashboard preview">
+            <div class="mk-demo-head"><span>YOUR LEARNING OVERVIEW</span><span class="mk-tag">ILLUSTRATIVE DEMO</span></div>
+            <div class="mk-demo-metrics">
+              <div><strong>12</strong><span>Flashcards due</span></div>
+              <div><strong>85%</strong><span>Recent accuracy</span></div>
+              <div><strong>5 days</strong><span>Learning streak</span></div>
+            </div>
+            <div class="mk-demo-progress"><span></span></div>
+            <small>A sample snapshot of your study progress</small>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <dialog class="mk-dialog" id="productDemoDialog" aria-labelledby="productDemoTitle" aria-describedby="productDemoDescription">
+      <div class="mk-dialog-head">
         <div>
-          <span class="demo-label">A QUICK PRODUCT TOUR</span>
+          <span class="mk-tag">A QUICK PRODUCT TOUR</span>
           <h2 id="productDemoTitle">One workspace. A clearer way to learn.</h2>
         </div>
-        <button class="product-demo-close" type="button" aria-label="Close product tour">×</button>
+        <button class="mk-dialog-close" type="button" aria-label="Close product tour">×</button>
       </div>
       <p id="productDemoDescription">Bring your materials together, make sense of difficult topics, then revisit what matters with focused practice.</p>
-      <div class="product-demo-steps">
+      <div class="mk-dialog-steps">
         <article><span>01</span><h3>Understand</h3><p>Explore your notes with an AI tutor and clear summaries.</p></article>
         <article><span>02</span><h3>Remember</h3><p>Use flashcards and spaced review to revisit key ideas.</p></article>
         <article><span>03</span><h3>Prepare</h3><p>Practise with exam simulations and see what to focus on next.</p></article>
       </div>
-      <button class="btn btn-primary product-demo-start" id="productDemoStart" type="button">Start learning free <span>↗</span></button>
+      <button class="mk-btn mk-btn-primary mk-btn-block" id="productDemoStart" type="button">Start learning free <span>↗</span></button>
     </dialog>
 
-    <section class="trust-strip wrap" aria-label="One connected learning workspace">
-      <span>ONE CONNECTED LEARNING WORKSPACE</span>
-      <div class="trust-strip-track" aria-live="polite">
-        <div class="trust-strip-items">
-          <span class="trust-strip-group" aria-hidden="true"><b>Understand</b><i>✦</i><b>Remember</b><i>✦</i><b>Practice</b><i>✦</i><b>Improve</b></span>
+    <section class="mk-marquee" aria-label="One connected learning workspace">
+      <span class="mk-marquee-label">ONE CONNECTED LEARNING WORKSPACE</span>
+      <div class="mk-marquee-track">
+        <div class="mk-marquee-items">
+          <span><b>Understand</b><i>✦</i><b>Remember</b><i>✦</i><b>Practice</b><i>✦</i><b>Improve</b><i>✦</i></span>
+          <span aria-hidden="true"><b>Understand</b><i>✦</i><b>Remember</b><i>✦</i><b>Practice</b><i>✦</i><b>Improve</b><i>✦</i></span>
         </div>
       </div>
     </section>
 
-    <section class="section intro wrap" id="platform">
-      <div class="section-kicker">YOUR LEARNING, CONNECTED</div>
-      <div class="intro-grid"><h2>Everything you need to<br> <span class="teal-text">make progress count.</span></h2><p>Stop jumping between scattered notes, revision apps and practice tests. Recalro connects the full learning journey, so every study session moves you forward.</p></div>
-      <div class="feature-showcase">
-        <div class="showcase-main"><div class="showcase-top"><span class="tiny-label">YOUR LEARNING OVERVIEW</span><span class="live-pill">● ON TRACK</span></div><div class="showcase-greeting">Good morning, Alex <span>✦</span></div><div class="showcase-sub">Small steps. Stronger understanding.</div><div class="metric-row"><div><small>Study streak</small><strong>12 <small>days</small></strong><span class="metric-foot">Best: 18 days</span></div><div><small>Cards to review</small><strong>24</strong><span class="metric-foot">Across 3 subjects</span></div><div><small>Weekly accuracy</small><strong>86%</strong><span class="metric-foot positive">↑ 8% this week</span></div></div><div class="chart-box"><div class="chart-head"><b>Learning activity</b><span>Last 7 days⌄</span></div><div class="bar-chart"><i style="height:38%"></i><i style="height:57%"></i><i style="height:45%"></i><i style="height:78%"></i><i style="height:61%"></i><i style="height:92%"></i><i style="height:72%"></i></div><div class="chart-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div></div></div>
-        <div class="showcase-side"><div class="mini-card roadmap-mini"><span class="mini-icon">⌁</span><small>YOUR NEXT STEP</small><h3>Thermodynamics</h3><p>Module 04 · Entropy</p><div class="mini-progress"><i style="width:68%"></i></div><div class="mini-bottom"><span>68% complete</span><b>Continue →</b></div></div><div class="mini-card quote-mini"><span class="quote-mark">“</span><p>Understanding is the beginning. Remembering is the advantage.</p><span>THE RECALRO METHOD</span></div></div>
+    <section class="mk-section mk-wrap" id="platform">
+      <div class="mk-section-head mk-reveal">
+        <div class="mk-kicker">YOUR LEARNING, CONNECTED</div>
+        <h2>Everything you need to <span class="mk-teal">make progress count.</span></h2>
+        <p>Stop jumping between scattered notes, revision apps and practice tests. Recalro connects the full learning journey, so every study session moves you forward.</p>
+      </div>
+
+      <div class="mk-browser mk-reveal">
+        <div class="mk-browser-bar" aria-hidden="true"><i></i><i></i><i></i><span>app.recalro.com / overview</span></div>
+        <div class="mk-showcase">
+          <div class="mk-showcase-main">
+            <div class="mk-showcase-top"><span class="mk-tiny">YOUR LEARNING OVERVIEW</span><span class="mk-live">● ON TRACK</span></div>
+            <div class="mk-greeting">Good morning, Alex <span>✦</span></div>
+            <div class="mk-greeting-sub">Small steps. Stronger understanding.</div>
+            <div class="mk-metrics">
+              <div><small>Study streak</small><strong>12 <small>days</small></strong><span>Best: 18 days</span></div>
+              <div><small>Cards to review</small><strong>24</strong><span>Across 3 subjects</span></div>
+              <div><small>Weekly accuracy</small><strong>86%</strong><span class="mk-positive">↑ 8% this week</span></div>
+            </div>
+            <div class="mk-chart">
+              <div class="mk-chart-head"><b>Learning activity</b><span>Last 7 days</span></div>
+              <div class="mk-bars" aria-hidden="true"><i style="--h:38%"></i><i style="--h:57%"></i><i style="--h:45%"></i><i style="--h:78%"></i><i style="--h:61%"></i><i class="mk-bar-hot" style="--h:92%"></i><i style="--h:72%"></i></div>
+              <div class="mk-days" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+            </div>
+          </div>
+          <div class="mk-showcase-side">
+            <div class="mk-mini mk-roadmap-card">
+              <div class="mk-mini-top"><img src="assets/roadmap-3d.webp" alt="" width="200" height="200"><small>YOUR NEXT STEP</small></div>
+              <h3>Thermodynamics</h3>
+              <p>Module 04 · Entropy</p>
+              <div class="mk-progress"><i style="width:68%"></i></div>
+              <div class="mk-mini-bottom"><span>68% complete</span><b>Continue →</b></div>
+            </div>
+            <div class="mk-mini mk-quote">
+              <span class="mk-quote-mark" aria-hidden="true">“</span>
+              <p>Understanding is the beginning. Remembering is the advantage.</p>
+              <span class="mk-quote-by">THE RECALRO METHOD</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="section dark-section" id="how"><div class="wrap"><div class="section-kicker light-kicker">A BETTER WAY TO STUDY</div><h2>From first read to<br><span class="orange-text">exam-day confidence.</span></h2><div class="steps-grid"><article><span>01</span><h3>Bring your materials</h3><p>Upload notes, PDFs and documents. Turn what you already study into structured learning resources.</p></article><article><span>02</span><h3>Understand the hard parts</h3><p>Ask your AI tutor, explore clear summaries and explain concepts in your own words.</p></article><article><span>03</span><h3>Make knowledge stick</h3><p>Review at the right time, find weak spots and practise with focused exam simulations.</p></article><article><span>04</span><h3>See your progress</h3><p>Follow your roadmap, build consistency and know what to work on next.</p></article></div></div></section>
+    <section class="mk-section mk-dark" id="how">
+      <div class="mk-wrap">
+        <div class="mk-section-head mk-reveal">
+          <div class="mk-kicker mk-kicker-light">A BETTER WAY TO STUDY</div>
+          <h2>From first read to <span class="mk-orange">exam-day confidence.</span></h2>
+        </div>
+        <ol class="mk-steps">
+          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>01</span><img src="assets/notebook-3d.webp" alt="" width="200" height="200"></div><h3>Bring your materials</h3><p>Upload notes, PDFs and documents. Turn what you already study into structured learning resources.</p></li>
+          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>02</span><img src="assets/computer-3d.webp" alt="" width="200" height="200"></div><h3>Understand the hard parts</h3><p>Ask your AI tutor, explore clear summaries and explain concepts in your own words.</p></li>
+          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>03</span><img src="assets/calendar-3d.webp" alt="" width="200" height="200"></div><h3>Make knowledge stick</h3><p>Review at the right time, find weak spots and practise with focused exam simulations.</p></li>
+          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>04</span><img src="assets/target-3d.webp" alt="" width="200" height="200"></div><h3>See your progress</h3><p>Follow your roadmap, build consistency and know what to work on next.</p></li>
+        </ol>
+      </div>
+    </section>
 
-    <section class="section wrap" id="features"><div class="section-kicker">BUILT AROUND HOW YOU LEARN</div><div class="intro-grid"><h2>One platform.<br><span class="teal-text">A whole lot of clarity.</span></h2><p>Every tool has a role. Together, they create a learning loop that helps you make sense of complex topics and keep the important things within reach.</p></div><div class="landing-feature-grid">
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-tutor.jpg" alt="Student focused studying on laptop in library" width="1200" height="800" loading="lazy"></div><h3>AI learning workspace</h3><p>Ask better questions, get unstuck and build understanding with subject-aware help.</p></article>
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-spaced-repetition.jpg" alt="Student using a colorful study marker while reviewing notes" width="1200" height="1800" loading="lazy"></div><h3>Spaced repetition</h3><p>Bring knowledge back at the right intervals with a review flow designed for recall.</p></article>
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-vault.jpg" alt="Students studying in library with laptop and books" width="1200" height="800" loading="lazy"></div><h3>Knowledge Vault</h3><p>Keep formulas, definitions, laws and personal notes organized and ready to revisit.</p></article>
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-exam-readiness.jpg" alt="Student preparing for an exam with books and notes" width="1200" height="1800" loading="lazy"></div><h3>Exam readiness</h3><p>See your coverage, practise under pressure and identify what still needs attention.</p></article>
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-roadmap.jpg" alt="Student planning a study schedule on a calendar" width="1200" height="800" loading="lazy"></div><h3>Personal roadmap</h3><p>Turn broad academic goals into a clear path of topics, milestones and next steps.</p></article>
-      <article class="feature-with-image"><div class="feature-image"><img src="assets/feature-progress.jpg" alt="Graduates celebrating their academic achievement" width="1200" height="800" loading="lazy"></div><h3>Progress that motivates</h3><p>Celebrate meaningful effort with streaks, quests and achievements that feel earned.</p></article>
-    </div></section>
+    <section class="mk-section mk-wrap" id="features">
+      <div class="mk-section-head mk-section-head-split mk-reveal">
+        <div>
+          <div class="mk-kicker">BUILT AROUND HOW YOU LEARN</div>
+          <h2>One platform. <span class="mk-teal">A whole lot of clarity.</span></h2>
+        </div>
+        <p>Every tool has a role. Together, they create a learning loop that helps you make sense of complex topics and keep the important things within reach.</p>
+      </div>
+      <div class="mk-bento">
+        <article class="mk-feature mk-feature-wide mk-reveal"><img src="assets/feature-tutor.jpg" alt="Student focused studying on laptop in library" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">01</span><h3>AI learning workspace</h3><p>Ask better questions, get unstuck and build understanding with subject-aware help.</p></div></article>
+        <article class="mk-feature mk-feature-tall mk-reveal"><img src="assets/feature-spaced-repetition.jpg" alt="Student using a colorful study marker while reviewing notes" width="1200" height="1800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">02</span><h3>Spaced repetition</h3><p>Bring knowledge back at the right intervals with a review flow designed for recall.</p></div></article>
+        <article class="mk-feature mk-reveal"><img src="assets/feature-vault.jpg" alt="Students studying in library with laptop and books" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">03</span><h3>Knowledge Vault</h3><p>Keep formulas, definitions, laws and personal notes organized and ready to revisit.</p></div></article>
+        <article class="mk-feature mk-reveal"><img src="assets/feature-exam-readiness.jpg" alt="Student preparing for an exam with books and notes" width="1200" height="1800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">04</span><h3>Exam readiness</h3><p>See your coverage, practise under pressure and identify what still needs attention.</p></div></article>
+        <article class="mk-feature mk-reveal"><img src="assets/feature-roadmap.jpg" alt="Student planning a study schedule on a calendar" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">05</span><h3>Personal roadmap</h3><p>Turn broad academic goals into a clear path of topics, milestones and next steps.</p></div></article>
+        <article class="mk-feature mk-feature-wide mk-reveal"><img src="assets/feature-progress.jpg" alt="Graduates celebrating their academic achievement" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">06</span><h3>Progress that motivates</h3><p>Celebrate meaningful effort with streaks, quests and achievements that feel earned.</p></div></article>
+      </div>
+    </section>
 
-    <section class="section community-section" id="community"><div class="wrap community-inner"><div class="community-copy"><div class="section-kicker">GROW TOGETHER</div><h2>Modern Academic<br><span class="teal-text">Community.</span></h2><p>Join study groups, collaborate on assignments, and learn alongside peers who share your goals. Build connections that last beyond the classroom.</p><button class="btn btn-primary" data-page="Study Groups" data-open-app>Explore study groups <span>↗</span></button></div><div class="collaboration-image"><img src="assets/community-study.jpg" alt="Students collaborating over study materials in a library" width="1200" height="800" loading="lazy"></div></div></section>
+    <section class="mk-section mk-wrap" id="community">
+      <div class="mk-community mk-reveal">
+        <div class="mk-community-copy">
+          <div class="mk-kicker">GROW TOGETHER</div>
+          <h2>Modern Academic <span class="mk-teal">Community.</span></h2>
+          <p>Join study groups, collaborate on assignments, and learn alongside peers who share your goals. Build connections that last beyond the classroom.</p>
+          <button class="mk-btn mk-btn-primary" type="button" data-page="Study Groups" data-open-app>Explore study groups <span>↗</span></button>
+        </div>
+        <div class="mk-community-media">
+          <img src="assets/community-study.jpg" alt="Students collaborating over study materials in a library" width="1200" height="800" loading="lazy">
+          <div class="mk-float mk-community-chip"><img src="assets/trophy-3d.webp" alt="" width="200" height="200"><span><b>Study groups</b><small>Learn alongside peers</small></span></div>
+        </div>
+      </div>
+    </section>
 
-    <section class="section story-section" id="stories"><div class="wrap story-inner"><div><div class="section-kicker">MAKE EVERY SESSION COUNT</div><h2>Less second-guessing.<br><span class="teal-text">More forward motion.</span></h2><p>Know what you understand, what needs another look and where your next focused session should begin.</p><button class="btn btn-primary" id="storyStart">Build your learning rhythm ↗</button></div><div class="story-stat"><strong>01</strong><span>Clear next action</span><div class="stat-divider"></div><strong>∞</strong><span>Room to keep improving</span></div></div></section>
+    <section class="mk-section mk-wrap" id="stories">
+      <div class="mk-cta mk-reveal">
+        <div class="mk-cta-copy">
+          <div class="mk-kicker mk-kicker-light">MAKE EVERY SESSION COUNT</div>
+          <h2>Less second-guessing.<br><span class="mk-orange">More forward motion.</span></h2>
+          <p>Know what you understand, what needs another look and where your next focused session should begin.</p>
+          <button class="mk-btn mk-btn-primary mk-btn-lg" id="storyStart" type="button">Build your learning rhythm ↗</button>
+        </div>
+        <div class="mk-cta-stats">
+          <div><strong>01</strong><span>Clear next action</span></div>
+          <div><strong>∞</strong><span>Room to keep improving</span></div>
+        </div>
+      </div>
+    </section>
 
-    <footer class="site-footer">
-      <div class="site-footer-content wrap">
-        <div class="site-footer-intro">
-          <div class="footer-main">
-            <a class="brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="brand-orange">ro</span></span></a>
+    <footer class="mk-footer">
+      <div class="mk-wrap">
+        <div class="mk-footer-top">
+          <div class="mk-footer-brand">
+            <a class="mk-brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="mk-orange">ro</span></span></a>
             <p>Learn with purpose. Remember for life. Recalro helps you understand more, remember longer and prepare smarter.</p>
           </div>
-          <section class="footer-newsletter" aria-labelledby="footer-newsletter-title">
+          <section class="mk-newsletter" aria-labelledby="footer-newsletter-title">
             <h2 id="footer-newsletter-title">Make every study session count.</h2>
             <p>Get practical learning tips, academic resources and product updates delivered to your inbox.</p>
-            <p class="newsletter-notice">Newsletter sign-ups are not active yet; an email service integration is required.</p>
             <form id="newsletterForm" novalidate>
               <label class="sr-only" for="newsletterEmail">Email address</label>
-              <input id="newsletterEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="newsletterStatus" required>
+              <input id="newsletterEmail" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="newsletterStatus newsletterNotice" required>
               <button type="submit">Subscribe</button>
             </form>
-            <p id="newsletterStatus" class="newsletter-status" role="status" aria-live="polite"></p>
+            <p class="mk-newsletter-notice" id="newsletterNotice">Newsletter sign-ups are not active yet; an email service integration is required.</p>
+            <p id="newsletterStatus" class="mk-newsletter-status" role="status" aria-live="polite"></p>
           </section>
         </div>
-        <nav class="footer-navigation" aria-label="Footer navigation">
-          <details class="footer-group" open>
+
+        <nav class="mk-footer-nav" aria-label="Footer navigation">
+          <details class="mk-footer-group" open>
             <summary>Platform</summary>
-            <div class="footer-group-links">
+            <div class="mk-footer-links">
               <button type="button" data-page="Dashboard" data-open-app>Dashboard</button>
               <button type="button" data-page="AI Tutor" data-open-app>AI Tutor</button>
               <button type="button" data-page="Flashcards" data-open-app>Flashcards</button>
@@ -138,9 +233,9 @@
               <button type="button" data-page="Study Planner" data-open-app>Study Planner</button>
             </div>
           </details>
-          <details class="footer-group" open>
+          <details class="mk-footer-group" open>
             <summary>Resources</summary>
-            <div class="footer-group-links">
+            <div class="mk-footer-links">
               <a href="#how">How It Works</a>
               <a href="#features">Learning Features</a>
               <span>Study Guides <small>Coming soon</small></span>
@@ -149,9 +244,9 @@
               <span>Frequently Asked Questions <small>Coming soon</small></span>
             </div>
           </details>
-          <details class="footer-group" open>
+          <details class="mk-footer-group" open>
             <summary>Company</summary>
-            <div class="footer-group-links">
+            <div class="mk-footer-links">
               <span>About Recalro <small>Coming soon</small></span>
               <span>Contact Us <small>Coming soon</small></span>
               <span>Our Mission <small>Coming soon</small></span>
@@ -159,9 +254,9 @@
               <span>Careers <small>Coming soon</small></span>
             </div>
           </details>
-          <details class="footer-group" open>
+          <details class="mk-footer-group" open>
             <summary>Legal</summary>
-            <div class="footer-group-links">
+            <div class="mk-footer-links">
               <span>Privacy Policy <small>Coming soon</small></span>
               <span>Terms of Service <small>Coming soon</small></span>
               <span>Cookie Policy <small>Coming soon</small></span>
@@ -169,19 +264,130 @@
             </div>
           </details>
         </nav>
-      </div>
-      <div class="site-footer-bottom">
-        <div class="wrap footer-meta">
+
+        <div class="mk-footer-bottom">
           <span>© 2026 Recalro. All rights reserved.</span>
-          <span class="footer-motto">Built for better learning.</span>
-          <div class="footer-legal">
+          <span class="mk-footer-motto">Built for better learning.</span>
+          <div class="mk-footer-legal">
             <span>Privacy <small>Coming soon</small></span>
             <span>Terms <small>Coming soon</small></span>
             <span>Cookies <small>Coming soon</small></span>
           </div>
         </div>
       </div>
+      <div class="mk-footer-word" aria-hidden="true">recalro</div>
     </footer>
+  </div>
+
+  <div id="auth" class="au hidden">
+    <aside class="au-side" aria-hidden="true">
+      <div class="au-side-glow"></div>
+      <span class="au-brand"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="au-orange">ro</span></span></span>
+      <div class="au-side-copy">
+        <h2>Learn it today.<br><em>Own it tomorrow.</em></h2>
+        <p>Your notes, AI tutor, smart revision and exam practice in one focused learning space.</p>
+        <ul class="au-perks">
+          <li><img src="assets/computer-3d.webp" alt="" width="200" height="200"><span><b>AI learning workspace</b>Get unstuck with subject-aware help.</span></li>
+          <li><img src="assets/calendar-3d.webp" alt="" width="200" height="200"><span><b>Spaced repetition</b>Review at the right time, every time.</span></li>
+          <li><img src="assets/target-3d.webp" alt="" width="200" height="200"><span><b>Exam readiness</b>Practise under pressure and close the gaps.</span></li>
+        </ul>
+      </div>
+      <figure class="au-quote">
+        <blockquote>“Understanding is the beginning. Remembering is the advantage.”</blockquote>
+        <figcaption>THE RECALRO METHOD</figcaption>
+      </figure>
+    </aside>
+
+    <main class="au-main">
+      <div class="au-topbar">
+        <button class="au-back" type="button" id="authBack"><span aria-hidden="true">←</span> Back to home</button>
+        <span class="au-brand au-brand-mobile"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="au-orange">ro</span></span></span>
+      </div>
+
+      <div class="au-card">
+        <div class="au-tabs" role="tablist" aria-label="Account">
+          <button type="button" role="tab" id="authTabLogin" data-auth-mode="login" aria-selected="true">Log in</button>
+          <button type="button" role="tab" id="authTabSignup" data-auth-mode="signup" aria-selected="false">Sign up</button>
+          <span class="au-tabs-pill" aria-hidden="true"></span>
+        </div>
+
+        <div class="au-head">
+          <h1 id="authTitle">Welcome back</h1>
+          <p id="authSubtitle">Log in to pick up where you left off.</p>
+        </div>
+
+        <div id="authFormView">
+          <div data-modes="login signup">
+            <button type="button" class="au-social" id="authGoogle">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.2 14.6 2.2 12 2.2 6.6 2.2 2.2 6.6 2.2 12s4.4 9.8 9.8 9.8c5.7 0 9.4-4 9.4-9.6 0-.6-.1-1.1-.2-1.6H12z"/></svg>
+              Continue with Google
+            </button>
+            <div class="au-divider"><span>or continue with email</span></div>
+          </div>
+
+          <form id="authForm" class="au-form" novalidate data-mode="login" aria-labelledby="authTitle">
+            <div class="au-field" data-modes="signup">
+              <label for="authName">Full name</label>
+              <input id="authName" name="name" type="text" autocomplete="name" placeholder="Alex Carter" aria-describedby="authNameError">
+              <p class="au-error" id="authNameError"></p>
+            </div>
+
+            <div class="au-field">
+              <label for="authEmail">Email address</label>
+              <input id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="authEmailError">
+              <p class="au-error" id="authEmailError"></p>
+            </div>
+
+            <div class="au-field" data-modes="login signup">
+              <div class="au-label-row">
+                <label for="authPassword">Password</label>
+                <button type="button" class="au-link" data-modes="login" data-auth-mode="forgot">Forgot password?</button>
+              </div>
+              <div class="au-password">
+                <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-describedby="authPasswordError authStrengthLabel">
+                <button type="button" class="au-eye" id="authTogglePassword" aria-label="Show password" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+              <div class="au-strength" data-modes="signup" data-score="0">
+                <div class="au-strength-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+                <span id="authStrengthLabel">Use 8+ characters with a letter and a number.</span>
+              </div>
+              <p class="au-error" id="authPasswordError"></p>
+            </div>
+
+            <label class="au-check" data-modes="login">
+              <input type="checkbox" id="authRemember" checked>
+              <span>Keep me signed in on this device</span>
+            </label>
+
+            <div class="au-field" data-modes="signup">
+              <label class="au-check">
+                <input type="checkbox" id="authTerms" aria-describedby="authTermsError">
+                <span>I agree to the Terms of Service and Privacy Policy</span>
+              </label>
+              <p class="au-error" id="authTermsError"></p>
+            </div>
+
+            <button class="au-submit" type="submit" id="authSubmit">
+              <span class="au-spinner" aria-hidden="true"></span>
+              <span class="au-submit-label">Log in</span>
+            </button>
+          </form>
+
+          <p class="au-switch" id="authSwitch"></p>
+        </div>
+
+        <div class="au-success" id="authResetSent" hidden tabindex="-1">
+          <div class="au-success-icon" aria-hidden="true">✓</div>
+          <h2>Check your inbox</h2>
+          <p id="authResetMessage"></p>
+          <button type="button" class="au-submit" data-auth-mode="login"><span class="au-submit-label">Back to log in</span></button>
+        </div>
+
+        <p class="au-demo-note"><b>Demo only.</b> Accounts aren't connected yet. Nothing you type is sent anywhere, and passwords are never saved.</p>
+      </div>
+    </main>
   </div>
 
   <div id="app" class="app-shell hidden">
