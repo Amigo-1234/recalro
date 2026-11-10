@@ -3,39 +3,43 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0d2929" />
+  <meta name="theme-color" content="#151C20" />
   <meta name="description" content="Recalro helps you understand more, remember longer and prepare with confidence." />
   <title>Recalro — Learn with purpose. Remember for life.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="marketing.css" />
+  <link rel="stylesheet" href="marketing/nav.css" />
+  <link rel="stylesheet" href="marketing/sections.css" />
   <link rel="stylesheet" href="auth.css" />
+  <link rel="stylesheet" href="auth/signup.css" />
   <link rel="stylesheet" href="app/app.css" />
 </head>
 <body>
   <div id="marketing" class="mk">
-    <header class="mk-nav-wrap" id="mkNavWrap">
-      <nav class="mk-nav" aria-label="Main navigation">
-        <a class="mk-brand" href="#" aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="mk-orange">ro</span></span></a>
-        <div class="mk-nav-panel" id="mobileNavPanel">
-          <div class="mk-links"><a href="#platform">Platform</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#stories">Student stories</a></div>
-          <div class="mk-nav-actions"><button class="mk-btn mk-btn-ghost" id="navLogin" type="button">Log in</button><button class="mk-btn mk-btn-primary" id="navStart" type="button">Get started <span>↗</span></button></div>
-        </div>
-        <button class="mk-menu" id="mobileMenu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNavPanel"><span></span><span></span></button>
-      </nav>
-    </header>
+    <a class="mk-skip" href="#platform">Skip to content</a>
+    <!-- MarketingNavbar (marketing/nav.js) renders the desktop bar, mega-menu and mobile sheet here. -->
+    <header class="mk-nav-wrap" id="mkNavWrap"></header>
 
     <section class="mk-hero" aria-labelledby="heroTitle">
-      <div class="mk-hero-bg" aria-hidden="true"></div>
+      <div class="mk-hero-bg" aria-hidden="true">
+        <video class="mk-hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/hero-study-poster.jpg">
+          <source src="assets/hero-study-video-optimized.mp4" type="video/mp4">
+        </video>
+        <div class="mk-hero-tint"></div>
+        <div class="mk-hero-glow"><i></i><i></i></div>
+        <div class="mk-hero-grain"></div>
+      </div>
+
       <div class="mk-wrap mk-hero-grid">
         <div class="mk-hero-copy">
           <div class="mk-pill"><span class="mk-dot"></span> THE LEARNING SYSTEM THAT STICKS</div>
-          <h1 id="heroTitle">Learn it today.<br><em>Own it tomorrow.</em></h1>
+          <h1 id="heroTitle" data-animate-headline>Learn it today.<br><em>Own it tomorrow.</em></h1>
           <p class="mk-lead">Turn study time into lasting understanding. Recalro brings your notes, AI tutor, smart revision and exam practice into one focused learning space.</p>
           <div class="mk-hero-actions">
             <button class="mk-btn mk-btn-primary mk-btn-lg" id="heroStart" type="button">Start learning free <span>↗</span></button>
-            <button class="mk-btn mk-btn-outline mk-btn-lg" id="heroTour" type="button"><span class="mk-play" aria-hidden="true"></span>Take the tour</button>
+            <button class="mk-btn mk-btn-glass mk-btn-lg" id="heroTour" type="button"><span class="mk-play" aria-hidden="true"></span>Take the tour</button>
           </div>
           <p class="mk-hero-note">No complicated setup. Start learning in minutes.</p>
           <div class="mk-hero-proof">
@@ -44,26 +48,39 @@
           </div>
         </div>
 
-        <div class="mk-hero-visual">
-          <div class="mk-hero-media">
-            <video class="mk-hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/hero-study-poster.jpg" aria-hidden="true">
-              <source src="assets/hero-study-video-optimized.mp4" type="video/mp4">
-            </video>
-            <div class="mk-hero-media-shade"></div>
-            <div class="mk-float mk-float-note"><span class="mk-note-line"></span>A clearer way to make knowledge yours</div>
+        <!-- A real, playable mini review session: the product itself, not a picture of it. -->
+        <div class="mk-tryit" id="heroLive">
+          <div class="mk-live-hud" aria-hidden="true">
+            <span class="mk-hud-chip mk-hud-streak"><svg viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.7 7-7 0-4-3-6.5-4-10-2 1.5-3 3.5-3 6-1-1-1.5-2-1.5-3.5C8 9.5 5 12 5 15c0 4.3 3 7 7 7z"/></svg><b id="heroStreak">4</b></span>
+            <span class="mk-hud-chip mk-hud-xp"><span>Lv <b>3</b></span><span class="mk-hud-bar"><i id="heroXpBar"></i></span><b id="heroXp">240</b> XP</span>
           </div>
-          <aside class="mk-float mk-demo-card" aria-label="Illustrative learning dashboard preview">
-            <div class="mk-demo-head"><span>YOUR LEARNING OVERVIEW</span><span class="mk-tag">ILLUSTRATIVE DEMO</span></div>
-            <div class="mk-demo-metrics">
-              <div><strong>12</strong><span>Flashcards due</span></div>
-              <div><strong>85%</strong><span>Recent accuracy</span></div>
-              <div><strong>5 days</strong><span>Learning streak</span></div>
+          <section class="mk-live-window" aria-labelledby="heroLiveTitle">
+            <header class="mk-live-bar">
+              <span class="mk-live-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span id="heroLiveTitle">Review · <b id="heroDeck">Thermodynamics</b></span>
+              <span class="mk-live-tag">Try it</span>
+            </header>
+            <div class="mk-live-progress" aria-hidden="true"><i id="heroProgress"></i></div>
+            <div class="mk-live-count" id="heroCount" aria-live="polite">Card 1 of 3</div>
+            <div class="mk-live-stage">
+              <button type="button" class="mk-hcard" id="heroCard" aria-live="polite">
+                <span class="mk-hcard-face mk-hcard-front"></span>
+                <span class="mk-hcard-face mk-hcard-back"></span>
+              </button>
             </div>
-            <div class="mk-demo-progress"><span></span></div>
-            <small>A sample snapshot of your study progress</small>
-          </aside>
+            <div class="mk-live-actions" id="heroActions"></div>
+          </section>
+          <div class="mk-live-tutor" aria-hidden="true">
+            <span class="mk-tutor-av"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg></span>
+            <p><b>AI tutor</b><span id="heroTutorText">Stuck? I can walk you through it step by step.</span></p>
+          </div>
+          <div class="mk-hero-float mk-hero-float-a" aria-hidden="true"><span class="mk-hf-ic mk-hf-teal"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg></span><span><b>12 cards due</b><small>Best time: now</small></span></div>
+          <div class="mk-hero-float mk-hero-float-b" aria-hidden="true"><span class="mk-hf-ring" style="--target:92"><b>92%</b></span><span><b>Memory strength</b><small>Thermodynamics</small></span></div>
+          <p class="mk-live-note"><span class="mk-live-badge">Interactive preview</span> Nothing you do here is saved.</p>
         </div>
       </div>
+
+      <a class="mk-scroll-cue" href="#platform" aria-label="Scroll to learn more"><span></span></a>
     </section>
 
     <dialog class="mk-dialog" id="productDemoDialog" aria-labelledby="productDemoTitle" aria-describedby="productDemoDescription">
@@ -108,9 +125,9 @@
             <div class="mk-greeting">Good morning, Alex <span>✦</span></div>
             <div class="mk-greeting-sub">Small steps. Stronger understanding.</div>
             <div class="mk-metrics">
-              <div><small>Study streak</small><strong>12 <small>days</small></strong><span>Best: 18 days</span></div>
-              <div><small>Cards to review</small><strong>24</strong><span>Across 3 subjects</span></div>
-              <div><small>Weekly accuracy</small><strong>86%</strong><span class="mk-positive">↑ 8% this week</span></div>
+              <div><small>Study streak</small><strong><span data-count="12">12</span> <small>days</small></strong><span>Best: 18 days</span></div>
+              <div><small>Cards to review</small><strong><span data-count="24">24</span></strong><span>Across 3 subjects</span></div>
+              <div><small>Weekly accuracy</small><strong><span data-count="86" data-suffix="%">86%</span></strong><span class="mk-positive">↑ 8% this week</span></div>
             </div>
             <div class="mk-chart">
               <div class="mk-chart-head"><b>Learning activity</b><span>Last 7 days</span></div>
@@ -136,22 +153,104 @@
       </div>
     </section>
 
-    <section class="mk-section mk-dark" id="how">
+    <!-- ScrollStory (marketing/story.js): one set of notes travels through Recalro.
+         Each step carries its own scene; on wide screens the scenes play in a sticky stage. -->
+    <section class="mk-section mk-dark mk-story" id="how" aria-labelledby="storyTitle">
       <div class="mk-wrap">
         <div class="mk-section-head mk-reveal">
-          <div class="mk-kicker mk-kicker-light">A BETTER WAY TO STUDY</div>
-          <h2>From first read to <span class="mk-orange">exam-day confidence.</span></h2>
+          <div class="mk-kicker mk-kicker-light">HOW RECALRO WORKS</div>
+          <h2 id="storyTitle">From first upload to <span class="mk-orange">exam-day confidence.</span></h2>
+          <p>Follow one week of thermodynamics notes through Recalro, from the moment they're uploaded to the day you're ready.</p>
         </div>
-        <ol class="mk-steps">
-          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>01</span><img src="assets/notebook-3d.webp" alt="" width="200" height="200"></div><h3>Bring your materials</h3><p>Upload notes, PDFs and documents. Turn what you already study into structured learning resources.</p></li>
-          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>02</span><img src="assets/computer-3d.webp" alt="" width="200" height="200"></div><h3>Understand the hard parts</h3><p>Ask your AI tutor, explore clear summaries and explain concepts in your own words.</p></li>
-          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>03</span><img src="assets/calendar-3d.webp" alt="" width="200" height="200"></div><h3>Make knowledge stick</h3><p>Review at the right time, find weak spots and practise with focused exam simulations.</p></li>
-          <li class="mk-step mk-reveal"><div class="mk-step-top"><span>04</span><img src="assets/target-3d.webp" alt="" width="200" height="200"></div><h3>See your progress</h3><p>Follow your roadmap, build consistency and know what to work on next.</p></li>
-        </ol>
+        <div class="mk-story-grid">
+          <ol class="mk-story-steps">
+            <li class="mk-story-step" id="story-1">
+              <span class="mk-story-num">01</span>
+              <h3>Upload your study materials</h3>
+              <p>Drop in lecture notes, PDFs or slides. Recalro reads them and keeps everything for that subject in one place.</p>
+              <div class="mk-scene sc-upload">
+                <div class="sc-drop"><span class="sc-file"><i>PDF</i><span><b>Thermo_Week4.pdf</b><small>24 pages · 2.4 MB</small></span></span><span class="sc-bar"><i></i></span><small class="sc-status"><span class="sc-up">Uploading…</span><span class="sc-done">Ready · 24 pages read</span></small></div>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-2">
+              <span class="mk-story-num">02</span>
+              <h3>AI organises the material</h3>
+              <p>Pages become topics and a short summary of the key ideas, so you can see the shape of the week before you start.</p>
+              <div class="mk-scene sc-organise">
+                <div class="sc-lines"><i style="--w:92%"></i><i style="--w:78%"></i><i style="--w:86%"></i><i style="--w:64%"></i><i style="--w:81%"></i></div>
+                <div class="sc-chips"><span style="--i:0">Second law</span><span style="--i:1">Entropy</span><span style="--i:2">Carnot cycle</span><span style="--i:3">Heat engines</span></div>
+                <div class="sc-summary"><b>Summary · 5 key ideas</b><small>Entropy of an isolated system never decreases…</small></div>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-3">
+              <span class="mk-story-num">03</span>
+              <h3>Flashcards are generated</h3>
+              <p>Each idea becomes a question you have to answer from memory. That effort is what makes it stick.</p>
+              <div class="mk-scene sc-cards">
+                <span class="sc-card" style="--i:0"><small>Card 1</small>What does the second law say about entropy?</span>
+                <span class="sc-card" style="--i:1"><small>Card 2</small>Carnot efficiency formula?</span>
+                <span class="sc-card" style="--i:2"><small>Card 3</small>Define a reversible process.</span>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-4">
+              <span class="mk-story-num">04</span>
+              <h3>You practise recall</h3>
+              <p>Flip, answer, rate how well you knew it. Every rating teaches the scheduler when to bring the card back.</p>
+              <div class="mk-scene sc-recall">
+                <span class="sc-flip"><span class="sc-face sc-front">Carnot efficiency formula?</span><span class="sc-face sc-back"><span>η = 1 − T<sub>c</sub> / T<sub>h</sub></span></span></span>
+                <span class="sc-rates"><i>Again</i><i>Hard</i><i class="is-picked">Good</i><i>Easy</i></span>
+                <span class="sc-xp">+10 XP</span>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-5">
+              <span class="mk-story-num">05</span>
+              <h3>Weaknesses are identified</h3>
+              <p>Recalro notices which topics you keep missing and flags them before they cost you marks.</p>
+              <div class="mk-scene sc-weak">
+                <span class="sc-topic"><b>Entropy</b><span class="sc-track"><i style="--w:88%"></i></span><em>88%</em></span>
+                <span class="sc-topic"><b>Second law</b><span class="sc-track"><i style="--w:76%"></i></span><em>76%</em></span>
+                <span class="sc-topic is-weak"><b>Carnot efficiency</b><span class="sc-track"><i style="--w:54%"></i></span><em>54%</em></span>
+                <span class="sc-flag">Needs review: Carnot efficiency</span>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-6">
+              <span class="mk-story-num">06</span>
+              <h3>You improve where it matters</h3>
+              <p>Short, targeted sessions on the weak topic. The tutor explains, the cards come back sooner, the score climbs.</p>
+              <div class="mk-scene sc-weak sc-improve">
+                <span class="sc-topic"><b>Entropy</b><span class="sc-track"><i style="--w:90%"></i></span><em>90%</em></span>
+                <span class="sc-topic"><b>Second law</b><span class="sc-track"><i style="--w:81%"></i></span><em>81%</em></span>
+                <span class="sc-topic is-up"><b>Carnot efficiency</b><span class="sc-track"><i style="--w:82%"></i></span><em>82%</em></span>
+                <span class="sc-flag sc-flag-up">+28 points in 6 days</span>
+              </div>
+            </li>
+            <li class="mk-story-step" id="story-7">
+              <span class="mk-story-num">07</span>
+              <h3>Progress you can see</h3>
+              <p>Your readiness, retention and streak in one view, so you always know where the next session should begin.</p>
+              <div class="mk-scene sc-progress">
+                <svg class="sc-line" viewBox="0 0 220 100" preserveAspectRatio="none"><path pathLength="1" d="M0 86 C30 80 40 70 62 66 S100 52 120 46 S160 30 180 24 S210 14 220 10"/></svg>
+                <span class="sc-ring" style="--target:78"><b>78%</b><small>Exam ready</small></span>
+                <span class="sc-stats"><span><b>14</b> day streak</span><span><b>86%</b> accuracy</span></span>
+              </div>
+            </li>
+          </ol>
+          <div class="mk-story-stage" aria-hidden="true"><div class="mk-story-device"><div class="mk-story-device-bar"><i></i><i></i><i></i><span>Thermodynamics · Week 4</span></div><div class="mk-story-scenes"></div></div></div>
+        </div>
       </div>
     </section>
 
-    <section class="mk-section mk-wrap" id="features">
+    <!-- FeatureTheatre (marketing/demos.js): one interactive demo per feature. -->
+    <section class="mk-section mk-wrap mk-theatre" id="features" aria-labelledby="featuresTitle">
+      <div class="mk-section-head mk-reveal">
+        <div class="mk-kicker">SEE IT WORK</div>
+        <h2 id="featuresTitle">Every feature, <span class="mk-teal">in motion.</span></h2>
+        <p>Pick a feature and try it. These are working previews with sample content, so you can feel how Recalro responds before you sign up.</p>
+      </div>
+      <div class="mk-th mk-reveal" id="featureTheatre"></div>
+    </section>
+
+    <section class="mk-section mk-wrap" id="toolkit">
       <div class="mk-section-head mk-section-head-split mk-reveal">
         <div>
           <div class="mk-kicker">BUILT AROUND HOW YOU LEARN</div>
@@ -291,6 +390,10 @@
           <li><img src="assets/calendar-3d.webp" alt="" width="200" height="200"><span><b>Spaced repetition</b>Review at the right time, every time.</span></li>
           <li><img src="assets/target-3d.webp" alt="" width="200" height="200"><span><b>Exam readiness</b>Practise under pressure and close the gaps.</span></li>
         </ul>
+        <div class="au-journey-wrap">
+          <p class="au-journey-title">Your setup, step by step</p>
+          <ol class="au-journey" id="authJourney"></ol>
+        </div>
       </div>
       <figure class="au-quote">
         <blockquote>“Understanding is the beginning. Remembering is the advantage.”</blockquote>
@@ -317,7 +420,7 @@
         </div>
 
         <div id="authFormView">
-          <div data-modes="login signup">
+          <div data-modes="login">
             <button type="button" class="au-social" id="authGoogle">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.2 14.6 2.2 12 2.2 6.6 2.2 2.2 6.6 2.2 12s4.4 9.8 9.8 9.8c5.7 0 9.4-4 9.4-9.6 0-.6-.1-1.1-.2-1.6H12z"/></svg>
               Continue with Google
@@ -326,32 +429,22 @@
           </div>
 
           <form id="authForm" class="au-form" novalidate data-mode="login" aria-labelledby="authTitle">
-            <div class="au-field" data-modes="signup">
-              <label for="authName">Full name</label>
-              <input id="authName" name="name" type="text" autocomplete="name" placeholder="Alex Carter" aria-describedby="authNameError">
-              <p class="au-error" id="authNameError"></p>
-            </div>
-
             <div class="au-field">
               <label for="authEmail">Email address</label>
               <input id="authEmail" name="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" aria-describedby="authEmailError">
               <p class="au-error" id="authEmailError"></p>
             </div>
 
-            <div class="au-field" data-modes="login signup">
+            <div class="au-field" data-modes="login">
               <div class="au-label-row">
                 <label for="authPassword">Password</label>
                 <button type="button" class="au-link" data-modes="login" data-auth-mode="forgot">Forgot password?</button>
               </div>
               <div class="au-password">
-                <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-describedby="authPasswordError authStrengthLabel">
+                <input id="authPassword" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" aria-describedby="authPasswordError">
                 <button type="button" class="au-eye" id="authTogglePassword" aria-label="Show password" aria-pressed="false">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
-              </div>
-              <div class="au-strength" data-modes="signup" data-score="0">
-                <div class="au-strength-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-                <span id="authStrengthLabel">Use 8+ characters with a letter and a number.</span>
               </div>
               <p class="au-error" id="authPasswordError"></p>
             </div>
@@ -361,14 +454,6 @@
               <span>Keep me signed in on this device</span>
             </label>
 
-            <div class="au-field" data-modes="signup">
-              <label class="au-check">
-                <input type="checkbox" id="authTerms" aria-describedby="authTermsError">
-                <span>I agree to the Terms of Service and Privacy Policy</span>
-              </label>
-              <p class="au-error" id="authTermsError"></p>
-            </div>
-
             <button class="au-submit" type="submit" id="authSubmit">
               <span class="au-spinner" aria-hidden="true"></span>
               <span class="au-submit-label">Log in</span>
@@ -377,6 +462,9 @@
 
           <p class="au-switch" id="authSwitch"></p>
         </div>
+
+        <!-- SignupWizard (auth/signup-wizard.js) renders the 8-step onboarding here. -->
+        <div class="sw" id="signupWizard" hidden></div>
 
         <div class="au-success" id="authResetSent" hidden tabindex="-1">
           <div class="au-success-icon" aria-hidden="true">✓</div>
@@ -399,6 +487,13 @@
   <script src="app/pages-learn.js"></script>
   <script src="app/pages-study.js"></script>
   <script src="app/pages-social.js"></script>
+  <script src="marketing/motion.js"></script>
+  <script src="marketing/nav.js"></script>
+  <script src="marketing/story.js"></script>
+  <script src="marketing/demos.js"></script>
+  <script src="auth/signup-data.js"></script>
+  <script src="auth/signup-components.js"></script>
+  <script src="auth/signup-wizard.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

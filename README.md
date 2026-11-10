@@ -13,7 +13,7 @@ No build step or package installation is required.
 - App (signed-in experience): teal `#14A09F` (primary actions, progress, navigation), orange `#F77503` (XP, streaks, achievements, rewards), light background `#F8FAFA`, dark background `#151C20`, secondary text `#899395`. Tokens live at the top of `app/app.css`.
 - Contrast: white text on `#14A09F` is 3.2:1 and `#F77503` text on white is 2.8:1, both below WCAG AA for body text. Buttons therefore use the deeper `--teal-600` (`#0B7C7B`, 5.0:1), small orange text uses `--orange-ink` (`#B85500`), and `#899395` is reserved for non-essential meta text.
 - Subject colours are a validated colour-blind-safe categorical palette (`--s0`–`--s3`), with separate light and dark values.
-- Marketing and auth pages still use the earlier `#4A9E9E` / `#E77D31` values in `marketing.css` and `auth.css`.
+- Marketing and auth pages use the same approved palette (`--mk-*` tokens in `marketing.css`, `--au-*` in `auth.css`). Filled buttons are teal-600; orange is kept for accents (the arrow disc on primary CTAs, streaks, XP, highlights).
 - Manrope headings, DM Sans interface text. Logo: `assets/recalro-logo.png`.
 
 ## Signed-in application
@@ -42,6 +42,27 @@ Navigation groups: Overview · My Learning (Subjects, Roadmap, Planner, Vault) �
 - Summaries: `summarize()` in `app/pages-study.js`.
 - Exam questions and pass threshold: `R.content.questions` and the 70% practice target in `app/pages-study.js`.
 - Leagues, groups and reward payouts: `R.league`, `C.groups`, `C.peers` in `app/core.js`.
+
+## Marketing page components
+No build step and no animation library: components are small vanilla modules on `window.RecalroMarketing` / `window.RecalroMotion`, styled with CSS transitions and the Web Animations API. Everything checks `prefers-reduced-motion`.
+
+| File | Components |
+|---|---|
+| `marketing/nav.js` + `nav.css` | `MarketingNavbar`: desktop links with sliding indicator and scroll-spy, Features mega-menu (click, hover-intent, arrow keys, Esc), sticky shrink, dedicated mobile sheet on `<dialog>` |
+| `marketing/motion.js` | `AnimatedHeadline`, `RevealOnScroll`, `StaggerContainer`, `AnimatedCounter`, `AnimatedProgress`, cancellable `wait` |
+| `marketing/story.js` | `ScrollStory`: 7-stage "How it works" journey with a sticky stage on wide screens and inline scenes on mobile; never intercepts scrolling |
+| `marketing/demos.js` + `sections.css` | `FeatureTheatre` with interactive demos: AI Tutor, Flashcards, Knowledge Vault, Forgetting Curve, Exam Simulator, Study Groups, Gamification. Demos run only while visible; all content is sample data and labelled |
+| `app.js` | Hero `InteractiveFlashcardPreview` (question → flip → rating → XP → progress → tutor feedback) |
+
+Mega-menu items link to the matching demo (`#demo-<id>`) or story stage (`#story-<n>`).
+
+## Signup wizard (frontend prototype)
+`auth/signup-wizard.js` replaces the old single signup form with an 8-step journey: Account details → Email verification (6-digit OTP) → Academic path → Academic details (conditional per path) → Learning interests → Learning goals → Review → Welcome.
+- `auth/signup-components.js`: `FormField`, `SelectField`, `PasswordField` + `PasswordStrengthIndicator`, `SelectionCard`, `Chip`, `ChoiceGroup`, `OTPInput` (auto-advance, backspace, paste, autofill), `InstitutionSearch` (ARIA combobox with "not listed" fallback).
+- `auth/signup-data.js`: paths, countries, **sample** institution lists, levels (100–600 Level for Nigeria), classes, exams, certifications, interests, goals.
+- State is in memory for the session only; going back keeps answers, editing from Review returns to Review. Passwords are never stored.
+- **Simulated:** Google button (shows a prototype notice), the verification email (the code is shown in an on-screen "prototype inbox"), Terms/Privacy (dialog says they're not published yet). Finishing writes the same demo session as log in and applies the display name, daily goal and onboarding answers to local app state.
+- Integration points: `AccountDetailsStep.beforeNext` (send code), `checkCode` (verify), `complete()` (create account / save profile).
 
 ## Marketing media
 The hero video, its poster, and marketing photos are bundled under `assets/`, so the page does not depend on third-party media hosts at runtime. The hero video is the Pexels clip by Kampus Production, served locally as optimized 1080p H.264 (the original 4K download was 8.6 MB; the optimized clip is about 3.5 MB):
@@ -76,6 +97,8 @@ Before production:
 ## Files
 - `index.html` — marketing site, auth screen and app mount point
 - `marketing.css`, `auth.css` — marketing and auth styles
+- `marketing/` — navbar, motion primitives, scroll story, feature demos
+- `auth/` — signup wizard, its components and option data
 - `app/` — signed-in application (see above)
 - `app.js` — marketing interactions, demo auth and app bridge
 - `assets/recalro-logo.png` — supplied logo artwork
