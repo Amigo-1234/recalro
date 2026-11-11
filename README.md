@@ -23,7 +23,10 @@ The app is plain JavaScript modules with no build step, loaded in order from `in
 |---|---|
 | `app/core.js` | Sample course content, local store (`recalro-app-v2`, migrates the old `recalro-demo-v1` data), local SM-2 scheduler, XP/levels/streaks, daily quests, weekly challenges, achievements, insights and recommendations |
 | `app/ui.js` | Icons, components, dialogs, toasts, tooltips, charts and reward animations (Web Animations API, respects reduced motion) |
-| `app/shell.js` | Grouped, collapsible navigation, hash router (`#/app/<page>`), top bar with streak/gem/XP chips, notifications, command palette (Ctrl/⌘ K), theme, mobile tab bar |
+| `app/shell.js` + `shell.css` | `AppShell`: hash router (`#/app/<page>`), `DesktopNavigationRail` (grouped accordion; collapses to one icon per group with side panels; forced rail on tablets), `MobileBottomNavigation` (Home · Learn · Practice · AI Tutor · More, hidden while the keyboard is open or in focus mode), `MobileNavigationHub` (full-screen More), notifications/account as sheets, command palette (Ctrl/⌘ K), theme |
+| `app/sheets.js` | `R.sheet` (bottom sheet on phones, side panel on desktop, full-screen hub), `R.picker` (searchable selection), and automatic replacement of every native `<select>` with a picker; there are no dropdown menus |
+| `app/tutor.js` + `tutor.css` | AI Tutor workspace: collapsible conversation history (full-screen on phones), subject selector, Markdown/maths/table/code rendering, copy · regenerate · feedback · retry · stop · continue, follow-up prompts, composer with image attachments, and the 3-step Explain-it workspace |
+| `app/review.css` | Flashcard review session (focus mode, 3D flip, rating feedback, completion screen) and app-wide learning motion |
 | `app/pages-*.js` | Pages: home & insights, learning, study tools, community/rewards/account |
 | `app.js` | Marketing page, demo authentication, bridge into the app, deep links |
 
@@ -38,7 +41,7 @@ Navigation groups: Overview · My Learning (Subjects, Roadmap, Planner, Vault) �
 - Authentication: `app.js` (`readSession`, `writeSession`, `signOut`, exposed as `window.RecalroAuth`).
 - Persistence: `R.save` / `R.state` in `app/core.js`. Swap for API calls per entity.
 - SM-2: `nextState` / `R.rateCard` in `app/core.js`. Replace with the backend scheduler.
-- AI tutor: `reply` in the tutor page (`app/pages-study.js`). Stream provider output into `stream()`.
+- AI tutor: `composeAnswer()` in `app/tutor.js` builds answers locally from the student's cards, vault and review history and says the provider isn't connected. Replace it with the provider call and pass streamed Markdown to `revealAnswer()`. Response feedback (thumbs) is stored locally on each message.
 - Summaries: `summarize()` in `app/pages-study.js`.
 - Exam questions and pass threshold: `R.content.questions` and the 70% practice target in `app/pages-study.js`.
 - Leagues, groups and reward payouts: `R.league`, `C.groups`, `C.peers` in `app/core.js`.

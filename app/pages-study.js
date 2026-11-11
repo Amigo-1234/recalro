@@ -48,82 +48,137 @@
     },
   });
 
+  /* ---------- Flashcard review session ----------
+     Components: ReviewProgress · Flashcard (FlipCard with FlashcardFront/Back) ·
+     ReviewControls · SessionStatistics · ReviewCompletion.
+     Scheduling is untouched: ratings go straight to R.rateCard (local SM-2) and
+     the "next review" label comes from R.previewInterval before rating. */
+  const RATINGS = [["Again", "1", "again", "Forgot"], ["Hard", "2", "hard", "Struggled"], ["Good", "3", "good", "Recalled"], ["Easy", "4", "easy", "Instant"]];
   function session(view, q) {
     const built = buildQueue(q);
     const queue = built.cards.map((c) => c.id), requeued = new Set();
-    let index = 0, flipped = false, xp = 0, startedAt = Date.now();
-    const results = [];
+    let index = 0, flipped = false, xp = 0, busy = false;
+    const startedAt = Date.now(), results = [];
     if (!queue.length) {
       view.innerHTML = `<div class="session-done">${ui.empty({ icon: "check-circle", title: "Nothing due here", body: `No due or new cards in ${esc(built.label)}. You can cram the deck for extra practice. Cramming doesn't change your schedule much, but it helps before exams.`, action: `${ui.link("Cram this deck", `flashcards?${new URLSearchParams({ ...q, cram: 1 })}`, { icon: "refresh" })} ${ui.link("Back to decks", "flashcards", { tone: "ghost" })}` })}</div>`;
       return;
     }
-    view.innerHTML = `<div class="fc-session">
-      <div class="fc-bar"><a class="icon-btn" href="#/app/flashcards" aria-label="End session">${icon("x")}</a>${ui.progress(0, { label: "Session progress" })}<span class="fc-count" aria-live="polite"></span><span class="fc-xp" data-tip="XP earned this session">${icon("bolt")}<b>0</b></span></div>
-      <div class="fc-label"><span>${esc(built.label)}</span>${built.kind === "cram" ? ui.pill("Cram", "neutral") : ""}</div>
-      <div class="fc-stage"><button type="button" class="flashcard" id="fc" aria-live="polite"><span class="fc-face fc-front"></span><span class="fc-face fc-back"></span></button></div>
-      <div class="fc-controls" id="fcControls"></div>
-      <p class="fc-hint">${ui.kbd("Space")} flip · ${ui.kbd("1")}–${ui.kbd("4")} rate</p></div>`;
-    const card = R.$("#fc", view), controls = R.$("#fcControls", view), bar = R.$(".fc-bar .progress i", view), countEl = R.$(".fc-count", view), xpEl = R.$(".fc-xp b", view);
-    const total = () => queue.length;
+    // Distraction-free: navigation hides while reviewing (the X ends the session).
+    R.setFocusMode(true);
+    view.innerHTML = `<div class="rv">
+      <header class="rv-bar">
+        <a class="icon-btn rv-close" href="#/app/flashcards" aria-label="End session">${icon("x")}</a>
+        <div class="rv-progress" role="progressbar" aria-label="Session progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
+        <span class="rv-left" aria-live="polite"></span>
+        <span class="rv-xp" data-tip="XP earned this session">${icon("bolt")}<b>0</b></span>
+      </header>
+      <div class="rv-meta"><span>${icon("cards")}${esc(built.label)}</span>${built.kind === "cram" ? ui.pill("Cram", "neutral") : ""}<span class="rv-tally" aria-label="Session statistics"><i class="t-ok">${icon("check")}<b>0</b></i><i class="t-again">${icon("refresh")}<b>0</b></i></span></div>
+      <div class="rv-stage">
+        <div class="rv-pile"><div class="rv-stack" aria-hidden="true"><i></i><i></i></div>
+        <button type="button" class="rv-card" id="fc"><span class="rv-face rv-front"></span><span class="rv-face rv-back"></span></button></div>
+        <div class="rv-fb" aria-live="polite"></div>
+      </div>
+      <div class="rv-controls" id="fcControls"></div>
+      <p class="rv-hint">${ui.kbd("Space")} flip · ${ui.kbd("1")}–${ui.kbd("4")} rate</p>
+    </div>`;
+    const root = R.$(".rv", view), card = R.$("#fc", view), controls = R.$("#fcControls", view), fb = R.$(".rv-fb", view);
+    const bar = R.$(".rv-progress", view), xpEl = R.$(".rv-xp b", view);
+    const remaining = () => queue.length - index;
+    const setProgress = () => {
+      const p = (index / queue.length) * 100;
+      bar.querySelector("i").style.width = `${p}%`; bar.setAttribute("aria-valuenow", String(Math.round(p)));
+      R.$(".rv-left", view).innerHTML = `<b>${remaining()}</b> left`;
+      root.dataset.stack = String(Math.min(2, remaining() - 1));
+    };
+    const tally = () => {
+      R.$(".t-ok b", view).textContent = results.filter((r) => r.rating !== "Again").length;
+      R.$(".t-again b", view).textContent = results.filter((r) => r.rating === "Again").length;
+    };
+    const revealBtn = () => `<button type="button" class="btn btn-primary btn-lg rv-reveal" data-flip>${icon("eye")}<span>Show answer</span></button>`;
     const draw = (animateIn = true) => {
       const c = R.card(queue[index]), mod = R.module(c.module);
       card.getAnimations?.().forEach((a) => a.cancel());
-      flipped = false; card.classList.remove("is-flipped");
-      card.querySelector(".fc-front").innerHTML = `<small>${ui.subjectDot(c.subject)}${esc(mod?.name || R.subject(c.subject)?.name || "")} · Question</small><b>${esc(c.front)}</b><em>Tap or press Space to reveal</em>`;
-      card.querySelector(".fc-back").innerHTML = `<small>Answer</small><b>${esc(c.back)}</b><em>How well did you recall it?</em>`;
-      card.setAttribute("aria-label", `Question: ${c.front}. Press to reveal the answer.`);
-      controls.innerHTML = `<button type="button" class="btn btn-primary btn-lg" data-flip>${icon("eye")}<span>Reveal answer</span></button>`;
-      countEl.textContent = `${Math.min(index + 1, total())} / ${total()}`;
-      bar.style.setProperty("--p", `${(index / total()) * 100}%`);
-      if (animateIn) R.animate(card, [{ opacity: 0, transform: "translateY(18px) scale(.97)" }, { opacity: 1, transform: "none" }], { duration: 320 });
+      flipped = false; card.classList.remove("is-flipped"); busy = false;
+      card.querySelector(".rv-front").innerHTML = `<span class="rv-tag">${ui.subjectDot(c.subject)}${esc(mod?.name || R.subject(c.subject)?.name || "")}</span><span class="rv-kind">Question</span><b>${esc(c.front)}</b><em>${icon("refresh")}Tap to flip</em>`;
+      card.querySelector(".rv-back").innerHTML = `<span class="rv-kind">Answer</span><b>${esc(c.back)}</b><em>How well did you remember it?</em>`;
+      card.setAttribute("aria-label", `Question: ${c.front}. Activate to show the answer.`);
+      controls.innerHTML = revealBtn();
+      setProgress();
+      if (animateIn) { R.animate(card, [{ transform: "translateY(14px) scale(.94)" }, { transform: "none" }], { duration: 380, easing: "cubic-bezier(.2,.9,.3,1.1)" }); R.animate(card.parentElement, [{ opacity: 0 }, { opacity: 1 }], { duration: 260 }); }
     };
     const flip = () => {
-      if (flipped) { flipped = false; card.classList.remove("is-flipped"); controls.innerHTML = `<button type="button" class="btn btn-primary btn-lg" data-flip>${icon("eye")}<span>Reveal answer</span></button>`; return; }
-      flipped = true; card.classList.add("is-flipped");
+      if (busy) return;
+      flipped = !flipped; card.classList.toggle("is-flipped", flipped);
       const id = queue[index];
+      if (!flipped) { controls.innerHTML = revealBtn(); card.setAttribute("aria-label", `Question: ${R.card(id).front}. Activate to show the answer.`); return; }
       card.setAttribute("aria-label", `Answer: ${R.card(id).back}`);
-      controls.innerHTML = `<div class="rate-row">${[["Again", "1", "again"], ["Hard", "2", "hard"], ["Good", "3", "good"], ["Easy", "4", "easy"]].map(([r, k, cls]) => `<button type="button" class="rate-btn rate-${cls}" data-rate="${r}"><b>${r}</b><small>${R.previewInterval(id, r)}</small><kbd>${k}</kbd></button>`).join("")}</div>`;
-      R.animate(controls, [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 220 });
+      controls.innerHTML = `<div class="rv-rates" role="group" aria-label="How well did you remember it?">${RATINGS.map(([r, k, cls, hint], i) => `<button type="button" class="rv-rate rv-${cls}" data-rate="${r}" style="--i:${i}"><b>${r}</b><small>${R.previewInterval(id, r)}</small><kbd>${k}</kbd><span class="sr-only">, ${hint}</span></button>`).join("")}</div>`;
     };
     const rate = (rating, btn) => {
-      const id = queue[index];
+      if (busy) return; busy = true;
+      const id = queue[index], next = R.previewInterval(id, rating);
+      R.$$("[data-rate]", controls).forEach((b) => { b.disabled = true; b.classList.toggle("is-picked", b === btn); });
       const res = R.rateCard(id, rating, btn);
       xp += res.xp; R.countUp(xpEl, xp, { from: xp - res.xp, dur: 400 });
+      R.animate(R.$(".rv-xp", view), [{ transform: "scale(1)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 380, easing: "cubic-bezier(.3,1.6,.5,1)" });
       results.push({ id, rating });
       if (rating === "Again" && !requeued.has(id)) { requeued.add(id); queue.push(id); }
+      tally();
+      // Immediate feedback: what happened and when the card comes back.
+      fb.className = `rv-fb is-${rating.toLowerCase()}`;
+      fb.innerHTML = `<b>${rating === "Again" ? "Coming back soon" : rating === "Hard" ? "Got there" : rating === "Good" ? "Nice recall" : "Too easy"}</b><span>Next review in ${next}${res.xp ? ` · +${res.xp} XP` : ""}</span>`;
+      R.animate(fb, [{ opacity: 0, transform: "translate(-50%, 8px) scale(.9)" }, { opacity: 1, transform: "translate(-50%, 0) scale(1)", offset: .2 }, { opacity: 1, transform: "translate(-50%, 0)", offset: .8 }, { opacity: 0, transform: "translate(-50%, -6px)" }], { duration: 1100 });
       const dir = rating === "Again" ? -1 : 1;
-      R.animate(card, [{ transform: card.classList.contains("is-flipped") ? "rotateY(180deg)" : "none", opacity: 1 }, { transform: `translateX(${dir * 70}px) rotate(${dir * 6}deg) ${card.classList.contains("is-flipped") ? "rotateY(180deg)" : ""}`, opacity: 0 }], { duration: 220, easing: "ease-in", fill: "forwards" }).finished.then(() => {
+      // Fade the wrapper, not the card: opacity on a preserve-3d element flattens it and shows the mirrored front.
+      R.animate(card.parentElement, [{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }], { duration: 360, delay: 160 });
+      R.animate(card, [{ transform: "rotateY(180deg)" }, { transform: `translateX(${dir * 42}vw) translateY(-12px) rotate(${dir * 9}deg) rotateY(180deg)` }], { duration: 360, delay: 160, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards" }).finished.then(() => {
         index++;
         if (index >= queue.length) finish(); else draw();
       });
     };
     const finish = () => {
+      R.setFocusMode(false);
       const counts = { Again: 0, Hard: 0, Good: 0, Easy: 0 };
       results.forEach((r) => counts[r.rating]++);
-      const unique = new Set(results.map((r) => r.id)).size, good = results.filter((r) => r.rating === "Good" || r.rating === "Easy").length;
-      const acc = results.length ? (good / results.length) * 100 : 0, mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
-      view.innerHTML = `<div class="session-complete">
-        <div class="sc-badge">${icon("check")}</div>
-        <h1>Session complete</h1><p>You reviewed ${R.plural(unique, "card")} in about ${R.plural(mins, "minute")}.</p>
-        <div class="sc-stats"><div><b>+${R.fmt(xp)}</b><span>XP earned</span></div><div><b>${R.pct(acc)}</b><span>recalled well</span></div><div><b>${R.streak().current}</b><span>day streak</span></div></div>
-        <div class="dist">${Object.entries(counts).map(([k, v]) => `<div class="dist-col" data-tip="${k}: ${v}"><i class="rate-${k.toLowerCase()}" style="--h:${results.length ? (v / results.length) * 100 : 0}%"></i><small>${k}</small><b>${v}</b></div>`).join("")}</div>
-        <div class="sc-actions">${ui.link("Back to decks", "flashcards", { tone: "soft" })}${ui.link("Dashboard", "dashboard", { iconRight: "arrow-right" })}</div></div>`;
-      const badge = R.$(".sc-badge", view);
-      R.animate(badge, [{ transform: "scale(.3)", opacity: 0 }, { transform: "scale(1.15)", opacity: 1, offset: 0.6 }, { transform: "scale(1)", opacity: 1 }], { duration: 600, easing: "cubic-bezier(.3,1.4,.5,1)" });
-      setTimeout(() => R.burst(badge, { count: 28, spread: 140 }), 200);
-      R.$$(".dist-col i", view).forEach((el, i) => R.animate(el, [{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 500, delay: 200 + i * 80 }));
+      const unique = new Set(results.map((r) => r.id)).size, n = results.length || 1;
+      const recalledWell = ((counts.Good + counts.Easy) / n) * 100, accuracy = ((n - counts.Again) / n) * 100;
+      const secs = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+      const rec = R.recommendations().find((r) => r.action && !/review$|flashcards/.test(r.action.route || "")) || R.recommendations()[0];
+      view.innerHTML = `<div class="rv-done">
+        <div class="rv-done-badge" aria-hidden="true">${icon("check")}<i></i><i></i><i></i></div>
+        <h1>Session complete</h1>
+        <p>${R.plural(unique, "card")} reviewed. ${recalledWell >= 80 ? "Strong recall. These intervals will grow." : recalledWell >= 50 ? "Good work. The tricky ones come back sooner." : "Tough session. That effort is what builds memory."}</p>
+        <div class="rv-stats">
+          <div><b data-count="${unique}">0</b><span>Cards reviewed</span></div>
+          <div><b data-count="${Math.round(recalledWell)}" data-suffix="%">0%</b><span>Recalled well</span></div>
+          <div><b data-count="${Math.round(accuracy)}" data-suffix="%">0%</b><span>Accuracy</span></div>
+          <div><b>${secs >= 60 ? `${Math.floor(secs / 60)}m ${secs % 60}s` : `${secs}s`}</b><span>Session time</span></div>
+          <div class="rv-stat-xp"><b data-count="${xp}" data-prefix="+">+0</b><span>XP earned</span></div>
+          <div class="rv-stat-streak">${icon("flame")}<b>${R.streak().current}</b><span>Day streak</span></div>
+        </div>
+        <div class="rv-dist" aria-label="Ratings">${Object.entries(counts).map(([k, v]) => `<div class="rv-dcol" data-tip="${k}: ${v}"><i class="rv-${k.toLowerCase()}" style="--h:${(v / n) * 100}%"></i><small>${k}</small><b>${v}</b></div>`).join("")}</div>
+        ${rec ? `<a class="rv-next" href="#/app/${rec.action?.route || "dashboard"}"><span class="rv-next-ic">${icon(rec.icon || "arrow-right")}</span><span><small>Recommended next</small><b>${esc(rec.title)}</b></span>${icon("arrow-right")}</a>` : ""}
+        <div class="rv-done-actions">${ui.link("Back to decks", "flashcards", { tone: "soft" })}${ui.link("Dashboard", "dashboard", { iconRight: "arrow-right" })}</div>
+      </div>`;
+      const badge = R.$(".rv-done-badge", view);
+      R.animate(badge, [{ transform: "scale(.3) rotate(-20deg)", opacity: 0 }, { transform: "scale(1.12) rotate(6deg)", opacity: 1, offset: 0.6 }, { transform: "none", opacity: 1 }], { duration: 650, easing: "cubic-bezier(.3,1.4,.5,1)" });
+      setTimeout(() => R.burst(badge, { count: 26, spread: 130 }), 220);
+      R.$$(".rv-stats > div", view).forEach((el, i) => R.animate(el, [{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }], { duration: 360, delay: 200 + i * 70, fill: "backwards" }));
+      R.$$("[data-count]", view).forEach((el) => setTimeout(() => R.countUp(el, Number(el.dataset.count), { from: 0, dur: 800, fmt: (v) => `${el.dataset.prefix || ""}${R.fmt(v)}${el.dataset.suffix || ""}` }), 300));
+      R.$$(".rv-dcol i", view).forEach((el, i) => R.animate(el, [{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 500, delay: 400 + i * 80, fill: "backwards" }));
+      R.$(".rv-done h1", view).setAttribute("tabindex", "-1"); R.$(".rv-done h1", view).focus({ preventScroll: true });
     };
     draw();
     card.addEventListener("click", flip);
-    controls.addEventListener("click", (e) => { if (e.target.closest("[data-flip]")) flip(); const r = e.target.closest("[data-rate]"); if (r && !r.disabled) { R.$$("[data-rate]", controls).forEach((b) => (b.disabled = true)); rate(r.dataset.rate, r); } });
+    controls.addEventListener("click", (e) => { if (e.target.closest("[data-flip]")) { flip(); R.$("[data-rate]", controls)?.focus({ preventScroll: true }); } const r = e.target.closest("[data-rate]"); if (r && !r.disabled) rate(r.dataset.rate, r); });
     const onKey = (e) => {
       if (typing() || document.querySelector("dialog[open]") || !view.isConnected || !R.$("#fc", view)) return;
-      // When the card itself has focus, its native button activation handles Space/Enter.
+      // When the card has focus, its native button activation handles Space/Enter.
       if ((e.key === " " || e.key === "Enter") && (document.activeElement === document.body || document.activeElement === view)) { e.preventDefault(); flip(); }
       if (flipped && ["1", "2", "3", "4"].includes(e.key)) { const b = R.$$("[data-rate]", controls)[Number(e.key) - 1]; if (b && !b.disabled) b.click(); }
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); R.setFocusMode(false); };
   }
 
   /* ======================= REVIEW CENTER ======================= */
@@ -361,137 +416,7 @@
     const docs = [...R.cards().map((c) => ({ kind: "Flashcard", title: c.front, body: c.back, subject: c.subject })), ...R.vaultItems().map((v) => ({ kind: "Vault", title: v.title, body: v.detail, subject: v.subject }))];
     return docs.map((d) => { const dw = words(`${d.title} ${d.body}`); let s = 0; dw.forEach((w) => { if (qw.has(w)) s++; }); if (subject && d.subject === subject) s += 0.5; return { ...d, score: s }; }).filter((d) => d.score >= 1).sort((a, b) => b.score - a.score).slice(0, 3);
   };
-  R.page("tutor", {
-    title: "AI Tutor",
-    crumb: (ctx) => (ctx.sub[0] === "explain" ? "Explain it to me" : null),
-    render(view, ctx) {
-      const tabs = ui.tabs([{ id: "chat", label: "Chat", route: "tutor", icon: "sparkles" }, { id: "explain", label: "Explain it to me", route: "tutor/explain", icon: "quote" }], ctx.sub[0] === "explain" ? "explain" : "chat", "Tutor modes");
-      if (ctx.sub[0] === "explain") return explain(view, ctx, tabs);
-      return chat(view, ctx, tabs);
-    },
-  });
-  function chat(view, ctx, tabs) {
-    const st = R.state;
-    let chatObj = ctx.query.new ? null : st.chats.find((c) => c.id === ctx.query.chat) || st.chats[st.chats.length - 1] || null;
-    let subject = ctx.query.subject || chatObj?.subject || R.subjects()[0].id;
-    let attachment = null, busy = false;
-    const suggestions = () => {
-      const s = R.subject(subject), mod = R.moduleStatus(s).find((m) => m.status === "active") || s.modules?.[0];
-      const topic = ctx.query.topic || mod?.name || s.name;
-      return [`Explain ${topic} simply`, `Give me a worked example on ${topic}`, `Quiz me on ${topic}`, `What are common mistakes in ${topic}?`];
-    };
-    view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "AI tutor", desc: "A subject-aware study partner for questions, explanations and deeper understanding." })}${tabs}
-      <div class="tutor">
-        <aside class="tutor-side"><button type="button" class="btn btn-soft btn-block" data-newchat>${icon("plus")}<span>New chat</span></button><div class="chat-list" id="chatList"></div></aside>
-        <section class="tutor-main">
-          <div class="tutor-ctx"><label>${icon("book")}<span class="sr-only">Subject context</span><select id="tutorSubject">${R.subjects().map((s) => `<option value="${s.id}" ${s.id === subject ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></label>${ui.pill("AI provider not connected", "orange", "info")}</div>
-          <div class="messages" id="msgs" aria-live="polite"></div>
-          <div class="suggest" id="suggest"></div>
-          <form class="composer" id="composer"><div class="attach-preview" id="attachPrev" hidden></div>
-            <div class="composer-row"><label class="icon-btn" data-tip="Attach an image" aria-label="Attach an image">${icon("paperclip")}<input type="file" accept="image/*" id="imgIn" class="sr-only"></label>
-            <textarea id="msgIn" rows="1" placeholder="Ask anything about ${esc(R.subject(subject).name)}…" aria-label="Message the tutor"></textarea>
-            <button type="submit" class="send-btn" aria-label="Send">${icon("send")}</button></div>
-            <small class="composer-hint">Enter to send · Shift + Enter for a new line</small></form>
-        </section></div>`;
-    const msgs = R.$("#msgs", view), input = R.$("#msgIn", view);
-    const drawList = () => {
-      R.$("#chatList", view).innerHTML = st.chats.length ? [...st.chats].reverse().map((c) => `<div class="chat-row ${chatObj && c.id === chatObj.id ? "is-active" : ""}"><a href="#/app/tutor?chat=${c.id}">${ui.subjectDot(c.subject)}<span><b>${esc(c.title)}</b><small>${R.relTime(c.updatedAt)}</small></span></a><button type="button" class="icon-btn sm" data-delchat="${c.id}" aria-label="Delete chat ${esc(c.title)}">${icon("trash")}</button></div>`).join("") : `<p class="muted small">Your conversations will appear here.</p>`;
-    };
-    const bubble = (m) => `<div class="msg msg-${m.role}">${m.role === "assistant" ? `<span class="msg-av">${icon("sparkles")}</span>` : ""}<div class="msg-body">${m.image ? `<img src="${m.image}" alt="Attached image" class="msg-img">` : m.imageName ? `<span class="pill pill-neutral">${icon("image")}${esc(m.imageName)}</span>` : ""}<div class="msg-text">${m.html || esc(m.text).replace(/\n/g, "<br>")}</div></div></div>`;
-    const drawMsgs = () => {
-      const intro = { role: "assistant", html: `<p>Hi ${esc(R.firstName())}! I'm your Recalro tutor for <b>${esc(R.subject(subject).name)}</b>.</p><p class="muted small">The AI provider isn't connected in this prototype, so I can't generate new explanations yet. I <i>can</i> search your flashcards and vault and show you what your own materials say.</p>` };
-      msgs.innerHTML = [intro, ...(chatObj?.messages || [])].map(bubble).join("");
-      msgs.scrollTop = msgs.scrollHeight;
-      R.$("#suggest", view).innerHTML = (chatObj?.messages?.length ? [] : suggestions()).map((s) => `<button type="button" class="chip-btn" data-prompt="${esc(s)}">${icon("sparkles")}${esc(s)}</button>`).join("");
-    };
-    const reply = (text) => {
-      const found = R.searchKnowledge(text, subject);
-      const html = `<p>I can't generate a full answer until an AI provider is connected.</p>${found.length ? `<p>Here's what your own materials say:</p><div class="sources">${found.map((f) => `<div class="source"><span class="pill pill-neutral">${f.kind}</span><b>${esc(f.title)}</b><p>${esc(f.body)}</p></div>`).join("")}</div>` : `<p>I couldn't find anything about that in your flashcards or vault yet. Try different keywords, or save what you learn to your <a href="#/app/vault">Knowledge Vault</a>.</p>`}`;
-      return { role: "assistant", html, sources: found.length };
-    };
-    const stream = async (el, html) => {
-      const target = el.querySelector(".msg-text");
-      if (R.reducedMotion()) { target.innerHTML = html; return; }
-      // Reveal block by block, like a streamed response.
-      const tmp = document.createElement("div"); tmp.innerHTML = html;
-      target.innerHTML = "";
-      for (const node of [...tmp.childNodes]) { target.append(node); R.animate(node.nodeType === 1 ? node : target, [{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "none" }], { duration: 260 }); msgs.scrollTop = msgs.scrollHeight; await new Promise((r) => setTimeout(r, 260)); }
-    };
-    const send = async (text) => {
-      text = text.trim();
-      if ((!text && !attachment) || busy) return;
-      busy = true;
-      if (!chatObj) { chatObj = { id: R.uid(), title: text.slice(0, 48) || "Image question", subject, messages: [], updatedAt: new Date().toISOString() }; st.chats.push(chatObj); history.replaceState(null, "", `#/app/tutor?chat=${chatObj.id}`); }
-      const userMsg = { role: "user", text, ...(attachment ? (attachment.data ? { image: attachment.data } : { imageName: attachment.name }) : {}) };
-      chatObj.messages.push(userMsg); chatObj.updatedAt = new Date().toISOString(); chatObj.subject = subject;
-      attachment = null; R.$("#attachPrev", view).hidden = true; input.value = ""; input.style.height = "";
-      R.$("#suggest", view).innerHTML = "";
-      msgs.insertAdjacentHTML("beforeend", bubble(userMsg));
-      R.animate(msgs.lastElementChild, [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }], { duration: 200 });
-      msgs.insertAdjacentHTML("beforeend", `<div class="msg msg-assistant is-typing"><span class="msg-av">${icon("sparkles")}</span><div class="msg-body"><div class="msg-text"><span class="typing"><i></i><i></i><i></i></span></div></div></div>`);
-      msgs.scrollTop = msgs.scrollHeight;
-      R.record({ t: "chat", subject, xp: R.content.xp.chat });
-      await new Promise((r) => setTimeout(r, R.reducedMotion() ? 0 : 650));
-      const ans = reply(text || "image");
-      chatObj.messages.push(ans); R.save();
-      const el = msgs.querySelector(".is-typing"); el.classList.remove("is-typing");
-      await stream(el, ans.html);
-      drawList(); busy = false; input.focus();
-    };
-    drawList(); drawMsgs();
-    R.$("#composer", view).addEventListener("submit", (e) => { e.preventDefault(); send(input.value); });
-    input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input.value); } });
-    input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(160, input.scrollHeight) + "px"; });
-    R.$("#tutorSubject", view).addEventListener("change", (e) => { subject = e.target.value; if (chatObj) { chatObj.subject = subject; R.save(); } input.placeholder = `Ask anything about ${R.subject(subject).name}…`; drawMsgs(); });
-    R.$("#imgIn", view).addEventListener("change", (e) => {
-      const f = e.target.files[0]; if (!f) return;
-      const prev = R.$("#attachPrev", view);
-      const done = (data) => { attachment = { name: f.name, data }; prev.hidden = false; prev.innerHTML = `${data ? `<img src="${data}" alt="">` : icon("image")}<span>${esc(f.name)}</span><button type="button" class="icon-btn sm" data-unattach aria-label="Remove attachment">${icon("x")}</button>`; };
-      if (f.size > 400 * 1024) { done(null); R.toast("Large image attached by name only; image analysis needs the AI provider.", { icon: "info" }); }
-      else { const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(f); }
-      e.target.value = "";
-    });
-    view.addEventListener("click", (e) => {
-      if (e.target.closest("[data-newchat]")) { chatObj = null; history.replaceState(null, "", "#/app/tutor?new=1"); drawList(); drawMsgs(); input.focus(); }
-      const p = e.target.closest("[data-prompt]"); if (p) { input.value = p.dataset.prompt; input.focus(); }
-      if (e.target.closest("[data-unattach]")) { attachment = null; R.$("#attachPrev", view).hidden = true; }
-      const d = e.target.closest("[data-delchat]"); if (d) { st.chats = st.chats.filter((c) => c.id !== d.dataset.delchat); if (chatObj?.id === d.dataset.delchat) chatObj = null; R.save(); drawList(); drawMsgs(); }
-    });
-    if (ctx.query.topic) input.value = `Help me understand ${ctx.query.topic}`;
-  }
-  function explain(view, ctx, tabs) {
-    const s = R.subjects()[0], mod = R.moduleStatus(s).find((m) => m.status === "active");
-    const topic = ctx.query.topic || (mod ? mod.name : "The second law of thermodynamics");
-    const past = R.state.explanations.slice(-5).reverse();
-    view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "AI tutor", desc: "Explaining an idea in your own words is one of the best ways to find gaps in understanding." })}${tabs}
-      <div class="grid-12">
-        ${ui.card(`<form class="form" id="explainForm"><div class="field"><label for="exTopic">Topic to explain</label><input id="exTopic" value="${esc(topic)}" required maxlength="120"></div>
-            <div class="field"><label for="exText">Your explanation</label><textarea id="exText" rows="9" placeholder="Explain it as if you were teaching a classmate. Use an example if you can…"></textarea><small class="hint" id="exCount">0 words</small></div>
-            ${ui.btn("Check my explanation", { icon: "sparkles", attrs: 'type="submit"' }).replace('type="button" ', "")}</form><div id="exFeedback"></div>`, { title: "Explain it to me", icon: "quote", cls: "span-8" })}
-        ${ui.card(`<ol class="tips"><li>Start with a one-sentence definition.</li><li>Explain <i>why</i> it works, not only what it is.</li><li>Give a concrete example.</li><li>Name a common misconception.</li></ol>${past.length ? `<h3 class="sub-h">Your recent explanations</h3><ul class="mini-list">${past.map((p) => `<li>${icon("quote")}<span>${esc(p.topic)}</span><small>${R.relTime(p.at)}</small></li>`).join("")}</ul>` : ""}`, { title: "A strong explanation", icon: "bulb", cls: "span-4" })}
-      </div>`;
-    const text = R.$("#exText", view);
-    text.addEventListener("input", () => (R.$("#exCount", view).textContent = `${(text.value.trim().match(/\S+/g) || []).length} words`));
-    R.$("#explainForm", view).addEventListener("submit", (e) => {
-      e.preventDefault();
-      const t = text.value.trim(), tp = R.$("#exTopic", view).value.trim();
-      if (!t) { R.toast("Write your explanation first.", { icon: "info" }); text.focus(); return; }
-      // Key terms come from your own cards/vault that match the topic.
-      const related = R.searchKnowledge(tp, null);
-      const pool = related.length ? related : R.searchKnowledge(t, null);
-      const terms = [...new Set(pool.flatMap((d) => words(`${d.title} ${d.body}`)).filter((w) => w.length > 4))].slice(0, 8);
-      const tw = new Set(words(t));
-      const hit = terms.filter((w) => tw.has(w)), wc = (t.match(/\S+/g) || []).length;
-      const hasExample = /\b(for example|e\.g\.|such as|for instance|imagine|like when)\b/i.test(t), hasWhy = /\b(because|so that|therefore|which means|due to)\b/i.test(t);
-      const checks = [[wc >= 40, `Length: ${wc} words`, wc >= 40 ? "Enough detail to show understanding." : "Aim for at least 40 words."], [hasWhy, "Explains why", hasWhy ? "You give reasons, not only facts." : "Add a “because…” to explain the mechanism."], [hasExample, "Uses an example", hasExample ? "Examples make ideas concrete." : "Add a concrete example."], [terms.length ? hit.length >= Math.ceil(terms.length / 3) : null, terms.length ? `Key terms: ${hit.length}/${terms.length}` : "Key terms", terms.length ? `From your materials: ${terms.map((w) => (hit.includes(w) ? `<b>${esc(w)}</b>` : esc(w))).join(", ")}` : "No matching cards or vault items to compare against."]];
-      const passed = checks.filter((c) => c[0]).length;
-      R.state.explanations.push({ topic: tp, text: t, at: new Date().toISOString(), score: passed });
-      R.record({ t: "explain", xp: R.content.xp.explain, topic: tp }, e.submitter);
-      R.$("#exFeedback", view).innerHTML = `<div class="feedback"><div class="fb-head">${ui.ring((passed / checks.length) * 100, { size: 64, stroke: 7, label: `${passed}/${checks.length}` })}<div><h3>${passed === checks.length ? "Excellent explanation" : passed >= 2 ? "Solid start" : "A first draft"}</h3><p class="muted small">Local text check against your own materials. It's not an AI or accuracy assessment, so compare with your course notes.</p></div></div>
-        <ul class="checks">${checks.map(([ok, l, d]) => `<li class="${ok ? "ok" : ok === null ? "na" : "todo"}">${icon(ok ? "check-circle" : "info")}<div><b>${l}</b><small>${d}</small></div></li>`).join("")}</ul></div>`;
-      R.animate(R.$(".feedback", view), [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 300 });
-    });
-  }
+  // The AI Tutor workspace (chat + Explain it to me) lives in app/tutor.js.
 
   /* ======================= SUMMARIES (+ Read aloud) ======================= */
   function summarize(text) {

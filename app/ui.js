@@ -72,6 +72,7 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
     more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    "arrow-up": '<path d="M12 19V5M5 12l7-7 7 7"/>',
     "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
     "arrow-up-right": '<path d="M7 17 17 7M8 7h9v9"/>',
     "arrow-left": '<path d="M19 12H5M11 6l-6 6 6 6"/>',
@@ -337,7 +338,7 @@
       const valid = pts.filter(Boolean);
       const areaD = area && valid.length > 1 ? `M${valid[0][0]},${padT + plotH} ` + valid.map((p) => `L${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ") + ` L${valid[valid.length - 1][0]},${padT + plotH} Z` : "";
       const last = valid[valid.length - 1];
-      return `${areaD ? `<path class="area" d="${areaD}" style="fill:${s.color}"/>` : ""}<path class="line" d="${d}" style="stroke:${s.color}"/>${valid.length === 1 ? `<circle class="dot" cx="${valid[0][0]}" cy="${valid[0][1]}" r="4" style="fill:${s.color}"/>` : ""}${last ? `<circle class="dot end" cx="${last[0]}" cy="${last[1]}" r="4.5" style="fill:${s.color}"/>` : ""}`;
+      return `${areaD ? `<path class="area" d="${areaD}" style="fill:${s.color}"/>` : ""}<path class="line" pathLength="1" d="${d}" style="stroke:${s.color}"/>${valid.length === 1 ? `<circle class="dot" cx="${valid[0][0]}" cy="${valid[0][1]}" r="4" style="fill:${s.color}"/>` : ""}${last ? `<circle class="dot end" cx="${last[0]}" cy="${last[1]}" r="4.5" style="fill:${s.color}"/>` : ""}`;
     }).join("");
     const hits = labels.map((l, i) => {
       const lines = series.map((s) => `${s.name}: ${s.values[i] == null ? "no data" : fmt(s.values[i]) + unit}`).join("\n");

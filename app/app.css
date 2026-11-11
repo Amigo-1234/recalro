@@ -212,7 +212,7 @@ body.dark .chip-btn.is-on { color: #05201F; }
 .cmd-go { color: var(--teal-600); }
 .cmd-empty { padding: 24px; text-align: center; color: var(--text-2); }
 
-/* ---------- App shell ---------- */
+/* ---------- App shell (layout overrides live in app/shell.css) ---------- */
 .shell { min-height: 100vh; min-height: 100dvh; }
 .sidebar { position: fixed; z-index: 40; inset: 0 auto 0 0; width: var(--sb-w); display: flex; flex-direction: column; gap: 6px; padding: 16px 12px 12px; background: var(--surface); border-right: 1px solid var(--line); transition: width .25s var(--ease), transform .3s var(--ease); }
 .sb-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 4px 8px; }
@@ -1142,23 +1142,6 @@ body.dark .msg-user .msg-text { color: #05201F; }
   .dash > .card.span-8 { grid-column: span 12; }
 }
 @media (max-width: 1023px) {
-  .sidebar { --sb-w: 288px; width: 288px; transform: translateX(-102%); box-shadow: var(--shadow-3); z-index: 60; }
-  .shell.is-collapsed .sidebar { width: 288px; }
-  .shell.is-collapsed .sb-word, .shell.is-collapsed .nav-label, .shell.is-collapsed .nav-group-head, .shell.is-collapsed .sb-search span, .shell.is-collapsed .sb-kbd, .shell.is-collapsed .sb-foot-text { display: revert; }
-  .shell.is-collapsed .nav-group-head { display: flex; } .shell.is-collapsed .sb-search span { display: block; } .shell.is-collapsed .sb-foot-text { display: grid; }
-  .shell.is-collapsed .nav-link { justify-content: flex-start; padding: 0 10px; }
-  .shell.is-collapsed .sb-top { flex-direction: row; }
-  .shell.is-collapsed .sb-search { justify-content: flex-start; padding: 0 10px; }
-  .shell.is-collapsed .nav-group { border: 0; padding: 0; margin-top: 6px; }
-  .shell.is-collapsed .sb-foot { justify-content: flex-start; padding: 10px; border: 1px solid var(--line); }
-  .shell.is-collapsed .nav-badge { position: static; }
-  .shell.drawer-open .sidebar { transform: none; }
-  .shell.drawer-open .scrim { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(10, 20, 24, .45); backdrop-filter: blur(2px); animation: fade .2s; }
-  @keyframes fade { from { opacity: 0; } }
-  .sb-collapse { display: none; }
-  .sb-close { display: inline-grid; }
-  .main { margin-left: 0; }
-  .tb-menu { display: inline-grid; }
   .topbar { padding: 0 16px; }
   .view { padding: 22px 20px 64px; }
   .exam-body { grid-template-columns: 1fr; }
@@ -1173,18 +1156,7 @@ body.dark .msg-user .msg-text { color: #05201F; }
 }
 @media (max-width: 767px) {
   :root { --tb-h: 58px; }
-  .tabbar { position: fixed; z-index: 45; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
-  .tabbar > * { position: relative; display: grid; justify-items: center; gap: 3px; padding: 6px 0; border: 0; border-radius: 12px; background: none; color: var(--text-3); font: 700 11px "DM Sans", sans-serif; text-decoration: none; }
-  .tabbar .ic { width: 22px; height: 22px; }
-  .tabbar .is-active { color: var(--teal-600); }
-  .tabbar .is-active .ic { stroke-width: 2.3; }
-  .tab-primary .ic { width: 44px; height: 44px; margin-top: -18px; padding: 11px; border-radius: 16px; background: var(--teal-600); color: #fff; box-shadow: 0 10px 20px -8px rgba(11,124,123,.8); }
-  .tab-badge { position: absolute; top: -12px; left: calc(50% + 12px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--orange); color: #1A0E00; font: 800 10px/18px Manrope, sans-serif; font-style: normal; box-shadow: 0 0 0 2px var(--surface); }
   .view { padding: 18px 16px calc(100px + env(safe-area-inset-bottom)); }
-  .crumbs { display: none; }
-  .tb-brand { display: block; margin-right: auto; }
-  .tb-brand img { width: 32px; height: 32px; }
-  .tb-search { display: inline-grid; }
   .chip-gem, .chip-bar { display: none; }
   .chip { height: 34px; padding: 0 9px; font-size: 13px; }
   .tb-right { gap: 4px; }
@@ -1252,7 +1224,6 @@ body.dark .msg-user .msg-text { color: #05201F; }
   .ach-count { border-left: 0; padding: 0; }
   .sh-earn { margin-left: 0; }
   .ph-inner { padding: 20px; }
-  .popover { position: fixed; left: 12px; right: 12px; top: calc(var(--tb-h) + 6px); width: auto; }
   .r-dialog { max-height: 92vh; }
   .cmd-dialog { margin-top: 8px; }
 }
