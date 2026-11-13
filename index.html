@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#151C20" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1619" />
+  <meta name="color-scheme" content="light dark" />
+  <!-- Critical paint: the first frame matches the hero, so no white flash or band appears
+       before the stylesheets load. app.js keeps the canvas colour in sync afterwards. -->
+  <style>html{background:#0F1619}body{margin:0;background:transparent}</style>
   <meta name="description" content="Recalro helps you understand more, remember longer and prepare with confidence." />
   <title>Recalro — Learn with purpose. Remember for life.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,8 +22,11 @@
   <link rel="stylesheet" href="app/shell.css" />
   <link rel="stylesheet" href="app/tutor.css" />
   <link rel="stylesheet" href="app/review.css" />
+  <link rel="stylesheet" href="app/pastq.css" />
 </head>
 <body>
+  <!-- ThemeProvider bootstrap: resolve Light / Dark / System before anything paints. -->
+  <script>(function(){var t="system";try{t=localStorage.getItem("recalro-theme")||"system"}catch(e){}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.body.classList.add(d?"dark":"theme-light");document.documentElement.style.colorScheme=d?"dark":"light"})();</script>
   <div id="marketing" class="mk">
     <a class="mk-skip" href="#platform">Skip to content</a>
     <!-- MarketingNavbar (marketing/nav.js) renders the desktop bar, mega-menu and mobile sheet here. -->
@@ -27,8 +34,8 @@
 
     <section class="mk-hero" aria-labelledby="heroTitle">
       <div class="mk-hero-bg" aria-hidden="true">
-        <video class="mk-hero-video" autoplay muted loop playsinline preload="metadata" poster="assets/hero-study-poster.jpg">
-          <source src="assets/hero-study-video-optimized.mp4" type="video/mp4">
+        <!-- Loaded only on tablets and desktops (app.js). Phones get a lightweight CSS background. -->
+        <video class="mk-hero-video" muted loop playsinline preload="none" data-src="assets/hero-study-video-optimized.mp4" data-poster="assets/hero-study-poster.jpg">
         </video>
         <div class="mk-hero-tint"></div>
         <div class="mk-hero-glow"><i></i><i></i></div>
@@ -491,6 +498,8 @@
   <script src="app/pages-learn.js"></script>
   <script src="app/pages-study.js"></script>
   <script src="app/tutor.js"></script>
+  <script src="app/pastq-data.js"></script>
+  <script src="app/pastq.js"></script>
   <script src="app/pages-social.js"></script>
   <script src="marketing/motion.js"></script>
   <script src="marketing/nav.js"></script>

@@ -24,6 +24,7 @@
       { route: "review", label: "Review Center", icon: "refresh", keywords: "due queue spaced repetition" },
       { route: "practice", label: "Quick Practice", icon: "zap", keywords: "quiz questions" },
       { route: "exam", label: "Exam Simulator", icon: "clipboard", keywords: "test timed mock" },
+      { route: "pastq", label: "Past Questions", icon: "cap", keywords: "eksu cbt past questions exam practice gst mth phy chm" },
       { route: "tutor", label: "AI Tutor", icon: "sparkles", keywords: "chat ask explain it to me" },
       { route: "summaries", label: "Summaries", icon: "file", keywords: "notes read aloud listen audio" } ] },
     { id: "insights", label: "Insights", icon: "chart", items: [
@@ -49,7 +50,7 @@
   const TABS = [
     { id: "home", label: "Home", icon: "home", route: "dashboard", covers: ["dashboard"] },
     { id: "learn", label: "Learn", icon: "book", route: "subjects", covers: ["subjects", "roadmap", "planner", "vault"] },
-    { id: "practice", label: "Practice", icon: "cards", route: "review", covers: ["review", "flashcards", "practice", "exam"], badge: "due" },
+    { id: "practice", label: "Practice", icon: "cards", route: "review", covers: ["review", "flashcards", "practice", "exam", "pastq"], badge: "due" },
     { id: "tutor", label: "AI Tutor", icon: "sparkles", route: "tutor", covers: ["tutor", "summaries"] },
   ];
   const navItem = (route) => { for (const g of R.NAV) for (const it of g.items) if (it.route === route) return { ...it, group: g }; const a = R.ACCOUNT.find((x) => x.route === route); return a ? { ...a, group: { id: "account", label: "Account" } } : null; };
@@ -118,10 +119,25 @@
 
   /* ---------- Theme (light / dark / system) ---------- */
   const THEME_KEY = "recalro-theme", darkMq = window.matchMedia("(prefers-color-scheme: dark)");
-  R.getTheme = () => { try { return localStorage.getItem(THEME_KEY) || "light"; } catch { return "light"; } };
-  R.applyTheme = () => { const t = R.getTheme(); document.body.classList.toggle("dark", t === "dark" || (t === "system" && darkMq.matches)); };
-  R.setTheme = (t) => { try { localStorage.setItem(THEME_KEY, t); } catch (e) { console.error("Recalro: could not save theme", e); } R.applyTheme(); R.emit("theme"); };
-  darkMq.addEventListener("change", R.applyTheme);
+  /* ThemeProvider: "system" follows the device; an explicit Light/Dark choice wins.
+     The body class is the single source of truth for every screen (marketing, auth,
+     app), and an inline script in index.html applies it before the first paint. */
+  R.getTheme = () => { try { return localStorage.getItem(THEME_KEY) || "system"; } catch { return "system"; } };
+  R.resolvedTheme = () => { const t = R.getTheme(); return t === "dark" || (t === "system" && darkMq.matches) ? "dark" : "light"; };
+  R.applyTheme = () => {
+    const dark = R.resolvedTheme() === "dark";
+    document.body.classList.toggle("dark", dark);
+    document.body.classList.toggle("theme-light", !dark);
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+  };
+  R.setTheme = (t) => {
+    try { localStorage.setItem(THEME_KEY, t); } catch (e) { console.error("Recalro: could not save theme", e); }
+    // Cross-fade colours briefly (skipped for reduced motion), then return to normal.
+    const html = document.documentElement;
+    if (!R.reducedMotion()) { html.classList.add("theme-anim"); clearTimeout(R.setTheme.t); R.setTheme.t = setTimeout(() => html.classList.remove("theme-anim"), 420); }
+    R.applyTheme(); R.emit("theme");
+  };
+  darkMq.addEventListener("change", () => { R.applyTheme(); R.emit("theme"); });
   R.applyTheme();
 
   /* ---------- AppShell markup ----------
@@ -185,6 +201,7 @@
     R.$$(".nav-group").forEach((g) => g.classList.toggle("has-active", !!item && g.dataset.group === item.group.id));
     if (item && item.group.id !== "overview" && item.group.id !== "account") openGroup(item.group.id);
     R.$("#shell").dataset.route = ctx.page;
+    R.showMobileNav?.();
     const tab = activeTab(ctx.page);
     R.$$(".tabbar [data-tab]").forEach((t) => { const on = t.dataset.tab === tab; t.classList.toggle("is-active", on); if (on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current"); });
     const extra = def.crumb ? def.crumb(ctx) : null;
@@ -199,7 +216,10 @@
     closeFlyout();
   }
   // Focus mode hides all navigation chrome (exams, flashcard review).
-  R.setFocusMode = (on) => { R.$("#shell")?.classList.toggle("is-focus", !!on); document.body.classList.toggle("focus-mode", !!on); };
+  R.setFocusMode = (on) => {
+    R.$("#shell")?.classList.toggle("is-focus", !!on); document.body.classList.toggle("focus-mode", !!on);
+    if (!on) setTimeout(() => R.flushCelebrations?.(), 400);
+  };
 
   let chipState = null;
   R.updateChips = (initial = false) => {
@@ -353,6 +373,39 @@
       <button type="button" class="menu-item menu-signout" data-signout>${icon("logout")}Sign out</button>`;
   }
 
+  /* ---------- SmartMobileNavigation + ScrollDirectionController ----------
+     Phone bottom bar: shown on load and near the top, slides away while scrolling
+     down, returns on scroll-up or after a short pause. Focus mode and the open
+     keyboard always win. Only page (window) scrolling counts, so nested scroll areas
+     such as the tutor thread never hide it. One passive listener, transform-only
+     motion, so content never jumps. */
+  function SmartMobileNavigation() {
+    const phoneMq = window.matchMedia("(max-width: 767px)");
+    const TOP_ZONE = 72, THRESHOLD = 10, IDLE_MS = 1400;
+    let lastY = window.scrollY, idle = 0, ticking = false;
+    const set = (hidden) => {
+      document.body.classList.toggle("nav-hidden", hidden);
+      R.$("#tabbar")?.toggleAttribute("inert", hidden);
+    };
+    R.showMobileNav = () => { clearTimeout(idle); set(false); lastY = window.scrollY; };
+    const update = () => {
+      ticking = false;
+      if (!phoneMq.matches || R.$("#app").classList.contains("hidden")) { set(false); return; }
+      const y = Math.max(0, window.scrollY), dy = y - lastY;
+      if (y < TOP_ZONE) set(false);
+      else if (dy > THRESHOLD) set(true);
+      else if (dy < -THRESHOLD) set(false);
+      if (Math.abs(dy) > THRESHOLD || y < TOP_ZONE) lastY = y;
+      clearTimeout(idle);
+      // After the reader pauses, bring navigation back (not inside focused activities).
+      idle = setTimeout(() => { if (!R.$("#shell")?.classList.contains("is-focus")) set(false); }, IDLE_MS);
+    };
+    window.addEventListener("scroll", () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    phoneMq.addEventListener("change", () => set(false));
+    // Keyboard users reaching the bar always get it back.
+    R.$("#tabbar").addEventListener("focusin", () => set(false));
+  }
+
   /* ---------- Wiring ---------- */
   function wire() {
     R.$("#sbNav").addEventListener("click", (e) => {
@@ -381,6 +434,7 @@
       const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
       if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing && !document.querySelector("dialog[open]"))) { e.preventDefault(); R.openCommand(); }
     });
+    SmartMobileNavigation();
     // Virtual keyboard: hide the bottom bar while typing so inputs and the tutor composer stay visible.
     const vv = window.visualViewport;
     if (vv) {

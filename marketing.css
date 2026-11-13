@@ -44,25 +44,6 @@
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  #marketing.mk {
-    --mk-bg: #151C20;
-    --mk-surface: #1B2429;
-    --mk-surface-2: #212C32;
-    --mk-ink: #EDF3F3;
-    --mk-text: #B3BEC0;
-    --mk-muted: #899395;
-    --mk-line: #2A363D;
-    --mk-teal-soft: #173A3B;
-    --mk-orange-soft: #3A2410;
-    --mk-orange-ink: #FF9A44;
-    --mk-teal-deep: #4FCFCB;
-    --mk-glass: rgba(27, 36, 41, .8);
-    --mk-glass-line: rgba(255, 255, 255, .08);
-    --mk-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -8px rgba(0, 0, 0, .5);
-    --mk-shadow-lg: 0 32px 64px -16px rgba(0, 0, 0, .6);
-  }
-}
 body.dark #marketing.mk {
   --mk-bg: #151C20;
   --mk-surface: #1B2429;
@@ -672,4 +653,33 @@ body.dark #marketing.mk {
 @media (prefers-reduced-motion: reduce) {
   .mk *, .mk *::before, .mk *::after { animation: none !important; transition: none !important; }
   .mk-js .mk-reveal { opacity: 1; transform: none; }
+}
+
+/* ==========================================================================
+   Mobile: lighter, typography-first marketing page
+   Photos and the hero video are desktop/tablet only. Lazy images inside
+   display:none containers are never fetched, so phones download far less.
+   Product demos (live review, story, feature theatre) stay on every size.
+   ========================================================================== */
+.mk-footer { padding-bottom: env(safe-area-inset-bottom); }
+.mk-hero { background: radial-gradient(120% 70% at 85% 0%, rgba(20, 160, 159, .35), transparent 60%), radial-gradient(90% 60% at 0% 100%, rgba(247, 117, 3, .16), transparent 60%), #0F1619; }
+@media (max-width: 767px) {
+  .mk .mk-hero-video { display: none; }
+  .mk-hero-tint { background: linear-gradient(180deg, transparent 70%, var(--mk-bg) 100%); }
+  .mk-hero-tint::after { display: none; }
+  .mk-hero { padding-top: calc(96px + env(safe-area-inset-top)); }
+  .mk-proof-icons { display: none; }
+  /* Feature bento: text cards on brand colour instead of photographs. */
+  .mk-feature img { display: none; }
+  .mk-bento { grid-auto-rows: auto; gap: 10px; }
+  .mk-feature { min-height: 0; background: linear-gradient(150deg, #173238, #151C20 70%); border: 1px solid rgba(255, 255, 255, .06); }
+  .mk-feature:nth-child(3n+2) { background: linear-gradient(150deg, #0B4B4A, #151C20 75%); }
+  .mk-feature:nth-child(3n) { background: linear-gradient(150deg, #3A2410, #151C20 70%); }
+  .mk-feature::after { display: none; }
+  .mk-feature-body { position: relative; padding: 20px; }
+  .mk-feature-wide, .mk-feature-tall { grid-column: auto; grid-row: auto; }
+  /* Community: copy + chip, no photograph. */
+  .mk-community-media > img { display: none; }
+  .mk-community-chip { position: static; margin-top: 4px; }
+  .mk-community { padding: 22px 18px; }
 }

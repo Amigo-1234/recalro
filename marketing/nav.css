@@ -8,11 +8,11 @@ html.mk-locked { overflow: hidden; }
 .mk-brand img { width: 34px; height: 34px; object-fit: contain; border-radius: 9px; }
 
 .mk-nav-wrap {
-  position: fixed; inset: 14px 0 auto; z-index: 50;
+  position: fixed; inset: calc(14px + env(safe-area-inset-top)) 0 auto; z-index: 50;
   padding-inline: 16px; pointer-events: none;
   transition: inset .35s var(--mk-ease);
 }
-.mk-nav-wrap.is-scrolled { inset: 8px 0 auto; }
+.mk-nav-wrap.is-scrolled { inset: calc(8px + env(safe-area-inset-top)) 0 auto; }
 .mk-nav {
   position: relative; pointer-events: auto;
   width: min(1180px, 100%); margin-inline: auto; height: 64px;
@@ -178,7 +178,7 @@ html.mk-locked { overflow: hidden; }
   .mk-burger { display: flex; }
 }
 @media (max-width: 520px) {
-  .mk-nav-wrap { padding-inline: 10px; inset: 10px 0 auto; }
+  .mk-nav-wrap { padding-inline: 10px; inset: calc(10px + env(safe-area-inset-top)) 0 auto; }
   .mk-nav { height: 60px; border-radius: 18px; }
   .mk-nav-start { display: none; }
 }

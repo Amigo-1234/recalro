@@ -300,9 +300,7 @@
 .sw-dialog .sw-next { width: 100%; }
 
 /* ---------- Dark mode bits not covered by tokens ---------- */
-@media (prefers-color-scheme: dark) { #auth.au { --au-teal-600: #2BB8B6; --au-teal-700: #5FD3D1; --au-orange-ink: #FF9A44; } }
 body.dark #auth.au { --au-teal-600: #2BB8B6; --au-teal-700: #5FD3D1; --au-orange-ink: #FF9A44; }
-@media (prefers-color-scheme: dark) { #auth.au .sw-next:not(.is-final), #auth.au .sw-chip input:checked + span, #auth.au .sw-tile-input:checked + .sw-tile-box .sw-tile-check, #auth.au .sw-tile-input:checked + .sw-tile-box .sw-tile-ic, #auth.au .sw-avatar, #auth.au .au-submit { color: #0F1619; } }
 body.dark #auth.au .sw-next:not(.is-final), body.dark #auth.au .sw-chip input:checked + span, body.dark #auth.au .au-submit { color: #0F1619; }
 
 /* ---------- Responsive ---------- */

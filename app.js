@@ -37,8 +37,18 @@ window.scrollTo(0, 0);
 
 /* ---------- Hero video: pause when hidden, off-screen tab, or reduced motion ---------- */
 const heroVideo = $(".mk-hero-video"), heroMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+// The video (≈3.5 MB) and its poster load only on tablets and larger. Phones keep the CSS background.
+const heroVideoMq = window.matchMedia("(min-width: 768px)");
+function loadHeroVideo() {
+  if (!heroVideo || heroVideo.src || !heroVideoMq.matches) return;
+  heroVideo.poster = heroVideo.dataset.poster;
+  heroVideo.src = heroVideo.dataset.src;
+  heroVideo.preload = "metadata";
+}
+loadHeroVideo();
+heroVideoMq.addEventListener("change", () => { loadHeroVideo(); updateHeroMotion(); });
 function updateHeroMotion() {
-  if (!heroVideo) return;
+  if (!heroVideo || !heroVideo.src) return;
   if (heroMotionPreference.matches || marketing.classList.contains("hidden") || document.visibilityState !== "visible") heroVideo.pause();
   else if (heroVideo.paused) heroVideo.play().catch((error) => { if (error.name !== "AbortError") console.error("Unable to play hero video:", error); });
 }
@@ -46,19 +56,46 @@ updateHeroMotion();
 heroMotionPreference.addEventListener("change", updateHeroMotion);
 document.addEventListener("visibilitychange", updateHeroMotion);
 
+/* ---------- Page canvas ----------
+   The root background shows during iOS rubber-band scrolling and before content paints.
+   Keep it matched to what's on screen: the hero colour near the top of the marketing page,
+   the footer colour near the bottom, and the active screen's background elsewhere. */
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+let canvasColor = "";
+function setCanvas(color) {
+  if (!color || color === canvasColor) return;
+  canvasColor = color;
+  document.documentElement.style.backgroundColor = color;
+  themeMeta?.setAttribute("content", color);
+}
+function syncCanvas() {
+  if (!marketing.classList.contains("hidden")) {
+    const past = window.scrollY > (document.documentElement.scrollHeight - window.innerHeight) / 2;
+    setCanvas(past ? getComputedStyle($(".mk-footer")).backgroundColor : "#0F1619");
+  } else {
+    const screen = !$("#auth").classList.contains("hidden") ? $("#auth") : document.body;
+    setCanvas(getComputedStyle(screen).backgroundColor);
+  }
+}
+let canvasTick = false;
+window.addEventListener("scroll", () => { if (!canvasTick) { canvasTick = true; requestAnimationFrame(() => { canvasTick = false; syncCanvas(); }); } }, { passive: true });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => setTimeout(syncCanvas, 50));
+window.R.on?.("theme", () => setTimeout(syncCanvas, 50));
+
 /* ---------- Screens ---------- */
 function openApp(page = "dashboard") {
   marketing.classList.add("hidden"); $("#auth").classList.add("hidden");
   updateHeroMotion();
   window.R.openApp(page);
   window.scrollTo(0, 0);
+  syncCanvas();
 }
 function goLanding() {
   window.R.closeApp();
   app.classList.add("hidden"); $("#auth").classList.add("hidden"); marketing.classList.remove("hidden");
   window.R.applyTheme();
   updateHeroMotion(); window.scrollTo(0, 0);
-  nav?.refresh();
+  nav?.refresh(); syncCanvas();
 }
 
 /* ---------- Authentication UI (demo) ----------
@@ -117,7 +154,7 @@ function openAuth(mode = "login", next = "dashboard") {
   authScreen.dataset.nextRoute = next;
   if (productDemoDialog.open) productDemoDialog.close();
   marketing.classList.add("hidden"); app.classList.add("hidden"); authScreen.classList.remove("hidden");
-  updateHeroMotion(); window.scrollTo(0, 0); setAuthMode(mode);
+  updateHeroMotion(); window.scrollTo(0, 0); setAuthMode(mode); syncCanvas();
   if (mode !== "signup") $("#authEmail").focus({ preventScroll: true });
 }
 function setFieldError(input, message) {
@@ -346,3 +383,4 @@ function routeFromHash() {
 }
 window.addEventListener("hashchange", () => { if (app.classList.contains("hidden")) routeFromHash(); });
 routeFromHash();
+syncCanvas();

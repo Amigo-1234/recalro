@@ -72,6 +72,7 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     moon: '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
     more: '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+    cap: '<path d="M2 9.5 12 5l10 4.5-10 4.5L2 9.5z"/><path d="M6 11.3V16c0 1.4 2.7 3 6 3s6-1.6 6-3v-4.7"/><path d="M22 9.5V15"/>',
     "arrow-up": '<path d="M12 19V5M5 12l7-7 7 7"/>',
     "arrow-right": '<path d="M5 12h14M13 6l6 6-6 6"/>',
     "arrow-up-right": '<path d="M7 17 17 7M8 7h9v9"/>',
@@ -134,6 +135,13 @@
     return `<span class="avatar ${frame ? "frame-" + frame : ""}" style="--av:${size}px">${avatar ? `<span class="avatar-emoji">${avatar}</span>` : esc(R.initials())}</span>`;
   };
   R.ui.kbd = (k) => `<kbd>${k}</kbd>`;
+  /* ThemeSelector: radio tiles with a miniature preview of each theme. */
+  R.ui.themeSelector = (value) => {
+    const opt = (v, label, sub) => `<label class="theme-opt"><input type="radio" name="theme-choice" value="${v}" ${v === value ? "checked" : ""} data-theme-choice>
+      <span class="theme-card"><span class="theme-prev tp-${v}" aria-hidden="true"><i class="tp-side"></i><i class="tp-head"></i><i class="tp-card"></i><i class="tp-card tp-b"></i><i class="tp-dot"></i></span>
+      <span class="theme-meta"><b>${label}</b><small>${sub}</small></span><span class="theme-tick" aria-hidden="true">${R.icon("check")}</span></span></label>`;
+    return `<fieldset class="theme-sel"><legend class="sr-only">Theme</legend>${opt("light", "Light", "Bright and clear")}${opt("dark", "Dark", "Easy on the eyes")}${opt("system", "System", "Matches your device")}</fieldset>`;
+  };
 
   /* ---------- Toasts ---------- */
   let toastTimer;
@@ -277,7 +285,11 @@
   const queue = [];
   let showing = false;
   R.celebrate = (opts) => { queue.push(opts); if (!showing) next(); };
+  // Big moments wait while a focused activity (CBT, flashcard review) is running,
+  // then appear once it ends, so they never interrupt answering.
+  R.flushCelebrations = () => { if (!showing) next(); };
   function next() {
+    if (document.body.classList.contains("focus-mode") && queue.length) { showing = false; return; }
     const o = queue.shift();
     if (!o) { showing = false; return; }
     showing = true;

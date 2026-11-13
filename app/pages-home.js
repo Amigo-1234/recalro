@@ -152,7 +152,7 @@
     const xp = R.sum(list, (a) => a.xp), mins = R.minutesFor(list), acc = R.accuracy(list), activeDays = s.filter((d) => d.xp > 0).length;
     const weekly = range > 31;
     const cols = weekly ? Array.from({ length: Math.ceil(range / 7) }, (_, i) => { const chunk = s.slice(i * 7, i * 7 + 7); return { label: R.fmtDate(chunk[0].day), value: R.sum(chunk, (d) => d.xp), tip: `Week of ${R.fmtDate(chunk[0].day)}: ${R.fmt(R.sum(chunk, (d) => d.xp))} XP` }; }) : s.map((d, i) => ({ label: range <= 7 ? wk(d.day) : R.fmtDate(d.day, { day: "numeric" }), value: d.xp, highlight: i === s.length - 1, tip: `${R.fmtDate(d.day, { weekday: "short", month: "short", day: "numeric" })}: ${R.fmt(d.xp)} XP · ~${Math.round(d.minutes)} min` }));
-    const types = [["review", "Flashcard reviews"], ["answer", "Practice answers"], ["explain", "Explanations"], ["summary", "Summaries"], ["vault", "Vault saves"], ["chat", "Tutor questions"]].map(([t, l]) => ({ label: l, n: list.filter((a) => a.t === t).length, mins: R.minutesFor(list.filter((a) => a.t === t)) })).filter((x) => x.n);
+    const types = [["review", "Flashcard reviews"], ["answer", "Practice answers"], ["pastq", "Past questions"], ["explain", "Explanations"], ["summary", "Summaries"], ["vault", "Vault saves"], ["chat", "Tutor questions"]].map(([t, l]) => ({ label: l, n: list.filter((a) => a.t === t).length, mins: R.minutesFor(list.filter((a) => a.t === t)) })).filter((x) => x.n);
     const totalTypeMins = R.sum(types, (t) => t.mins) || 1;
     // Insights from data
     const insights = [];

@@ -67,6 +67,28 @@ Mega-menu items link to the matching demo (`#demo-<id>`) or story stage (`#story
 - **Simulated:** Google button (shows a prototype notice), the verification email (the code is shown in an on-screen "prototype inbox"), Terms/Privacy (dialog says they're not published yet). Finishing writes the same demo session as log in and applies the display name, daily goal and onboarding answers to local app state.
 - Integration points: `AccountDetailsStep.beforeNext` (send code), `checkCode` (verify), `complete()` (create account / save profile).
 
+## Past Questions (EKSU) and the CBT
+Route `#/app/pastq` (Study Tools → Past Questions; the phone Practice tab covers it).
+- `app/pastq-data.js`: institution config and a **demonstration** bank: 40 original practice questions arranged like EKSU 100-level first-semester courses (MTH 101, PHY 101, CHM 101, GST 111). **None of them is an official EKSU past question.** The UI labels every collection and question as demo practice, and says Recalro is not affiliated with or endorsed by EKSU. No university logo is used.
+- `app/pastq.js` + `pastq.css`: dashboard (performance from real activity, recent attempts, readiness only after 20 answers), searchable library with filters (level, semester, faculty, department, session), setup, CBT workspace, results and answer review.
+- **Practice mode:** check each answer, see your answer vs the correct one, a structured explanation (concept, formula, given values, working, result, why your option is wrong, common mistake) and an optional similar-questions session on the same topic, which returns you to the main flow afterwards.
+- **Exam mode:** optional timer (auto-submits at zero), no answers revealed, flagging, answer changes, navigator (side panel on desktop, sheet on phones), submission confirmation, then results with a full review (all / incorrect / flagged) and "Practise my mistakes".
+- Progress is stored locally in `R.state.pastq.attempts`, and each answer is logged as activity type `pastq` (counts toward XP, streaks and study time).
+
+### Question-bank contract (backend work, not part of this frontend)
+Replace `window.RecalroPastQ` with an API returning the shapes documented at the top of `app/pastq-data.js` (Institution, Collection, Question). Required before launch:
+1. A verified question bank with provenance per question (`source.kind: "past"`, `verified: true`, exam year/paper). Only those may be labelled "past question".
+2. Permission or licensing for any reproduced examination content.
+3. Server-side storage for attempts and answers so progress syncs across devices.
+4. Optional: server-side "similar question" matching (the prototype matches by topic).
+
+## Theme system
+Light, Dark and System (default) in Settings → Appearance. The `body.dark` / `body.theme-light` class is the single source for every surface (marketing, auth and app). An inline script in `index.html` applies it before first paint (no flash), switches cross-fade briefly, and System follows live OS changes. Text on filled colours uses semantic tokens (`--on-teal`, `--on-orange`, `--on-status`) so contrast holds in both themes.
+
+## Mobile behaviour
+- Phone bottom bar (`SmartMobileNavigation` in `app/shell.js`): visible on load and near the top, slides away while scrolling down, returns on scroll-up or after a short pause. It is hidden during focused activities (flashcard review, CBT) and while the keyboard is open. Celebrations wait until a focused activity ends.
+- Marketing page on phones: no hero video, poster or photographs (none are downloaded); text cards replace the photo bento; product demos stay. The page canvas colour follows the scroll position, so iOS overscroll never shows a mismatched band; safe-area insets are respected.
+
 ## Marketing media
 The hero video, its poster, and marketing photos are bundled under `assets/`, so the page does not depend on third-party media hosts at runtime. The hero video is the Pexels clip by Kampus Production, served locally as optimized 1080p H.264 (the original 4K download was 8.6 MB; the optimized clip is about 3.5 MB):
 - `hero-study-video-optimized.mp4` and `hero-study-poster.jpg` — [Pexels video 5939924](https://www.pexels.com/video/man-and-woman-using-a-laptop-in-a-library-5939924/)

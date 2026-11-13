@@ -31,14 +31,6 @@
   font-family: "DM Sans", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-@media (prefers-color-scheme: dark) {
-  #auth.au {
-    --au-bg: #151C20; --au-surface: #1B2429; --au-surface-2: #212C32;
-    --au-ink: #EDF3F3; --au-text: #B3BEC0; --au-muted: #899395; --au-line: #2A363D;
-    --au-danger: #ff8a75; --au-danger-soft: #3a1d18;
-    --au-shadow: 0 24px 48px -16px rgba(0, 0, 0, .6);
-  }
-}
 body.dark #auth.au {
   --au-bg: #151C20; --au-surface: #1B2429; --au-surface-2: #212C32;
   --au-ink: #EDF3F3; --au-text: #B3BEC0; --au-muted: #899395; --au-line: #2A363D;
