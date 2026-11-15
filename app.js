@@ -35,18 +35,15 @@ decorateArrows(marketing);
 if ("scrollRestoration" in history) history.scrollRestoration = "manual";
 window.scrollTo(0, 0);
 
-/* ---------- Hero video: pause when hidden, off-screen tab, or reduced motion ---------- */
+/* ---------- Hero background video: pause when hidden or reduced motion ---------- */
 const heroVideo = $(".mk-hero-video"), heroMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-// The video (≈3.5 MB) and its poster load only on tablets and larger. Phones keep the CSS background.
-const heroVideoMq = window.matchMedia("(min-width: 768px)");
 function loadHeroVideo() {
-  if (!heroVideo || heroVideo.src || !heroVideoMq.matches) return;
+  if (!heroVideo || heroVideo.src) return;
   heroVideo.poster = heroVideo.dataset.poster;
   heroVideo.src = heroVideo.dataset.src;
   heroVideo.preload = "metadata";
 }
 loadHeroVideo();
-heroVideoMq.addEventListener("change", () => { loadHeroVideo(); updateHeroMotion(); });
 function updateHeroMotion() {
   if (!heroVideo || !heroVideo.src) return;
   if (heroMotionPreference.matches || marketing.classList.contains("hidden") || document.visibilityState !== "visible") heroVideo.pause();
@@ -304,11 +301,15 @@ $("#newsletterForm").addEventListener("submit", (event) => {
 (function heroLiveDemo() {
   const card = $("#heroCard"), actions = $("#heroActions");
   if (!card || !window.R) return;
-  const deck = ["th-8", "fl-5", "ma-1"].map((id) => window.R.content.cards.find((c) => c.id === id)).filter(Boolean);
+  const deck = [
+    { subject: "biology", module: "cells", front: "What is the function of the cell membrane?", back: "It controls which substances enter and leave the cell." },
+    { subject: "biology", module: "cells", front: "What does the mitochondrion do?", back: "It releases usable energy during cellular respiration." },
+    { subject: "biology", module: "cells", front: "Where is most of a cell's genetic material stored?", back: "In the nucleus, which contains most of a eukaryotic cell's DNA." },
+  ];
   const XP = { Again: 4, Hard: 7, Good: 10, Easy: 10 };
   const NEXT = { Again: "10 min", Hard: "1 day", Good: "1 day", Easy: "2 days" };
   const TUTOR = {
-    Again: (c) => `No worries. Want a worked example on ${c.module.includes("thermo") ? "Brayton cycles" : c.subject === "fluids" ? "Bernoulli's equation" : "complex numbers"}? It'll come back in 10 minutes.`,
+    Again: () => "No worries. Want a worked example on cell structures? It'll come back in 10 minutes.",
     Hard: () => "That took effort, which is exactly what makes it stick. I'll bring it back sooner.",
     Good: () => "Nice recall! I'll schedule that one for tomorrow.",
     Easy: () => "Too easy? I'll wait longer before showing it again.",
@@ -328,7 +329,7 @@ $("#newsletterForm").addEventListener("submit", (event) => {
   const show = () => {
     const c = deck[index], subject = window.R.content.subjects.find((s) => s.id === c.subject);
     flipped = false; card.classList.remove("is-flipped"); card.hidden = false;
-    $("#heroDeck").textContent = subject.name;
+    $("#heroDeck").textContent = subject?.name || "Biology";
     $("#heroCount").textContent = `Card ${index + 1} of ${deck.length}`;
     $("#heroProgress").style.width = `${(index / deck.length) * 100}%`;
     card.querySelector(".mk-hcard-front").innerHTML = `<small>Question</small><b>${esc(c.front)}</b><em>Tap the card or press Reveal</em>`;

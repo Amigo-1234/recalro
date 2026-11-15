@@ -176,7 +176,7 @@ body.dark #marketing.mk {
 .mk-hero-grid { position: relative; display: grid; grid-template-columns: 1.08fr .92fr; gap: 64px; align-items: center; width: min(1200px, calc(100% - 32px)); }
 .mk-hero .mk-pill { background: rgba(255, 255, 255, .08); border-color: rgba(255, 255, 255, .16); color: #BDEBEA; box-shadow: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 .mk-hero-copy h1 {
-  margin: 24px 0 22px; color: var(--hero-ink);
+  margin: 0 0 22px; color: var(--hero-ink);
   font-size: clamp(42px, 6.2vw, 82px); line-height: 1.02; font-weight: 800; letter-spacing: -.045em;
   text-shadow: 0 2px 30px rgba(0, 0, 0, .25);
 }
@@ -657,15 +657,13 @@ body.dark #marketing.mk {
 
 /* ==========================================================================
    Mobile: lighter, typography-first marketing page
-   Photos and the hero video are desktop/tablet only. Lazy images inside
-   display:none containers are never fetched, so phones download far less.
+   Photos are hidden on phones; the hero video remains behind the copy.
    Product demos (live review, story, feature theatre) stay on every size.
    ========================================================================== */
 .mk-footer { padding-bottom: env(safe-area-inset-bottom); }
 .mk-hero { background: radial-gradient(120% 70% at 85% 0%, rgba(20, 160, 159, .35), transparent 60%), radial-gradient(90% 60% at 0% 100%, rgba(247, 117, 3, .16), transparent 60%), #0F1619; }
 @media (max-width: 767px) {
-  .mk .mk-hero-video { display: none; }
-  .mk-hero-tint { background: linear-gradient(180deg, transparent 70%, var(--mk-bg) 100%); }
+  .mk-hero-tint { background: linear-gradient(180deg, rgba(13, 19, 22, .72) 0%, rgba(13, 19, 22, .64) 62%, rgba(13, 19, 22, .84) 82%, var(--mk-bg) 100%); }
   .mk-hero-tint::after { display: none; }
   .mk-hero { padding-top: calc(96px + env(safe-area-inset-top)); }
   .mk-proof-icons { display: none; }
@@ -682,4 +680,22 @@ body.dark #marketing.mk {
   .mk-community-media > img { display: none; }
   .mk-community-chip { position: static; margin-top: 4px; }
   .mk-community { padding: 22px 18px; }
+}
+
+/* Compact, readable marketing flow on phones */
+@media (max-width:600px) {
+  .mk-hero { padding-bottom:58px; }
+  .mk-hero-copy h1 { font-size:clamp(40px,11vw,54px); line-height:1.02; }
+  .mk-hero-actions { gap:9px; margin-top:24px; }
+  .mk-hero-proof { margin-top:24px; padding-top:18px; }
+  .mk-tryit { display:block; padding-top:36px; }
+  .mk-live-window { padding:12px; }
+  .mk-hcard { height:160px; }
+  .mk-live-actions { min-height:44px; margin-top:10px; }
+  .mk-live-tutor { display:none; }
+  .mk-marquee { display:flex; width:100%; gap:0; padding:16px; }
+  .mk-section-head { margin-bottom:26px; }
+  .mk-story-stage { display:none; }
+  .mk-community-media { display:none; }
+  .mk-footer-top { gap:24px; }
 }

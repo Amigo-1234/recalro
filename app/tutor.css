@@ -265,3 +265,11 @@ body.dark .tw-send:not(.is-stop) { color: #05201F; }
   .md-math { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) { .tw-orb { animation: none; } }
+
+/* AI Tutor learning modes and voice controls */
+.tw-modebar { display:flex; justify-content:flex-start; padding:0 4px; }
+.tw-modebar label { display:flex; align-items:center; gap:8px; color:var(--text-3); font-size:11px; font-weight:700; }
+.tw-modebar select { max-width:190px; min-height:30px; padding:4px 28px 4px 10px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--text-2); font:600 12px "DM Sans",sans-serif; }
+.tw-tool.is-recording { background:color-mix(in srgb,var(--danger) 13%,transparent); color:var(--danger); animation:tw-record-pulse 1.2s infinite; }
+@keyframes tw-record-pulse { 50% { box-shadow:0 0 0 6px color-mix(in srgb,var(--danger) 12%,transparent); } }
+@media(max-width:600px) { .tw-dock { padding:4px 10px calc(10px + env(safe-area-inset-bottom)); } .tw-hint span:last-child { display:none; } .tw-modebar select { max-width:170px; } }

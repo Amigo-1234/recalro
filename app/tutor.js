@@ -5,16 +5,16 @@
    MessageComposer + AttachmentPreview · SubjectSelector · SuggestedPrompts ·
    ExplainItWorkspace.
 
-   Availability: no AI provider is connected in this prototype. Answers are
-   assembled locally from the student's own flashcards, vault and review
-   history, and every answer says so. To connect a provider, replace
-   `composeAnswer()` and feed streamed Markdown into `revealAnswer()`.
+   AI Tutor: uses the secure same-origin /api/tutor endpoint when configured.
+   Local quiz, summary and review helpers remain available as fallbacks.
    ========================================================================== */
 (function () {
   "use strict";
   const R = window.R, ui = R.ui, esc = R.esc, icon = R.icon;
   const phone = () => window.matchMedia("(max-width: 767px)").matches;
   const wait = (ms) => new Promise((r) => setTimeout(r, R.reducedMotion() ? 0 : ms));
+  const blobToBase64 = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
+  async function speakText(text) { if (!text) return; try { const response = await fetch("/api/speech", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ text:text.slice(0,4000) }) }); if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Speech generation failed."); } const audio = new Audio(URL.createObjectURL(await response.blob())); audio.onended = () => URL.revokeObjectURL(audio.src); await audio.play(); } catch (err) { if (window.speechSynthesis) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text.slice(0,12000)); window.speechSynthesis.speak(utterance); } else R.toast(err.message || "Read aloud is unavailable.", { icon:"info" }); } }
 
   /* ======================= Markdown + maths (AIResponse) ======================= */
   const SYM = { Delta: "Δ", delta: "δ", eta: "η", rho: "ρ", theta: "θ", pi: "π", alpha: "α", beta: "β", gamma: "γ", omega: "ω", Omega: "Ω", sigma: "σ", Sigma: "Σ", mu: "μ", lambda: "λ", epsilon: "ε", phi: "φ", tau: "τ", geq: "≥", ge: "≥", leq: "≤", le: "≤", neq: "≠", approx: "≈", times: "×", cdot: "·", pm: "±", to: "→", rightarrow: "→", infty: "∞", sum: "∑", int: "∫", partial: "∂", nabla: "∇", degree: "°" };
@@ -155,7 +155,7 @@
     let chat = mode === "chat" && !ctx.query.new ? st.chats.find((c) => c.id === ctx.query.chat) || null : null;
     let subject = ctx.query.subject || chat?.subject || R.subjects()[0].id;
     if (!R.subject(subject)) subject = R.subjects()[0].id;
-    let streaming = null, attachment = null;
+    let streaming = null, attachment = null, learningMode = "ask";
 
     view.innerHTML = `
       <div class="tw ${historyOpen() ? "" : "is-history-closed"}" data-mode="${mode}">
@@ -168,7 +168,7 @@
               <a role="tab" href="#/app/tutor/explain" aria-selected="${mode === "explain"}" class="${mode === "explain" ? "is-on" : ""}">${icon("quote")}<span>Explain it</span></a>
             </div>
             <button type="button" class="tw-subject" data-subject aria-haspopup="dialog"></button>
-            <span class="tw-status" data-tip="No AI provider is connected in this prototype. Answers come from your own flashcards, vault and review history.">${icon("info")}<span>Local mode</span></span>
+            <span class="tw-status" data-tip="AI Tutor connection status"><span>AI Tutor</span></span>
             <button type="button" class="icon-btn" data-newchat aria-label="New chat" data-tip="New chat">${icon("edit")}</button>
           </header>
           <div class="tw-body"></div>
@@ -252,19 +252,20 @@
         <h1>Hi ${esc(R.firstName())}! What are we learning today?</h1>
         <p>Studying <b>${esc(s.name)}</b>${mod ? ` · currently on <b>${esc(mod.name)}</b>` : ""}</p>
         <div class="tw-starters">${starters.map((x, i) => `<button type="button" class="tw-starter" data-send="${esc(x.p)}" style="--i:${i}"><span class="tw-st-ic">${icon(x.ic)}</span><span><b>${x.t}</b><small>${esc(x.sub)}</small></span></button>`).join("")}</div>
-        <p class="tw-local">${icon("info")}No AI provider is connected. Quizzes, summaries and mistake reviews are built from your own data; explanations show what your materials say.</p>
+        <p class="tw-local">${icon("sparkles")}Ask questions, share study materials, or choose a learning mode to get started.</p>
       </div>`;
     }
 
     /* ChatMessage + MessageActions */
     function messageHTML(m, idx, isLast) {
       if (m.role === "user") return `<div class="tw-msg tw-user" data-idx="${idx}"><div class="tw-bubble">${m.image ? `<img src="${m.image}" alt="Attached image" class="tw-img">` : m.imageName ? `<span class="pill pill-neutral">${icon("image")}${esc(m.imageName)}</span>` : ""}${m.text ? `<p>${esc(m.text).replace(/\n/g, "<br>")}</p>` : ""}</div></div>`;
-      if (m.error) return `<div class="tw-msg tw-ai is-error" data-idx="${idx}"><span class="tw-av">${icon("info")}</span><div class="tw-ai-body"><p>That answer didn't come through.</p><button type="button" class="btn btn-soft btn-sm" data-retry>${icon("refresh")}<span>Retry</span></button></div></div>`;
+      if (m.error) return `<div class="tw-msg tw-ai is-error" data-idx="${idx}"><span class="tw-av">${icon("info")}</span><div class="tw-ai-body"><p>${esc(m.errorMessage || "That answer didn't come through. Please try again.")}</p><button type="button" class="btn btn-soft btn-sm" data-retry>${icon("refresh")}<span>Retry</span></button></div></div>`;
       const content = m.md != null ? (m.stopped != null ? stoppedHTML(m) : R.md(m.md)) : m.html || esc(m.text || "");
       return `<div class="tw-msg tw-ai" data-idx="${idx}"><span class="tw-av" aria-hidden="true">${icon("sparkles")}</span><div class="tw-ai-body"><div class="tw-md">${content}</div>
         ${m.stopped ? `<p class="tw-stopped">${icon("stop")}Response stopped. <button type="button" class="link-btn" data-continue>Continue</button></p>` : ""}
         <div class="tw-actions" role="group" aria-label="Response actions">
           <button type="button" class="tw-act" data-copy aria-label="Copy response" data-tip="Copy">${icon("copy")}</button>
+          <button type="button" class="tw-act" data-speak aria-label="Read response aloud" data-tip="Read aloud">${icon("volume")}</button>
           ${isLast ? `<button type="button" class="tw-act" data-regen aria-label="Regenerate response" data-tip="Regenerate">${icon("refresh")}</button>` : ""}
           <button type="button" class="tw-act ${m.feedback === "up" ? "is-on" : ""}" data-fb="up" aria-pressed="${m.feedback === "up"}" aria-label="Helpful" data-tip="Helpful">${thumb(true)}</button>
           <button type="button" class="tw-act ${m.feedback === "down" ? "is-on" : ""}" data-fb="down" aria-pressed="${m.feedback === "down"}" aria-label="Not helpful" data-tip="Not helpful">${thumb(false)}</button>
@@ -308,14 +309,20 @@
     async function respond(prompt, replaceIdx) {
       const typing = document.createElement("div");
       typing.className = "tw-msg tw-ai is-typing";
-      typing.innerHTML = `<span class="tw-av" aria-hidden="true">${icon("sparkles")}</span><div class="tw-ai-body"><span class="tw-thinking"><i></i><i></i><i></i><span>Searching your materials…</span></span></div>`;
+      typing.innerHTML = `<span class="tw-av" aria-hidden="true">${icon("sparkles")}</span><div class="tw-ai-body"><span class="tw-thinking"><i></i><i></i><i></i><span>Thinking through your question…</span></span></div>`;
       if (replaceIdx != null) thread.querySelector(`[data-idx="${replaceIdx}"]`)?.replaceWith(typing); else thread.append(typing);
       toBottom(true);
       composer.setStreaming(true);
-      await wait(700);
+      await wait(250);
       let m;
-      try { const a = composeAnswer(prompt, subject); m = { role: "assistant", md: a.md, follow: a.follow, kind: a.kind, at: new Date().toISOString() }; }
-      catch (err) { console.error("Recalro tutor: could not build an answer", err); m = { role: "assistant", error: true, prompt }; }
+      try {
+        const history = (chat?.messages || []).slice(0, -1).filter((x) => x.role === "user" || x.role === "assistant").slice(-12).map((x) => ({ role: x.role, content: x.role === "assistant" ? (x.md || x.text || "") : (x.text || "") }));
+        const payload = { message: prompt, subject: R.subject(subject).name, mode: learningMode, history, attachment: attachment?.payload || null };
+        const response = await fetch("/api/tutor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "The tutor could not respond. Please try again.");
+        m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${R.subject(subject).name}`, `Explain that more simply`], at: new Date().toISOString() };
+      } catch (err) { console.error("Recalro tutor request failed", err); m = { role: "assistant", error: true, prompt, errorMessage: err.message }; }
       if (replaceIdx != null) chat.messages[replaceIdx] = m; else chat.messages.push(m);
       chat.updatedAt = new Date().toISOString(); R.save();
       const idx = chat.messages.indexOf(m);
@@ -335,14 +342,14 @@
       if (!chat) { chat = { id: R.uid(), title: (text || "Image question").slice(0, 60), subject, messages: [], updatedAt: new Date().toISOString() }; st.chats.push(chat); R.replaceRoute(`tutor?chat=${chat.id}`); }
       if (!chat.messages.length) thread.innerHTML = "";
       root.classList.remove("is-empty");
-      const msg = { role: "user", text, at: new Date().toISOString(), ...(attachment ? (attachment.data ? { image: attachment.data } : { imageName: attachment.name }) : {}) };
+      const msg = { role: "user", text, at: new Date().toISOString(), ...(attachment ? { imageName: attachment.name } : {}) };
       chat.messages.push(msg); chat.subject = subject; chat.updatedAt = msg.at; R.save();
-      attachment = null; composer.clear(); follow.innerHTML = "";
+      const pendingAttachment = attachment; attachment = null; composer.clear(); follow.innerHTML = "";
       thread.insertAdjacentHTML("beforeend", messageHTML(msg, chat.messages.length - 1));
       R.animate(thread.lastElementChild, [{ opacity: 0, transform: "translateY(10px) scale(.98)" }, { opacity: 1, transform: "none" }], { duration: 240 });
       R.record({ t: "chat", subject, xp: R.content.xp.chat });
       drawHistory();
-      await respond(text || "image");
+      attachment = pendingAttachment; await respond(text || `Please help me understand the attached ${pendingAttachment?.name || "file"}.`); attachment = null;
     }
 
     /* MessageComposer + AttachmentPreview */
@@ -350,6 +357,11 @@
       placeholder: () => `Ask about ${R.subject(subject).name}…`,
       onSend: (t) => send(t), onStop: stopStream,
       onAttach: (a) => { attachment = a; }, onUnattach: () => { attachment = null; },
+      onMode: (m) => { learningMode = m; },
+      onVoice: async (blob) => {
+        try { const b64 = await blobToBase64(blob); const r = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio: b64, mimeType: blob.type || "audio/webm" }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); composer.setValue(d.text || ""); }
+        catch (err) { R.toast(err.message || "Voice transcription failed.", { icon: "info" }); }
+      },
     });
 
     thread.addEventListener("click", async (e) => {
@@ -358,6 +370,7 @@
       if (e.target.closest("[data-copy-code]")) { copy(e.target.closest(".md-code").querySelector("code").textContent, e.target.closest("button")); return; }
       if (!m) return;
       if (e.target.closest("[data-copy]")) copy(m.md ?? msgEl.querySelector(".tw-md").innerText, e.target.closest("button"));
+      if (e.target.closest("[data-speak]")) speakText(msgEl.querySelector(".tw-md")?.innerText || "");
       const fb = e.target.closest("[data-fb]");
       if (fb) {
         m.feedback = m.feedback === fb.dataset.fb ? null : fb.dataset.fb; R.save();
@@ -393,17 +406,19 @@
   let explainWs = null;
 
   /* ======================= MessageComposer ======================= */
-  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach }) {
+  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach, onMode, onVoice }) {
     el.innerHTML = `<form class="tw-form" novalidate>
         <div class="tw-attach" hidden></div>
+        <div class="tw-modebar"><label>Learning mode <select aria-label="Learning mode"><option value="ask">Ask anything</option><option value="simple">Explain simply</option><option value="notes">Study my notes</option><option value="summary">Summarize</option><option value="quiz">Quiz me</option><option value="steps">Step-by-step</option></select></label></div>
         <div class="tw-input">
-          <label class="tw-tool" data-tip="Attach an image"><input type="file" accept="image/*" class="sr-only" aria-label="Attach an image">${icon("paperclip")}</label>
+          <label class="tw-tool" data-tip="Attach an image or document"><input type="file" accept="image/*,.pdf,.txt,.md,.docx" class="sr-only" aria-label="Attach an image or document">${icon("paperclip")}</label>
           <textarea rows="1" aria-label="Message the tutor" enterkeyhint="send"></textarea>
+          <button type="button" class="tw-tool" data-mic aria-label="Record voice question" title="Record voice question">${icon("mic")}</button>
           <button type="submit" class="tw-send" aria-label="Send message" disabled>${icon("arrow-up")}</button>
         </div>
-        <p class="tw-hint"><span>${ui.kbd("Enter")} send · ${ui.kbd("Shift")}+${ui.kbd("Enter")} new line · ${ui.kbd("Esc")} stop</span><span>Answers come from your materials</span></p>
+        <p class="tw-hint"><span>${ui.kbd("Enter")} send · ${ui.kbd("Shift")}+${ui.kbd("Enter")} new line · ${ui.kbd("Esc")} stop</span><span>AI study assistant · check important answers</span></p>
       </form>`;
-    const form = el.querySelector("form"), ta = el.querySelector("textarea"), sendBtn = el.querySelector(".tw-send"), file = el.querySelector("input[type=file]"), prev = el.querySelector(".tw-attach");
+    const form = el.querySelector("form"), ta = el.querySelector("textarea"), sendBtn = el.querySelector(".tw-send"), file = el.querySelector("input[type=file]"), prev = el.querySelector(".tw-attach"), modeSelect = el.querySelector("select"), micBtn = el.querySelector("[data-mic]");
     let streaming = false, hasAttachment = false;
     const grow = () => { ta.style.height = "auto"; ta.style.height = `${Math.min(phone() ? 140 : 220, ta.scrollHeight)}px`; };
     const sync = () => { if (!streaming) sendBtn.disabled = !ta.value.trim() && !hasAttachment; };
@@ -431,14 +446,24 @@
     file.addEventListener("change", () => {
       const f = file.files[0]; if (!f) return;
       const done = (data) => {
-        hasAttachment = true; onAttach({ name: f.name, data }); prev.hidden = false;
-        prev.innerHTML = `<div class="tw-attach-item">${data ? `<img src="${data}" alt="">` : `<span class="tw-attach-ic">${icon("image")}</span>`}<span><b>${esc(f.name)}</b><small>${data ? "Image attached" : "Attached by name only"}</small></span><button type="button" class="icon-btn sm" data-unattach aria-label="Remove attachment">${icon("x")}</button></div>`;
+        hasAttachment = true; onAttach({ name: f.name, data, payload: data ? { name: f.name, mimeType: f.type, data } : null }); prev.hidden = false;
+        prev.innerHTML = `<div class="tw-attach-item">${f.type.startsWith("image/") && data ? `<img src="${data}" alt="">` : `<span class="tw-attach-ic">${icon("file-text")}</span>`}<span><b>${esc(f.name)}</b><small>${f.type.startsWith("image/") ? "Image attached" : "Document attached"}</small></span><button type="button" class="icon-btn sm" data-unattach aria-label="Remove attachment">${icon("x")}</button></div>`;
         R.animate(prev.firstElementChild, [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "none" }], { duration: 200, easing: "cubic-bezier(.3,1.4,.5,1)" });
         sync(); ta.focus();
       };
-      if (f.size > 400 * 1024) { done(null); R.toast("Large images are attached by name only. Image analysis needs the AI provider.", { icon: "info" }); }
-      else { const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(f); }
+      const allowed = f.type.startsWith("image/") || f.type === "application/pdf" || /\.(txt|md|docx)$/i.test(f.name);
+      if (!allowed) { R.toast("Choose an image, PDF, DOCX, TXT or Markdown file.", { icon: "info" }); return; }
+      if (f.size > 12 * 1024 * 1024) { R.toast("Please keep attachments under 12 MB.", { icon: "info" }); return; }
+      const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(f);
       file.value = "";
+    });
+    modeSelect.addEventListener("change", () => onMode?.(modeSelect.value));
+    let recorder = null, chunks = [];
+    micBtn.addEventListener("click", async () => {
+      if (recorder?.state === "recording") { recorder.stop(); micBtn.classList.remove("is-recording"); micBtn.setAttribute("aria-label", "Record voice question"); return; }
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { R.toast("Voice recording requires a supported browser on HTTPS or localhost.", { icon: "info" }); return; }
+      try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); recorder = new MediaRecorder(stream); chunks = []; recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); }; recorder.onstop = () => { const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" }); stream.getTracks().forEach((t) => t.stop()); onVoice?.(blob); }; recorder.start(); micBtn.classList.add("is-recording"); micBtn.setAttribute("aria-label", "Stop recording"); }
+      catch (err) { R.toast("Microphone permission was not granted.", { icon: "info" }); }
     });
     prev.addEventListener("click", (e) => { if (e.target.closest("[data-unattach]")) { hasAttachment = false; prev.hidden = true; prev.innerHTML = ""; onUnattach(); sync(); ta.focus(); } });
     return api;

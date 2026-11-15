@@ -1,11 +1,16 @@
 {
   "name": "recalro",
   "version": "1.0.0",
-  "description": "Recalro — standalone product prototype",
+  "description": "Recalro \u2014 standalone product prototype",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "dev": "node --env-file-if-exists=.env server.js",
+    "start": "node --env-file-if-exists=.env server.js",
+    "check": "node --check server.js && node --check app.js"
   },
-  "keywords": ["learning", "education", "prototype"],
+  "keywords": [
+    "learning",
+    "education",
+    "prototype"
+  ],
   "license": "MIT"
 }

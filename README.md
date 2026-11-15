@@ -107,14 +107,14 @@ The marketing photos were downloaded from these Pexels photo sources:
 The calendar, map pin, target, trophy, notebook and computer 3D icons are from [3dicons](https://3dicons.co/) and are released under [CC0 1.0](https://github.com/realvjy/3dicons/blob/develop/LICENSE). They are used in feature cards, study steps and workspace navigation; other utility glyphs use raised, dimensional icon tiles to keep the visual treatment consistent.
 
 ## Important implementation boundary
-This is a self-contained frontend prototype, not a connected production application. It does not include authentication, Supabase, FastAPI, server-side database persistence, AI provider calls, server-side file processing, production SM-2 scheduling, or verified XP/gem transactions. Browser local storage is not account storage and may be cleared by the user or browser. Summary and explanation helpers are local demos, not AI output or verified academic assessment. UI examples and sample analytics are demonstration data. Do not present them as real user records.
+This is a standalone learning prototype with a connected optional OpenAI AI Tutor API. It does not include production authentication, Supabase, server-side database persistence, production SM-2 scheduling, or verified XP/gem transactions. Browser local storage is not account storage and may be cleared by the user or browser. The dedicated summary and explain-it-to-me helpers remain local learning demos; the AI Tutor uses the configured provider. UI examples and sample analytics are demonstration data. Do not present them as real user records.
 
 Before production:
 1. Connect authentication and account settings to the existing identity provider.
 2. Map all existing routes, API contracts and database entities before replacing an existing app.
 3. Connect subject/material uploads, AI extraction and generated content to backend APIs.
 4. Wire flashcard ratings to the existing SM-2 implementation without changing its calculations.
-5. Connect AI Tutor, summaries and explain-it-to-me to configured AI providers.
+5. Consider connecting summaries and explain-it-to-me to the configured AI provider; the AI Tutor is now connected when an API key is supplied.
 6. Verify exam question limits and pass threshold with the backend.
 7. Persist roadmap, planner, knowledge vault, quests, groups and reward economy through approved backend work.
 8. Add automated tests, accessibility audit and cross-device QA.
@@ -127,3 +127,20 @@ Before production:
 - `app/` — signed-in application (see above)
 - `app.js` — marketing interactions, demo auth and app bridge
 - `assets/recalro-logo.png` — supplied logo artwork
+
+
+## AI Tutor setup (Phase 1–3 update)
+
+The AI Tutor connects through the included Node.js server. The OpenAI key is read only by the server and must never be placed in browser JavaScript.
+
+1. Install Node.js 20.12 or newer.
+2. Copy `.env.example` to `.env` in the project root (the same folder as `package.json`).
+3. Open `.env` and set `OPENAI_API_KEY=your_api_key_here`. Keep this file local; it is ignored by Git. Never put the key in browser JavaScript or share it in chat.
+4. Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-mini-transcribe`) and `OPENAI_TTS_MODEL` (default `gpt-4o-mini-tts`).
+5. Run `npm run dev` and open `http://localhost:8000`.
+
+The Tutor supports conversational follow-ups, subject-aware learning modes, image and PDF analysis, TXT/Markdown uploads, DOCX text extraction, voice transcription and generated spoken responses. Microphone access requires HTTPS or localhost and browser permission. Uploads are limited to 12 MB. DOCX extraction reads the main document body; complex layout, headers, footers and embedded images may not be preserved.
+
+### Important product boundaries
+
+This remains a standalone prototype: login/onboarding and most learning progress are still local browser demos, not production authentication or cloud sync. Existing local quiz, summary, review, flashcard and explain-it-to-me features have been retained. The AI Tutor, voice endpoints and file analysis require a valid OpenAI API key and a server with outbound network access.

@@ -34,8 +34,8 @@
 
     <section class="mk-hero" aria-labelledby="heroTitle">
       <div class="mk-hero-bg" aria-hidden="true">
-        <!-- Loaded only on tablets and desktops (app.js). Phones get a lightweight CSS background. -->
-        <video class="mk-hero-video" muted loop playsinline preload="none" data-src="assets/hero-study-video-optimized.mp4" data-poster="assets/hero-study-poster.jpg">
+        <!-- Loaded by app.js and shown behind the hero copy at every screen size. -->
+        <video class="mk-hero-video" muted loop playsinline preload="none" aria-hidden="true" data-src="assets/hero-study-video-optimized.mp4" data-poster="assets/hero-study-poster.jpg">
         </video>
         <div class="mk-hero-tint"></div>
         <div class="mk-hero-glow"><i></i><i></i></div>
@@ -44,9 +44,8 @@
 
       <div class="mk-wrap mk-hero-grid">
         <div class="mk-hero-copy">
-          <div class="mk-pill"><span class="mk-dot"></span> THE LEARNING SYSTEM THAT STICKS</div>
-          <h1 id="heroTitle" data-animate-headline>Learn it today.<br><em>Own it tomorrow.</em></h1>
-          <p class="mk-lead">Turn study time into lasting understanding. Recalro brings your notes, AI tutor, smart revision and exam practice into one focused learning space.</p>
+          <h1 id="heroTitle" data-animate-headline>Study smarter.<br><em>Remember more.</em></h1>
+          <p class="mk-lead">Understand your lessons, remember what matters and feel more prepared for exams. Bring your notes, AI tutor, flashcards and practice together in one place.</p>
           <div class="mk-hero-actions">
             <button class="mk-btn mk-btn-primary mk-btn-lg" id="heroStart" type="button">Start learning free <span>↗</span></button>
             <button class="mk-btn mk-btn-glass mk-btn-lg" id="heroTour" type="button"><span class="mk-play" aria-hidden="true"></span>Take the tour</button>
@@ -67,7 +66,7 @@
           <section class="mk-live-window" aria-labelledby="heroLiveTitle">
             <header class="mk-live-bar">
               <span class="mk-live-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span id="heroLiveTitle">Review · <b id="heroDeck">Thermodynamics</b></span>
+              <span id="heroLiveTitle">Review · <b id="heroDeck">Biology</b></span>
               <span class="mk-live-tag">Try it</span>
             </header>
             <div class="mk-live-progress" aria-hidden="true"><i id="heroProgress"></i></div>
@@ -85,7 +84,7 @@
             <p><b>AI tutor</b><span id="heroTutorText">Stuck? I can walk you through it step by step.</span></p>
           </div>
           <div class="mk-hero-float mk-hero-float-a" aria-hidden="true"><span class="mk-hf-ic mk-hf-teal"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg></span><span><b>12 cards due</b><small>Best time: now</small></span></div>
-          <div class="mk-hero-float mk-hero-float-b" aria-hidden="true"><span class="mk-hf-ring" style="--target:92"><b>92%</b></span><span><b>Memory strength</b><small>Thermodynamics</small></span></div>
+          <div class="mk-hero-float mk-hero-float-b" aria-hidden="true"><span class="mk-hf-ring" style="--target:92"><b>92%</b></span><span><b>Memory strength</b><small>Biology</small></span></div>
           <p class="mk-live-note"><span class="mk-live-badge">Interactive preview</span> Nothing you do here is saved.</p>
         </div>
       </div>
@@ -148,8 +147,8 @@
           <div class="mk-showcase-side">
             <div class="mk-mini mk-roadmap-card">
               <div class="mk-mini-top"><img src="assets/roadmap-3d.webp" alt="" width="200" height="200"><small>YOUR NEXT STEP</small></div>
-              <h3>Thermodynamics</h3>
-              <p>Module 04 · Entropy</p>
+              <h3>Biology</h3>
+              <p>Module 04 · Cell structure</p>
               <div class="mk-progress"><i style="width:68%"></i></div>
               <div class="mk-mini-bottom"><span>68% complete</span><b>Continue →</b></div>
             </div>
@@ -170,7 +169,7 @@
         <div class="mk-section-head mk-reveal">
           <div class="mk-kicker mk-kicker-light">HOW RECALRO WORKS</div>
           <h2 id="storyTitle">From first upload to <span class="mk-orange">exam-day confidence.</span></h2>
-          <p>Follow one week of thermodynamics notes through Recalro, from the moment they're uploaded to the day you're ready.</p>
+          <p>Follow one week of class notes through Recalro, from the moment they're uploaded to the day you're ready.</p>
         </div>
         <div class="mk-story-grid">
           <ol class="mk-story-steps">
@@ -179,7 +178,7 @@
               <h3>Upload your study materials</h3>
               <p>Drop in lecture notes, PDFs or slides. Recalro reads them and keeps everything for that subject in one place.</p>
               <div class="mk-scene sc-upload">
-                <div class="sc-drop"><span class="sc-file"><i>PDF</i><span><b>Thermo_Week4.pdf</b><small>24 pages · 2.4 MB</small></span></span><span class="sc-bar"><i></i></span><small class="sc-status"><span class="sc-up">Uploading…</span><span class="sc-done">Ready · 24 pages read</span></small></div>
+                <div class="sc-drop"><span class="sc-file"><i>PDF</i><span><b>Biology_Week4.pdf</b><small>24 pages · 2.4 MB</small></span></span><span class="sc-bar"><i></i></span><small class="sc-status"><span class="sc-up">Uploading…</span><span class="sc-done">Ready · 24 pages read</span></small></div>
               </div>
             </li>
             <li class="mk-story-step" id="story-2">
@@ -188,8 +187,8 @@
               <p>Pages become topics and a short summary of the key ideas, so you can see the shape of the week before you start.</p>
               <div class="mk-scene sc-organise">
                 <div class="sc-lines"><i style="--w:92%"></i><i style="--w:78%"></i><i style="--w:86%"></i><i style="--w:64%"></i><i style="--w:81%"></i></div>
-                <div class="sc-chips"><span style="--i:0">Second law</span><span style="--i:1">Entropy</span><span style="--i:2">Carnot cycle</span><span style="--i:3">Heat engines</span></div>
-                <div class="sc-summary"><b>Summary · 5 key ideas</b><small>Entropy of an isolated system never decreases…</small></div>
+                <div class="sc-chips"><span style="--i:0">Cell membrane</span><span style="--i:1">Cell structure</span><span style="--i:2">Cell division</span><span style="--i:3">Cell energy</span></div>
+                <div class="sc-summary"><b>Summary · 5 key ideas</b><small>Cell structure of an isolated system never decreases…</small></div>
               </div>
             </li>
             <li class="mk-story-step" id="story-3">
@@ -197,9 +196,9 @@
               <h3>Flashcards are generated</h3>
               <p>Each idea becomes a question you have to answer from memory. That effort is what makes it stick.</p>
               <div class="mk-scene sc-cards">
-                <span class="sc-card" style="--i:0"><small>Card 1</small>What does the second law say about entropy?</span>
-                <span class="sc-card" style="--i:1"><small>Card 2</small>Carnot efficiency formula?</span>
-                <span class="sc-card" style="--i:2"><small>Card 3</small>Define a reversible process.</span>
+                <span class="sc-card" style="--i:0"><small>Card 1</small>What is the function of the cell membrane?</span>
+                <span class="sc-card" style="--i:1"><small>Card 2</small>What does the mitochondrion do?</span>
+                <span class="sc-card" style="--i:2"><small>Card 3</small>What is the role of the nucleus?</span>
               </div>
             </li>
             <li class="mk-story-step" id="story-4">
@@ -207,7 +206,7 @@
               <h3>You practise recall</h3>
               <p>Flip, answer, rate how well you knew it. Every rating teaches the scheduler when to bring the card back.</p>
               <div class="mk-scene sc-recall">
-                <span class="sc-flip"><span class="sc-face sc-front">Carnot efficiency formula?</span><span class="sc-face sc-back"><span>η = 1 − T<sub>c</sub> / T<sub>h</sub></span></span></span>
+                <span class="sc-flip"><span class="sc-face sc-front">What does the mitochondrion do?</span><span class="sc-face sc-back"><span>The mitochondrion releases usable energy during cellular respiration.</span></span></span>
                 <span class="sc-rates"><i>Again</i><i>Hard</i><i class="is-picked">Good</i><i>Easy</i></span>
                 <span class="sc-xp">+10 XP</span>
               </div>
@@ -217,10 +216,10 @@
               <h3>Weaknesses are identified</h3>
               <p>Recalro notices which topics you keep missing and flags them before they cost you marks.</p>
               <div class="mk-scene sc-weak">
-                <span class="sc-topic"><b>Entropy</b><span class="sc-track"><i style="--w:88%"></i></span><em>88%</em></span>
-                <span class="sc-topic"><b>Second law</b><span class="sc-track"><i style="--w:76%"></i></span><em>76%</em></span>
-                <span class="sc-topic is-weak"><b>Carnot efficiency</b><span class="sc-track"><i style="--w:54%"></i></span><em>54%</em></span>
-                <span class="sc-flag">Needs review: Carnot efficiency</span>
+                <span class="sc-topic"><b>Cell structure</b><span class="sc-track"><i style="--w:88%"></i></span><em>88%</em></span>
+                <span class="sc-topic"><b>Cell membrane</b><span class="sc-track"><i style="--w:76%"></i></span><em>76%</em></span>
+                <span class="sc-topic is-weak"><b>Cell energy</b><span class="sc-track"><i style="--w:54%"></i></span><em>54%</em></span>
+                <span class="sc-flag">Needs review: Cell energy</span>
               </div>
             </li>
             <li class="mk-story-step" id="story-6">
@@ -228,9 +227,9 @@
               <h3>You improve where it matters</h3>
               <p>Short, targeted sessions on the weak topic. The tutor explains, the cards come back sooner, the score climbs.</p>
               <div class="mk-scene sc-weak sc-improve">
-                <span class="sc-topic"><b>Entropy</b><span class="sc-track"><i style="--w:90%"></i></span><em>90%</em></span>
-                <span class="sc-topic"><b>Second law</b><span class="sc-track"><i style="--w:81%"></i></span><em>81%</em></span>
-                <span class="sc-topic is-up"><b>Carnot efficiency</b><span class="sc-track"><i style="--w:82%"></i></span><em>82%</em></span>
+                <span class="sc-topic"><b>Cell structure</b><span class="sc-track"><i style="--w:90%"></i></span><em>90%</em></span>
+                <span class="sc-topic"><b>Cell membrane</b><span class="sc-track"><i style="--w:81%"></i></span><em>81%</em></span>
+                <span class="sc-topic is-up"><b>Cell energy</b><span class="sc-track"><i style="--w:82%"></i></span><em>82%</em></span>
                 <span class="sc-flag sc-flag-up">+28 points in 6 days</span>
               </div>
             </li>
@@ -245,7 +244,7 @@
               </div>
             </li>
           </ol>
-          <div class="mk-story-stage" aria-hidden="true"><div class="mk-story-device"><div class="mk-story-device-bar"><i></i><i></i><i></i><span>Thermodynamics · Week 4</span></div><div class="mk-story-scenes"></div></div></div>
+          <div class="mk-story-stage" aria-hidden="true"><div class="mk-story-device"><div class="mk-story-device-bar"><i></i><i></i><i></i><span>Biology · Week 4</span></div><div class="mk-story-scenes"></div></div></div>
         </div>
       </div>
     </section>
@@ -393,7 +392,7 @@
       <div class="au-side-glow"></div>
       <span class="au-brand"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="au-orange">ro</span></span></span>
       <div class="au-side-copy">
-        <h2>Learn it today.<br><em>Own it tomorrow.</em></h2>
+        <h2>Study smarter.<br><em>Remember more.</em></h2>
         <p>Your notes, AI tutor, smart revision and exam practice in one focused learning space.</p>
         <ul class="au-perks">
           <li><img src="assets/computer-3d.webp" alt="" width="200" height="200"><span><b>AI learning workspace</b>Get unstuck with subject-aware help.</span></li>

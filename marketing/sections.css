@@ -14,6 +14,10 @@
 .mk-hero-copy h1 .mk-w { display: inline-block; overflow: hidden; vertical-align: top; padding: 0 .02em .14em; margin: 0 -.02em -.14em; }
 .mk-hero-copy h1 .mk-w > span { display: inline-block; transform: translateY(110%) rotate(4deg); transform-origin: 0 100%; transition: transform .95s cubic-bezier(.2, .9, .25, 1) calc(var(--i) * 75ms + 120ms); }
 .mk-hero-copy h1.is-in .mk-w > span { transform: none; }
+@media (max-width: 767px) {
+  .mk-hero-copy h1 .mk-w { overflow: visible; padding-bottom: 0; margin-bottom: 0; }
+  .mk-hero-copy h1 .mk-w > span { transform: none; transition: none; }
+}
 /* Teal highlight sweeps behind "Own it tomorrow." once the words land. */
 .mk-hero-copy h1 em { isolation: isolate; }
 .mk-hero-copy h1 em::before {

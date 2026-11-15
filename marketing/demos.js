@@ -25,9 +25,9 @@
 
   /* ---------------------------------------------------------------- AI Tutor */
   const TUTOR = [
-    { q: "Why does entropy always increase?", a: "Think of entropy as the number of ways energy can be spread out. In an isolated system, spread-out arrangements vastly outnumber tidy ones, so the system drifts towards them on its own. That drift is the second law: ΔS ≥ 0.", src: "Thermo_Week4.pdf · page 12" },
+    { q: "Why do living cells need energy?", a: "Cells need energy to carry out essential processes such as growth, repair, transport and reproduction. They obtain and use energy in different ways depending on the organism.", src: "Biology_Notes.pdf · page 12" },
     { q: "Explain Bernoulli like I'm 12", a: "Imagine a crowd squeezing through a narrow doorway. To keep everyone moving, people near the door walk faster. Fluids do the same in a narrow pipe, and because the energy goes into speed, there's less left pushing on the walls. Faster flow, lower pressure.", src: "Fluids_Lecture3.pdf · page 4" },
-    { q: "Quiz me on Carnot efficiency", a: "Here's one: an engine runs between 600 K and 300 K. Using η = 1 − Tc/Th, what's its best possible efficiency? Take a moment… it's 1 − 300/600 = 50%. Want a harder one with Celsius temperatures?", src: "Your flashcards · Thermodynamics" },
+    { q: "Quiz me on cell structures", a: "Here's one: Which cell structure controls what enters and leaves the cell? The answer is the cell membrane. Want another question about cell structures?", src: "Your flashcards · Biology" },
   ];
   function TutorDemo(body) {
     body.innerHTML = `
@@ -66,8 +66,8 @@
 
   /* -------------------------------------------------------------- Flashcards */
   const CARDS = [
-    { q: "What does the second law say about entropy?", a: "The entropy of an isolated system never decreases (ΔS ≥ 0)." },
-    { q: "Carnot efficiency formula?", a: "η = 1 − Tc / Th, with temperatures in kelvin." },
+    { q: "What is the function of the cell membrane?", a: "The cell membrane controls the movement of substances into and out of the cell." },
+    { q: "What does the mitochondrion do?", a: "Mitochondria release usable energy during cellular respiration." },
     { q: "Bernoulli's principle in one line?", a: "Faster fluid, lower pressure: P + ½ρv² + ρgh stays constant." },
     { q: "What is |3 + 4i|?", a: "5, because √(3² + 4²) = 5." },
   ];
@@ -216,7 +216,7 @@
 
   /* ----------------------------------------------------------- Exam Simulator */
   const EXAM = [
-    { q: "A Carnot engine runs between 600 K and 300 K. What is its maximum efficiency?", o: ["25%", "50%", "67%", "100%"], a: 1, topic: "Thermodynamics", why: "η = 1 − 300/600 = 0.5" },
+    { q: "Which organelle is often called the powerhouse of the cell?", o: ["Nucleus", "Mitochondrion", "Ribosome", "Golgi apparatus"], a: 1, topic: "Biology", why: "Mitochondria release usable energy during cellular respiration." },
     { q: "Water flows steadily into a narrower section of pipe. What happens to its speed?", o: ["It decreases", "It stays the same", "It increases", "It drops to zero"], a: 2, topic: "Fluid mechanics", why: "Continuity: A₁v₁ = A₂v₂, so smaller area means higher speed." },
     { q: "What is the modulus of 3 + 4i?", o: ["5", "7", "12", "25"], a: 0, topic: "Mathematics", why: "|z| = √(3² + 4²) = 5" },
   ];
