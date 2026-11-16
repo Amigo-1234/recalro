@@ -34,7 +34,7 @@
       <div class="dash dash-modern">
         <section class="hero-card" aria-labelledby="dashGreeting">
           <div class="hero-main">
-            <h1 id="dashGreeting">${esc(R.timeGreeting())}, <span class="dash-name">${esc(R.firstName())}</span></h1>
+            <h1 id="dashGreeting">${esc(R.timeGreeting())}, <span class="dash-name ${R.firstName().length > 16 ? "is-long" : ""}">${esc(R.firstName())}</span></h1>
             <p>${due.length ? `You have ${R.plural(due.length, "card")} ready for review. A short session will keep you moving.` : "Choose one small step today and keep your learning moving."}</p>
             <div class="hero-actions">${primary}${ui.link("Ask the tutor", "tutor", { tone: "ghost", icon: "sparkles", size: "lg" })}</div>
           </div>

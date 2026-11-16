@@ -338,7 +338,7 @@
       return `
         ${head("Review", "Your learning space is almost ready.", "Check your details. You can edit any section before you finish.")}
         <div class="sw-review">
-          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim())}</b><small>${esc(S.account.email)} <span class="sw-verified">${icon("mail")}Verify by email link</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
+          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim())}</b><small>@${esc(S.account.username)} · ${esc(S.account.email)} <span class="sw-verified">${icon("mail")}Verify by email link</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
           ${section("Academic path", 2, `<p class="sw-rv-path"><img src="${pathMeta()?.img}" alt="" width="200" height="200">${esc(pathMeta()?.title || "")}</p>`)}
           ${section("Academic details", 3, dl(pathDetails()))}
           ${section("Learning interests", 4, tagList(interests))}

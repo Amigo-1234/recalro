@@ -375,6 +375,7 @@ body.dark #app .btn-primary { color: #fff; }
   }
   #app .dash-modern .hero-main h1 { font-size: clamp(26px, 8vw, 34px); }
   #app .dash-modern .dash-name { display: block; overflow-wrap: anywhere; }
+  #app .dash-modern .dash-name.is-long { margin-top: 5px; font-size: clamp(18px, 5vw, 24px); line-height: 1.2; letter-spacing: -.035em; }
   #app .dash-modern .hero-main p { font-size: 14.5px; }
   #app .dash-modern .hero-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 18px; }
   #app .dash-modern .hero-actions .btn { min-width: 0; width: 100%; min-height: 46px; padding: 8px 12px; white-space: normal; text-align: center; font-size: 13px; line-height: 1.25; }

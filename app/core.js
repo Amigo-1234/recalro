@@ -384,8 +384,7 @@
     let changed = false;
     if (s.reviewReminders && s.lastReviewReminderDay !== today) {
       const due = R.dueCards().length;
-      if (due) { R.notify(`${R.plural(due, "card")} ready for review`, "refresh", "review"); changed = true; }
-      s.lastReviewReminderDay = today; changed = true;
+      if (due) { R.notify(`${R.plural(due, "card")} ready for review`, "refresh", "review"); s.lastReviewReminderDay = today; changed = true; }
     }
     if (s.weeklyReport && new Date().getDay() === 0 && s.lastWeeklyReportDay !== today) {
       R.notify("Your weekly study report is ready to review", "report", "reports");

@@ -9,7 +9,7 @@
 
   const INSTITUTIONS = {
     Nigeria: [
-      "University of Lagos", "University of Ibadan", "Obafemi Awolowo University", "Ahmadu Bello University", "University of Nigeria, Nsukka",
+      "University of Lagos", "University of Ibadan", "Obafemi Awolowo University", "Ahmadu Bello University", "University of Nigeria, Nsukka", "Ekiti State University, Ado-Ekiti",
       "University of Benin", "University of Ilorin", "Lagos State University", "Covenant University", "Babcock University",
       "Federal University of Technology, Akure", "Federal University of Technology, Minna", "Federal University of Technology, Owerri",
       "Nnamdi Azikiwe University", "University of Port Harcourt", "Rivers State University", "Bayero University Kano",
