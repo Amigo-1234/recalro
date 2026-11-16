@@ -18,6 +18,8 @@ The project has no frontend build step. Opening `index.html` directly does not p
 - AI Tutor, voice and file-analysis APIs served by the included Node.js server.
 - Responsive layout, light/dark/system themes and a first-run experience without prefilled learner content.
 
+The marketing landing page includes its interactive flashcard preview, product tour, scroll story and feature demos. Activity in those previews is not saved to a learner account.
+
 Practice, exam simulation, community and readiness pages are currently unavailable and are not shown in the workspace navigation.
 
 ## Supabase and AI setup
@@ -43,7 +45,7 @@ Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI
 - `index.html`, `marketing.css`, `auth.css` — landing page, authentication views and shared styling.
 - `app/` — signed-in workspace, local learner state, UI pages, Supabase client and cloud sync.
 - `auth/` — sign-up wizard, form components and option data.
-- `marketing/` — landing-page navigation and motion components.
+- `marketing/` — landing-page navigation, motion, story and feature-demo components.
 - `server.js` — static server and authenticated API routes for AI-related features.
 - `supabase/migrations/` — profile, learner-state and username tables with row-level security policies.
 - `assets/` — local brand assets and favicon.

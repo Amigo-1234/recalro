@@ -377,20 +377,30 @@ window.RecalroSignup.init(wizardEl, {
   },
 });
 /* ---------- Marketing page ---------- */
+const productDemoDialog = $("#productDemoDialog");
 const M = window.RecalroMotion, MK = window.RecalroMarketing;
 const nav = MK.MarketingNavbar($("#mkNavWrap"), {
   onLogin: () => openAuth("login"),
   onSignup: () => openAuth("signup"),
+  onDemo: () => setTimeout(() => $("#heroCard")?.focus({ preventScroll: true }), M.reduced() ? 0 : 500),
 });
 M.AnimatedHeadline($("[data-animate-headline]"));
 M.StaggerContainer(marketing);
 M.RevealOnScroll(marketing);
+MK.ScrollStory($("#how"));
+MK.FeatureTheatre($("#featureTheatre"));
 
 $("#heroStart")?.addEventListener("click", () => openAuth("signup"));
-$("#footerStart")?.addEventListener("click", () => openAuth("signup"));
+$(".mk-dialog-close").addEventListener("click", () => productDemoDialog.close());
+$("#heroTour")?.addEventListener("click", () => productDemoDialog.showModal());
+productDemoDialog.addEventListener("click", (event) => { if (event.target === productDemoDialog) productDemoDialog.close(); });
+$("#productDemoStart").addEventListener("click", () => { productDemoDialog.close(); openAuth("signup"); });
+const roadmapShortcut = $(".mk-roadmap-card");
+if (roadmapShortcut) { roadmapShortcut.setAttribute("role", "button"); roadmapShortcut.setAttribute("tabindex", "0"); roadmapShortcut.setAttribute("aria-label", "Explore the learning roadmap"); }
 marketing.addEventListener("click", (event) => {
   const appLink = event.target.closest("[data-open-app]");
   if (appLink) { openAuth("login", appLink.dataset.page || "dashboard"); return; }
+  if (event.target.closest(".mk-roadmap-card")) { openAuth("login", "roadmap"); return; }
   // In-page anchors outside the navbar (footer, scroll cue, skip link) scroll smoothly too.
   const anchor = event.target.closest('a[href^="#"]:not([data-nav-target])');
   if (anchor && anchor.getAttribute("href").length > 1 && !anchor.getAttribute("href").startsWith("#/")) {
@@ -402,6 +412,20 @@ marketing.addEventListener("click", (event) => {
       target.focus({ preventScroll: true });
     }
   }
+});
+marketing.addEventListener("keydown", (event) => { if ((event.key === "Enter" || event.key === " ") && event.target.closest(".mk-roadmap-card")) { event.preventDefault(); openAuth("login", "roadmap"); } });
+const footerGroups = $$(".mk-footer-group"), footerBreakpoint = window.matchMedia("(max-width: 600px)");
+function setFooterGroupState(event) { footerGroups.forEach((group) => { group.open = !event.matches; }); }
+setFooterGroupState(footerBreakpoint);
+footerBreakpoint.addEventListener("change", setFooterGroupState);
+footerGroups.forEach((group) => group.querySelector("summary").addEventListener("click", (event) => { if (!footerBreakpoint.matches) event.preventDefault(); }));
+$("#newsletterForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const email = $("#newsletterEmail"), status = $("#newsletterStatus");
+  status.textContent = "";
+  email.setAttribute("aria-invalid", "false");
+  if (!email.checkValidity()) { email.setAttribute("aria-invalid", "true"); status.textContent = "Enter a valid email address."; email.reportValidity(); return; }
+  status.textContent = "Newsletter sign-up is unavailable because no subscription service is connected. Your email has not been sent or saved.";
 });
 
 /* ---------- InteractiveFlashcardPreview (hero): a playable 3-card review ----------
