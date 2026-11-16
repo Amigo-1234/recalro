@@ -253,9 +253,9 @@
     const activeTab = ctx.query.tab === "decorations" ? "decorations" : "overview";
     const activeFilter = ["all", "frame", "banner", "accent"].includes(ctx.query.filter) ? ctx.query.filter : "all";
     const next = list.filter((a) => !a.unlockedAt).sort((a, b) => (b.value / b.target) - (a.value / a.target))[0];
-    const activities = [...R.state.activity].filter((a) => !["chat", "ai", "tutor", "explain"].includes(String(a.t || "").toLowerCase())).slice(-5).reverse();
-    const activityTitles = { review: "Reviewed flashcards", answer: "Practised a question", exam: "Completed a practice exam", summary: "Made a study summary", vault: "Saved a Knowledge Vault item", material: "Added a study material", quest: "Completed a daily quest", bonus: "Earned a study bonus" };
-    const activityIcons = { review: "cards", answer: "zap", exam: "clipboard", summary: "file", vault: "archive", material: "upload", quest: "check-circle", bonus: "award" };
+    const activities = [...R.state.activity].filter((a) => !["chat", "ai", "tutor", "explain", "summary"].includes(String(a.t || "").toLowerCase())).slice(-5).reverse();
+    const activityTitles = { review: "Reviewed flashcards", answer: "Practised a question", exam: "Completed a practice exam", vault: "Saved a Knowledge Vault item", material: "Added a study material", quest: "Completed a daily quest", bonus: "Earned a study bonus" };
+    const activityIcons = { review: "cards", answer: "zap", exam: "clipboard", vault: "archive", material: "upload", quest: "check-circle", bonus: "award" };
     const activityMarkup = activities.length ? `<ol class="profile-history">${activities.map((a) => `<li><span class="profile-history-icon">${icon(activityIcons[a.t] || "book")}</span><span><b>${activityTitles[a.t] || "Study session"}</b><small>${esc(R.subject(a.subject)?.name || "Independent study")} · ${R.relTime(a.at)}</small></span>${a.xp ? `<em>+${R.fmt(a.xp)} XP</em>` : ""}</li>`).join("")}</ol>` : `<div class="profile-empty">${icon("book")}<b>Your study history starts with your next session</b><span>Your real study activity will appear here.</span>${ui.link("Start learning", "subjects", { tone: "soft", size: "sm", icon: "arrow-right" })}</div>`;
     const overviewMarkup = () => {
       const showcase = unlocked.slice(0, 4);
