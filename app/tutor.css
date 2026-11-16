@@ -355,3 +355,11 @@ body.dark .tw-send:not(.is-stop) { color: #05201F; }
 @keyframes tw-voice-ring { 0% { opacity: .55; transform: scale(.94); } 100% { opacity: 0; transform: scale(1.16); } }
 @keyframes tw-voice-logo { to { transform: scale(1.09) rotate(-4deg); } }
 @keyframes tw-voice-think { 50% { filter: saturate(.8); transform: scale(.98); } }
+
+@media (max-width: 767px) {
+  /* The 420px desktop minimum used to push the composer/list behind short keyboards. */
+  body.kb-open .tw { height: var(--vvh, 100dvh); min-height: 0; }
+  body.kb-open .tw-main, body.kb-open .tw-body, body.kb-open .tw-scroll { min-height: 0; }
+  body.kb-open .tw-dock { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+}
+

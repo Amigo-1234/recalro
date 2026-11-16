@@ -440,12 +440,18 @@
     const vv = window.visualViewport;
     if (vv) {
       const onVV = () => {
-        const open = window.innerHeight - vv.height > 140 && /INPUT|TEXTAREA/.test(document.activeElement?.tagName);
+        const active = document.activeElement;
+        const typing = !!active?.matches?.('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]');
+        const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
+        const screenHeight = window.screen?.height || layoutHeight;
+        const open = typing && (layoutHeight - vv.height > 120 || vv.height < Math.min(layoutHeight * .8, screenHeight * .68));
         document.body.classList.toggle("kb-open", open);
         document.documentElement.style.setProperty("--vvh", `${vv.height}px`);
+        document.documentElement.style.setProperty("--vv-top", `${Math.max(0, vv.offsetTop || 0)}px`);
       };
-      vv.addEventListener("resize", onVV); onVV();
-      document.addEventListener("focusout", () => setTimeout(onVV, 50));
+      vv.addEventListener("resize", onVV); vv.addEventListener("scroll", onVV); onVV();
+      document.addEventListener("focusin", () => requestAnimationFrame(onVV));
+      document.addEventListener("focusout", () => setTimeout(onVV, 60));
     }
   }
 
@@ -528,3 +534,4 @@
     window.RecalroAuth?.signOut();
   };
 })();
+

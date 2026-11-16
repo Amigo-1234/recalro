@@ -73,6 +73,7 @@ body.dark #app .nav-group-head.is-flyout {
 #app .tb-avatar { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--workspace-edge); cursor: pointer; }
 #app .tb-avatar .avatar { --av: 34px !important; }
 #app .profile-photo-control { display: grid; justify-items: center; gap: 7px; align-self: start; }
+#app .profile-page .profile-photo-control { display: block; justify-items: initial; gap: 0; align-self: flex-end; }
 #app .profile-photo-label, #app .profile-photo-remove { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 32px; padding: 5px 10px; border: 1px solid rgba(255,255,255,.45); border-radius: 9px; background: rgba(255,255,255,.12); color: #fff; font: 700 11px Manrope, sans-serif; cursor: pointer; }
 #app .profile-photo-label .ic { width: 15px; height: 15px; }
 #app .profile-photo-remove { background: transparent; border: 0; text-decoration: underline; }
@@ -419,3 +420,4 @@ body.dark #app .btn-primary { color: #fff; }
   #app .btn-primary, #app .subject-card, #app .group-card, #app .stat,
   #app .progress i, #app .dash-modern .hero-card::before { animation: none !important; transition: none !important; }
 }
+

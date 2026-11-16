@@ -9,6 +9,22 @@
   const initials = (n) => n.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
   const peerAv = (n) => `<span class="avatar peer" style="--hue:${R.hash(n) % 360}" aria-hidden="true">${esc(initials(n))}</span>`;
   const checkRewards = () => R.record([]); // settles achievements without logging an activity
+  const PROFILE_REWARDS = [
+    { id: "first-recall-frame", achievement: "first-review", kind: "frame", value: "recall", name: "Recall Frame", icon: "cards", tone: "teal", rarity: "Starter" },
+    { id: "memory-banner", achievement: "reviews-50", kind: "banner", value: "memory", name: "Memory Banner", icon: "brain", tone: "teal", rarity: "Rare" },
+    { id: "mastery-frame", achievement: "reviews-200", kind: "frame", value: "mastery", name: "Mastery Frame", icon: "brain", tone: "orange", rarity: "Epic" },
+    { id: "exam-accent", achievement: "first-exam", kind: "accent", value: "exam", name: "Exam Focus Accent", icon: "clipboard", tone: "teal", rarity: "Starter" },
+    { id: "perfect-frame", achievement: "perfect-exam", kind: "frame", value: "perfect", name: "Flawless Frame", icon: "star", tone: "orange", rarity: "Epic" },
+    { id: "momentum-accent", achievement: "streak-3", kind: "accent", value: "momentum", name: "Momentum Accent", icon: "flame", tone: "orange", rarity: "Rare" },
+    { id: "week-frame", achievement: "streak-7", kind: "frame", value: "week", name: "Week Laurel Frame", icon: "flame", tone: "orange", rarity: "Epic" },
+    { id: "scholar-banner", achievement: "level-5", kind: "banner", value: "scholar", name: "Scholar Banner", icon: "award", tone: "teal", rarity: "Epic" },
+    { id: "curator-banner", achievement: "vault-5", kind: "banner", value: "curator", name: "Curator Banner", icon: "archive", tone: "teal", rarity: "Rare" },
+    { id: "mentor-accent", achievement: "explainer", kind: "accent", value: "mentor", name: "Mentor Accent", icon: "quote", tone: "teal", rarity: "Starter" },
+    { id: "mastery-banner", achievement: "module-master", kind: "banner", value: "mastery", name: "Mastery Banner", icon: "map", tone: "orange", rarity: "Rare" },
+    { id: "together-accent", achievement: "social", kind: "accent", value: "together", name: "Together Accent", icon: "users", tone: "teal", rarity: "Starter" },
+  ];
+  const rewardFor = (achievementId) => PROFILE_REWARDS.find((reward) => reward.achievement === achievementId);
+  const rewardMark = (reward, locked = false) => `<span class="profile-reward-mark tone-${reward.tone} kind-${reward.kind} ${locked ? "is-locked" : ""}" aria-hidden="true">${icon(locked ? "lock" : reward.icon)}</span>`;
 
   async function prepareProfilePhoto(file) {
     if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPG, PNG or WebP image.");
@@ -151,22 +167,50 @@
   } });
 
   /* ======================= ACHIEVEMENTS ======================= */
-  R.page("achievements", { title: "Achievements", render(view) {
+  R.page("achievements", { title: "Achievements", render(view, ctx) {
     const list = R.achievementList(), unlocked = list.filter((a) => a.unlockedAt), lv = R.levelInfo();
-    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Achievements", desc: "Milestones that celebrate real effort. Every one is earned through recorded study activity." })}
-      <div class="ach-summary">
-        <div class="ach-level">${ui.ring(lv.pct, { size: 112, stroke: 10, tone: "orange", label: `${lv.level}`, sub: "level" })}<div><b>Level ${lv.level}</b><p>${R.fmt(lv.into)} / ${R.fmt(lv.needed)} XP to level ${lv.level + 1}</p>${ui.progress(lv.pct, { tone: "orange", label: "Level progress" })}</div></div>
-        <div class="ach-count"><b>${unlocked.length}<span>/${list.length}</span></b><small>unlocked</small></div>
-        <div class="ach-count"><b>${R.fmt(R.sum(unlocked, (a) => a.gems))}</b><small>gems earned from badges</small></div>
-      </div>
-      <div class="badge-grid">${list.map((a) => `<button type="button" class="badge ${a.unlockedAt ? "is-unlocked" : ""}" data-ach="${a.id}">
-          <span class="badge-art">${icon(a.unlockedAt ? a.icon : "lock")}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
-          ${a.unlockedAt ? `<span class="badge-date">${R.fmtDate(a.unlockedAt)}</span>` : `${ui.progress((a.value / a.target) * 100, { tone: "orange", size: "thin", label: a.name })}<span class="badge-date">${a.value}/${a.target}</span>`}
-        </button>`).join("")}</div>`;
+    let filter = ["all", "in-progress", "unlocked"].includes(ctx.query.filter) ? ctx.query.filter : "all";
+    const next = list.filter((a) => !a.unlockedAt).sort((a, b) => (b.value / b.target) - (a.value / a.target))[0];
+    const nextReward = next && rewardFor(next.id);
+    const earnedDecorations = PROFILE_REWARDS.filter((r) => list.find((a) => a.id === r.achievement)?.unlockedAt).length;
+    view.innerHTML = `${ui.header({ eyebrow: "Your study journey", title: "Achievements", desc: "Every milestone comes from real study. Earn gems and profile decorations as you build your learning streak." })}
+      <section class="ach-journey">
+        <div class="ach-journey-main">
+          <div class="ach-journey-copy"><span class="eyebrow">${next ? "Next study reward" : "Journey complete"}</span><h2>${next ? esc(next.name) : "You have earned every achievement"}</h2><p>${next ? esc(next.desc) : "Your full decoration collection is ready to equip on your profile."}</p>
+            ${next ? `<div class="ach-next-progress">${ui.progress((next.value / next.target) * 100, { tone: "orange", label: `${next.name} progress` })}<small>${R.fmt(next.value)} of ${R.fmt(next.target)} · ${R.fmt(next.gems)} gems${nextReward ? ` + ${esc(nextReward.name)}` : ""}</small></div>` : ""}
+          </div>
+          ${nextReward ? `<div class="ach-next-prize">${rewardMark(nextReward)}<span><small>Profile reward</small><b>${esc(nextReward.name)}</b><em>${esc(nextReward.rarity)} · ${esc(nextReward.kind)}</em></span></div>` : `<a class="btn btn-soft" href="#/app/profile?tab=decorations">${icon("user")}View profile decorations</a>`}
+        </div>
+        <div class="ach-journey-stats"><div><b>${unlocked.length}<small>/${list.length}</small></b><span>milestones earned</span></div><div><b>${earnedDecorations}<small>/${PROFILE_REWARDS.length}</small></b><span>decorations earned</span></div><div><b>${R.fmt(R.sum(unlocked, (a) => a.gems))}</b><span>gems from study</span></div></div>
+      </section>
+      <nav class="ach-filters" aria-label="Achievement filters">${[["all", "All milestones"], ["in-progress", "In progress"], ["unlocked", "Earned"]].map(([id, label]) => `<button type="button" class="ach-filter ${id === filter ? "is-active" : ""}" data-ach-filter="${id}" aria-pressed="${id === filter}">${label}</button>`).join("")}</nav>
+      <div class="badge-grid" data-ach-grid></div>`;
+    const grid = R.$("[data-ach-grid]", view);
+    const drawAchievements = () => {
+      const shown = list.filter((a) => filter === "all" || (filter === "unlocked" ? !!a.unlockedAt : !a.unlockedAt));
+      grid.innerHTML = shown.length ? shown.map((a) => {
+        const reward = rewardFor(a.id), isUnlocked = !!a.unlockedAt;
+        return `<button type="button" class="badge ${isUnlocked ? "is-unlocked" : ""} ${reward ? `rarity-${reward.rarity.toLowerCase()}` : ""}" data-ach="${a.id}" aria-label="${esc(a.name)}. ${isUnlocked ? "Earned" : `${a.value} of ${a.target}`}">
+          <span class="badge-art">${icon(isUnlocked ? a.icon : "lock")}</span><span class="badge-rarity">${isUnlocked ? "Earned" : reward?.rarity || "Milestone"}</span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small>
+          <span class="badge-progress">${isUnlocked ? `<span class="badge-date">${R.fmtDate(a.unlockedAt)}</span>` : `${ui.progress((a.value / a.target) * 100, { tone: "orange", size: "thin", label: `${a.name} progress` })}<span class="badge-date">${R.fmt(a.value)} / ${R.fmt(a.target)}</span>`}</span>
+          ${reward ? `<span class="badge-prize">${rewardMark(reward, !isUnlocked)}<span><small>${isUnlocked ? "Profile reward earned" : "Unlocks"}</small><b>${esc(reward.name)}</b></span></span>` : ""}
+        </button>`;
+      }).join("") : `<div class="ach-empty">${icon("sparkles")}<b>No milestones in this view yet</b><span>Keep studying and your progress will appear here.</span></div>`;
+    };
+    drawAchievements();
     view.addEventListener("click", (e) => {
-      const b = e.target.closest("[data-ach]"); if (!b) return;
-      const a = list.find((x) => x.id === b.dataset.ach);
-      R.dialog({ size: "sm", cls: "celebrate", labelled: false, body: `<div class="celebrate-badge ${a.unlockedAt ? "celebrate-orange" : "is-locked"}">${icon(a.unlockedAt ? a.icon : "lock")}</div><h2 class="celebrate-title">${esc(a.name)}</h2><p class="celebrate-sub">${esc(a.desc)}</p>${a.unlockedAt ? `<p class="muted small center">Unlocked ${R.fmtDate(a.unlockedAt, { month: "long", day: "numeric", year: "numeric" })}</p>` : `${ui.progress((a.value / a.target) * 100, { tone: "orange", label: "Progress" })}<p class="muted small center">${a.value} of ${a.target}</p>`}<div class="celebrate-rewards"><span class="reward-chip gem">${icon("gem")}+${a.gems} gems</span></div>`, actions: [{ label: "Close", tone: "primary" }] });
+      const filterButton = e.target.closest("[data-ach-filter]");
+      if (filterButton) {
+        filter = filterButton.dataset.achFilter;
+        R.replaceRoute(`achievements?filter=${filter}`);
+        R.$$("[data-ach-filter]", view).forEach((button) => { const active = button === filterButton; button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", String(active)); });
+        drawAchievements();
+        return;
+      }
+      const button = e.target.closest("[data-ach]"); if (!button) return;
+      const a = list.find((x) => x.id === button.dataset.ach); if (!a) return;
+      const reward = rewardFor(a.id);
+      R.dialog({ size: "sm", cls: "celebrate ach-detail", labelled: false, body: `<div class="celebrate-badge ${a.unlockedAt ? "celebrate-orange" : "is-locked"}">${icon(a.unlockedAt ? a.icon : "lock")}</div><span class="badge-rarity">${a.unlockedAt ? "Milestone earned" : "Study milestone"}</span><h2 class="celebrate-title">${esc(a.name)}</h2><p class="celebrate-sub">${esc(a.desc)}</p>${a.unlockedAt ? `<p class="muted small center">Earned ${R.fmtDate(a.unlockedAt, { month: "long", day: "numeric", year: "numeric" })}</p>` : `${ui.progress((a.value / a.target) * 100, { tone: "orange", label: "Milestone progress" })}<p class="muted small center">${R.fmt(a.value)} of ${R.fmt(a.target)} completed</p>`}${reward ? `<div class="ach-detail-reward">${rewardMark(reward, !a.unlockedAt)}<span><small>${a.unlockedAt ? "Decoration added to your collection" : "Decoration earned when complete"}</small><b>${esc(reward.name)}</b><em>${esc(reward.rarity)} profile ${esc(reward.kind)}</em></span></div>` : ""}<div class="celebrate-rewards"><span class="reward-chip gem">${icon("gem")}+${a.gems} gems</span></div>`, actions: a.unlockedAt && reward ? [{ label: "Customize profile", tone: "primary", onClick: () => R.go("profile?tab=decorations") }] : [{ label: "Close", tone: "primary" }] });
     });
   } });
 
@@ -200,88 +244,102 @@
   } });
 
   /* ======================= PROFILE ======================= */
-  R.page("profile", { title: "Profile", render(view) {
-    const lv = R.levelInfo(), st = R.streak(), stats = R.stats(), ach = R.achievementList().filter((a) => a.unlockedAt).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
-    const user = window.RecalroAuth?.currentUser() || {};
-    view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "Your learning profile")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} tier`, "neutral", "shield")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
-        <div class="ph-actions">${ui.btn("Edit profile", { tone: "glass", icon: "edit", attrs: "data-editprofile" })}${ui.link("Customise", "store", { tone: "glass", icon: "bag" })}</div></div></section>
-      <div class="stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(st.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Exams taken", R.fmt(stats.exams), "clipboard"]].map(([l, v, ic]) => `<div class="stat"><div class="stat-top"><span>${l}</span><span class="stat-ic">${icon(ic)}</span></div><strong>${v}</strong></div>`).join("")}</div>
-      <div class="grid-12">
-        ${ui.card(ach.length ? `<div class="showcase">${ach.slice(0, 6).map((a) => `<div class="sc-badge-sm"><span class="badge-art">${icon(a.icon)}</span><b>${esc(a.name)}</b><small>${R.fmtDate(a.unlockedAt)}</small></div>`).join("")}</div>` : `<p class="muted small">Unlocked achievements will be showcased here.</p>`, { title: "Achievement showcase", icon: "award", cls: "span-7", action: ui.link("All", "achievements", { tone: "ghost", size: "sm" }) })}
-        ${ui.card(R.chart.hbars(R.subjects().map((s) => ({ label: s.name, value: R.subjectMastery(s.id), color: `var(--s${R.subjectIndex(s.id) % 4})` }))), { title: "Subject mastery", icon: "map", cls: "span-5" })}
-        ${ui.card(R.chart.heatmap(16), { title: "Study activity", icon: "calendar", cls: "span-12" })}
+  R.page("profile", { title: "Profile", render(view, ctx) {
+    const lv = R.levelInfo(), streak = R.streak(), stats = R.stats(), list = R.achievementList();
+    const unlocked = list.filter((a) => a.unlockedAt).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
+    const onboarding = R.state.profile.onboarding || {}, details = onboarding.details || {};
+    const username = onboarding.username ? `@${onboarding.username}` : "Your learning profile";
+    const studyContext = [onboarding.institution || details.school, details.department || details.field || details.proField].filter(Boolean).join(" · ");
+    const activeTab = ctx.query.tab === "decorations" ? "decorations" : "overview";
+    const activeFilter = ["all", "frame", "banner", "accent"].includes(ctx.query.filter) ? ctx.query.filter : "all";
+    const next = list.filter((a) => !a.unlockedAt).sort((a, b) => (b.value / b.target) - (a.value / a.target))[0];
+    const activities = [...R.state.activity].slice(-5).reverse();
+    const activityTitles = { review: "Reviewed flashcards", answer: "Practised a question", exam: "Completed a practice exam", summary: "Made a study summary", explain: "Explained a concept", chat: "Studied with AI Tutor", vault: "Saved a Knowledge Vault item", material: "Added a study material", quest: "Completed a daily quest", bonus: "Earned a study bonus" };
+    const activityIcons = { review: "cards", answer: "zap", exam: "clipboard", summary: "file", explain: "quote", chat: "sparkles", vault: "archive", material: "upload", quest: "check-circle", bonus: "award" };
+    const activityMarkup = activities.length ? `<ol class="profile-history">${activities.map((a) => `<li><span class="profile-history-icon">${icon(activityIcons[a.t] || "book")}</span><span><b>${activityTitles[a.t] || "Study session"}</b><small>${esc(R.subject(a.subject)?.name || "Independent study")} · ${R.relTime(a.at)}</small></span>${a.xp ? `<em>+${R.fmt(a.xp)} XP</em>` : ""}</li>`).join("")}</ol>` : `<div class="profile-empty">${icon("book")}<b>Your study history starts with your next session</b><span>Your real study activity will appear here.</span>${ui.link("Start learning", "subjects", { tone: "soft", size: "sm", icon: "arrow-right" })}</div>`;
+    const overviewMarkup = () => {
+      const showcase = unlocked.slice(0, 4);
+      return `<div class="profile-overview-grid">
+        <section class="profile-panel profile-next-panel"><div class="profile-panel-head"><div><span class="eyebrow">Your next milestone</span><h2>${next ? esc(next.name) : "Every milestone earned"}</h2></div>${icon(next ? "target" : "award")}</div><p>${next ? esc(next.desc) : "You have completed every current achievement. New study milestones will appear here."}</p>${next ? `<div class="profile-next-progress">${ui.progress((next.value / next.target) * 100, { tone: "orange", label: `${next.name} progress` })}<small>${R.fmt(next.value)} of ${R.fmt(next.target)} · ${R.fmt(next.gems)} gems${rewardFor(next.id) ? ` + ${esc(rewardFor(next.id).name)}` : ""}</small></div>` : ""}<a class="btn btn-soft btn-sm" href="#/app/achievements">${icon("award")}Achievement journey</a></section>
+        <section class="profile-panel profile-collection-panel"><div class="profile-panel-head"><div><span class="eyebrow">Earned through study</span><h2>Decoration collection</h2></div><a href="#/app/profile?tab=decorations" class="link-btn">View all ${icon("arrow-right")}</a></div>${showcase.length ? `<div class="profile-showcase">${showcase.map((a) => { const reward = rewardFor(a.id); return `<div class="profile-showcase-item">${reward ? rewardMark(reward) : `<span class="badge-art">${icon(a.icon)}</span>`}<b>${esc(reward?.name || a.name)}</b><small>${esc(a.name)}</small></div>`; }).join("")}</div>` : `<div class="profile-empty profile-empty-inline">${icon("award")}<span>Complete a study milestone to earn your first profile decoration.</span></div>`}</section>
+        <section class="profile-panel profile-mastery-panel"><div class="profile-panel-head"><div><span class="eyebrow">Knowledge in progress</span><h2>Subject mastery</h2></div>${icon("map")}</div>${R.subjects().length ? R.chart.hbars(R.subjects().map((s) => ({ label: s.name, value: R.subjectMastery(s.id), color: `var(--s${R.subjectIndex(s.id) % 4})` }))) : `<div class="profile-empty profile-empty-inline">${icon("book")}<span>Add subjects and your mastery will grow here.</span></div>`}</section>
+        <section class="profile-panel profile-history-panel"><div class="profile-panel-head"><div><span class="eyebrow">Recent sessions</span><h2>Study history</h2></div>${icon("calendar")}</div>${activityMarkup}</section>
       </div>`;
+    };
+    const decorationsMarkup = () => {
+      const rewards = PROFILE_REWARDS.filter((reward) => activeFilter === "all" || reward.kind === activeFilter);
+      const earnedCount = PROFILE_REWARDS.filter((reward) => !!list.find((a) => a.id === reward.achievement)?.unlockedAt).length;
+      return `<section class="profile-decoration-section"><div class="profile-decoration-heading"><div><span class="eyebrow">Earned through learning</span><h2>Your profile collection</h2><p>Complete real study milestones to unlock frames, banners and accents. No gems or purchases needed.</p></div><div class="profile-decoration-count"><b>${earnedCount}<small>/${PROFILE_REWARDS.length}</small></b><span>earned</span></div></div>
+        <nav class="profile-decoration-filters" aria-label="Filter profile decorations">${[["all", "All"], ["frame", "Frames"], ["banner", "Banners"], ["accent", "Accents"]].map(([id, label]) => `<button type="button" data-profile-filter="${id}" class="${id === activeFilter ? "is-active" : ""}" aria-pressed="${id === activeFilter}">${label}</button>`).join("")}</nav>
+        <div class="profile-decoration-grid">${rewards.map((reward) => {
+          const achievement = list.find((a) => a.id === reward.achievement), earned = !!achievement?.unlockedAt, equipped = R.state.equipped[reward.kind] === reward.value;
+          return `<article class="profile-decoration-card ${earned ? "is-earned" : "is-locked"} ${equipped ? "is-equipped" : ""} tone-${reward.tone}"><div class="profile-decoration-preview">${rewardMark(reward, !earned)}${reward.kind === "banner" ? `<span class="profile-banner-sample banner-${reward.value}" aria-hidden="true"></span>` : ""}</div><div class="profile-decoration-meta"><span class="profile-decoration-kind">${esc(reward.rarity)} · ${esc(reward.kind)}</span><h3>${esc(reward.name)}</h3><p>${earned ? `Earned with ${esc(achievement.name)}.` : `Earn with ${esc(achievement.name)}: ${esc(achievement.desc)}`}</p>${earned ? ui.btn(equipped ? "Equipped" : "Equip", { tone: equipped ? "soft" : "primary", size: "sm", icon: equipped ? "check" : "sparkles", attrs: `data-profile-equip="${reward.id}" aria-pressed="${equipped}"` }) : `<div class="profile-decoration-progress">${ui.progress((achievement.value / achievement.target) * 100, { tone: "orange", size: "thin", label: `${achievement.name} progress` })}<small>${R.fmt(achievement.value)} / ${R.fmt(achievement.target)}</small></div>`}</div></article>`;
+        }).join("")}</div></section>`;
+    };
+    view.innerHTML = `<div class="profile-page profile-accent-${R.state.equipped.accent || "none"}">
+      <section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="profile-cover-art" aria-hidden="true"><span>${icon(R.state.equipped.banner ? "award" : "sparkles")}</span></div>
+        <div class="profile-hero-main"><div class="profile-photo-control"><div class="profile-avatar-frame">${R.ui.avatar(92)}</div><label class="profile-photo-button" for="profilePhotoInput" aria-label="Change profile picture">${icon("image")}</label><input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload profile photo" hidden></div>
+          <div class="profile-identity"><span class="profile-username">${esc(username)}</span><h1>${esc(R.displayName())}</h1><p>${esc(studyContext || "Your personal learning space")}</p><div class="profile-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} tier`, "neutral", "shield")}${ui.pill(`${R.plural(streak.current, "day")} streak`, "neutral", "flame")}</div><div class="profile-level-progress"><div><span>Progress to level ${lv.level + 1}</span><b>${R.fmt(lv.into)} / ${R.fmt(lv.needed)} XP</b></div>${ui.progress(lv.pct, { tone: "orange", size: "thin", label: "Progress to next level" })}</div></div>
+          <div class="profile-hero-actions"><button type="button" class="btn btn-soft" data-editprofile>${icon("edit")}Edit profile</button><button type="button" class="btn btn-primary" data-profile-tab="decorations">${icon("award")}Customize</button>${R.state.profile.photo ? `<button type="button" class="profile-remove-photo" data-removephoto>Remove photo</button>` : ""}</div>
+        </div>
+      </section>
+      <div class="profile-stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(streak.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Exams taken", R.fmt(stats.exams), "clipboard"]].map(([label, value, glyph]) => `<div class="profile-stat"><span class="profile-stat-icon">${icon(glyph)}</span><span><small>${label}</small><b>${value}</b></span></div>`).join("")}</div>
+      <nav class="profile-tabs" aria-label="Profile sections"><button type="button" class="${activeTab === "overview" ? "is-active" : ""}" data-profile-tab="overview" aria-selected="${activeTab === "overview"}">${icon("user")}Overview</button><button type="button" class="${activeTab === "decorations" ? "is-active" : ""}" data-profile-tab="decorations" aria-selected="${activeTab === "decorations"}">${icon("award")}Decorations <span>${PROFILE_REWARDS.filter((reward) => !!list.find((a) => a.id === reward.achievement)?.unlockedAt).length}</span></button></nav>
+      <div class="profile-tab-content">${activeTab === "decorations" ? decorationsMarkup() : overviewMarkup()}</div>
+    </div>`;
+    const rerender = (tab = activeTab, filter = activeFilter) => { R.replaceRoute(`profile?tab=${tab}${tab === "decorations" ? `&filter=${filter}` : ""}`); R.refresh(); };
     view.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-profile-tab]");
+      if (tab) { rerender(tab.dataset.profileTab, "all"); return; }
+      const filter = e.target.closest("[data-profile-filter]");
+      if (filter) { rerender("decorations", filter.dataset.profileFilter); return; }
+      const equip = e.target.closest("[data-profile-equip]");
+      if (equip) {
+        const reward = PROFILE_REWARDS.find((item) => item.id === equip.dataset.profileEquip), achievement = list.find((a) => a.id === reward?.achievement);
+        if (!reward || !achievement?.unlockedAt) return;
+        const wasEquipped = R.state.equipped[reward.kind] === reward.value;
+        R.update((state) => { state.equipped[reward.kind] = wasEquipped ? null : reward.value; });
+        rerender("decorations", activeFilter);
+        R.toast(wasEquipped ? `${reward.name} unequipped.` : `${reward.name} equipped on your profile.`, { icon: wasEquipped ? "check" : "award" });
+        return;
+      }
+      if (e.target.closest("[data-removephoto]")) { R.update((state) => { state.profile.photo = ""; }); R.updateChips(); rerender(); R.toast("Profile photo removed."); return; }
       if (e.target.closest("[data-editprofile]")) {
-        const onboarding = R.state.profile.onboarding || {}, details = onboarding.details || {};
         const pathOptions = [["", "Not set"], ["university", "University"], ["secondary", "Secondary school"], ["postgraduate", "Postgraduate"], ["professional", "Professional study"], ["independent", "Independent learning"]];
-        R.formDialog({
-          title: "Your profile and study details",
-          description: "Add the information you skipped during signup. You can change it again anytime.",
-          submitLabel: "Save profile",
-          fields: [
-            { name: "name", label: "Display name", required: true, maxLength: 40, value: R.displayName() },
-            { name: "username", label: "Username", maxLength: 24, placeholder: "letters, numbers and underscores", value: onboarding.username || "" },
-            { name: "path", label: "Study path", type: "select", options: pathOptions, value: onboarding.path || "" },
-            { name: "country", label: "Country", maxLength: 60, placeholder: "Your country", value: onboarding.country || "" },
-            { name: "institution", label: "School or institution", maxLength: 120, placeholder: "Your school, college or university", value: onboarding.institution || details.school || "" },
-            { name: "field", label: "Course or field", maxLength: 120, placeholder: "Your course, department or field", value: details.department || details.field || details.proField || details.topics || "" },
-            { name: "level", label: "Level, class or programme", maxLength: 80, placeholder: "Your current level or class", value: details.level || details.grade || details.programme || details.stage || details.cert || "" },
-          ],
-          onSubmit: async (v) => {
-            const username = v.username.trim().toLowerCase();
-            if (username && !/^[a-z][a-z0-9_]{2,23}$/.test(username)) { R.toast("Use 3–24 characters: start with a letter, then use letters, numbers or underscores.", { icon: "info" }); return; }
-            const path = v.path, institution = v.institution.trim(), field = v.field.trim(), level = v.level.trim();
-            const nextDetails = { ...details };
-            if (path === "secondary") { nextDetails.school = institution; nextDetails.grade = level; }
-            else if (path === "university") { nextDetails.institution = institution; nextDetails.department = field; nextDetails.level = level; }
-            else if (path === "postgraduate") { nextDetails.institution = institution; nextDetails.field = field; nextDetails.programme = level; }
-            else if (path === "professional") { nextDetails.cert = level; nextDetails.proField = field; }
-            else if (path === "independent") nextDetails.topics = field;
-            const nextOnboarding = { ...onboarding, path, country:v.country.trim(), institution, username:username || null, details:nextDetails };
-            try {
-              const saved = await window.RecalroAuth.updateProfile({ name:v.name.trim().replace(/\s+/g, " "), username, onboarding:nextOnboarding });
-              R.update((state) => { state.profile.displayName = saved.display_name; state.profile.onboarding = saved.onboarding || nextOnboarding; });
-              R.toast("Profile saved."); R.refresh();
-            } catch (error) { R.toast(error.message || "Could not save your profile. Please try again.", { icon: "info" }); }
-          },
-        });
+        R.formDialog({ title: "Your profile and study details", description: "Add or update your name, username and study information. You can change it again anytime.", submitLabel: "Save profile", fields: [
+          { name: "name", label: "Display name", required: true, maxLength: 40, value: R.displayName() },
+          { name: "username", label: "Username", maxLength: 24, placeholder: "letters, numbers and underscores", value: onboarding.username || "" },
+          { name: "path", label: "Study path", type: "select", options: pathOptions, value: onboarding.path || "" },
+          { name: "country", label: "Country", maxLength: 60, placeholder: "Your country", value: onboarding.country || "" },
+          { name: "institution", label: "School or institution", maxLength: 120, placeholder: "Your school, college or university", value: onboarding.institution || details.school || "" },
+          { name: "field", label: "Course or field", maxLength: 120, placeholder: "Your course, department or field", value: details.department || details.field || details.proField || details.topics || "" },
+          { name: "level", label: "Level, class or programme", maxLength: 80, placeholder: "Your current level or class", value: details.level || details.grade || details.programme || details.stage || details.cert || "" },
+        ], onSubmit: async (values) => {
+          const nextUsername = values.username.trim().toLowerCase();
+          if (nextUsername && !/^[a-z][a-z0-9_]{2,23}$/.test(nextUsername)) { R.toast("Use 3–24 characters: start with a letter, then use letters, numbers or underscores.", { icon: "info" }); return; }
+          const path = values.path, institution = values.institution.trim(), field = values.field.trim(), level = values.level.trim(), nextDetails = { ...details };
+          if (path === "secondary") { nextDetails.school = institution; nextDetails.grade = level; }
+          else if (path === "university") { nextDetails.institution = institution; nextDetails.department = field; nextDetails.level = level; }
+          else if (path === "postgraduate") { nextDetails.institution = institution; nextDetails.field = field; nextDetails.programme = level; }
+          else if (path === "professional") { nextDetails.cert = level; nextDetails.proField = field; }
+          else if (path === "independent") nextDetails.topics = field;
+          const nextOnboarding = { ...onboarding, path, country: values.country.trim(), institution, username: nextUsername || null, details: nextDetails };
+          try {
+            const saved = await window.RecalroAuth.updateProfile({ name: values.name.trim().replace(/\s+/g, " "), username: nextUsername, onboarding: nextOnboarding });
+            R.update((state) => { state.profile.displayName = saved.display_name; state.profile.onboarding = saved.onboarding || nextOnboarding; });
+            R.toast("Profile saved."); rerender();
+          } catch (error) { R.toast(error.message || "Could not save your profile. Please try again.", { icon: "info" }); }
+        } });
       }
     });
-  } });
-
-  const profilePage = R.pages.profile;
-  R.page("profile", { ...profilePage, render(view, ctx) {
-    const cleanup = profilePage.render(view, ctx);
-    const username = R.state.profile.onboarding?.username;
-    if (username) {
-      const handle = document.createElement("span");
-      handle.className = "profile-handle";
-      handle.textContent = `@${username}`;
-      view.querySelector(".profile-hero h1")?.after(handle);
-    }
-    const avatar = view.querySelector(".profile-hero .avatar");
-    const control = document.createElement("div");
-    control.className = "profile-photo-control";
-    avatar.replaceWith(control);
-    control.append(avatar);
-    control.insertAdjacentHTML("beforeend", `<label class="profile-photo-label" for="profilePhotoInput">${icon("image")}<span>Change photo</span></label><input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload profile photo" hidden>${R.state.profile.photo ? '<button type="button" class="profile-photo-remove" data-removephoto>Remove photo</button>' : ""}`);
-    control.addEventListener("click", (event) => {
-      if (!event.target.closest("[data-removephoto]")) return;
-      R.update((state) => { state.profile.photo = ""; });
-      R.updateChips(); R.refresh(); R.toast("Profile photo removed.");
-    });
-    control.addEventListener("change", async (event) => {
-      if (event.target.id !== "profilePhotoInput" || !event.target.files?.[0]) return;
+    view.addEventListener("change", async (e) => {
+      if (e.target.id !== "profilePhotoInput" || !e.target.files?.[0]) return;
       try {
-        const photo = await prepareProfilePhoto(event.target.files[0]);
-        R.update((state) => { state.profile.photo = photo; });
-        R.updateChips(); R.refresh(); R.toast("Profile photo updated.");
+        const photo = await prepareProfilePhoto(e.target.files[0]);
+        R.update((state) => { state.profile.photo = photo; }); R.updateChips(); rerender(); R.toast("Profile photo updated.");
       } catch (error) { R.toast(error.message || "Could not use that image.", { icon: "info" }); }
     });
-    return cleanup;
   } });
-
   /* ======================= SETTINGS ======================= */
   R.page("settings", { title: "Settings", render(view) {
     const s = R.state.settings, theme = R.getTheme(), user = window.RecalroAuth?.currentUser() || {};

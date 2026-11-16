@@ -201,7 +201,7 @@
     activity: [], cards: {}, customCards: [], subjects: [], materials: [],
     favorites: [], savedVault: [], milestones: [], planner: [], deadlines: [], customQuests: [],
     questClaims: {}, challengeClaims: {}, joinedGroups: [], customGroups: [],
-    purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 0, achievements: {},
+    purchases: [], equipped: { frame: null, avatar: null, banner: null, accent: null }, gems: 0, achievements: {},
     examHistory: [], chats: [], summaries: [], explanations: [], notifications: [],
     profile: { displayName: "", photo: "" },
     settings: { dailyGoal: 45, notificationsEnabled: true, reviewReminders: true, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, hideTutorNavigation: false, navOpen: {} },
@@ -534,3 +534,4 @@
     return recs;
   };
 })();
+

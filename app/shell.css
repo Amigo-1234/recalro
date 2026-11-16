@@ -221,6 +221,14 @@ select.is-enhanced { display: none !important; }
 }
 @media (min-width: 600px) and (max-width: 767px) { .hub-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
+/* Keep searchable sheets inside the visual viewport when the phone keyboard opens. */
+@media (max-width: 767px) {
+  body.kb-open .r-sheet-full { top: var(--vv-top, 0px); bottom: auto; height: var(--vvh, 100dvh); max-height: var(--vvh, 100dvh); }
+  body.kb-open .r-sheet-bottom { max-height: calc(var(--vvh, 100dvh) - 12px); }
+  body.kb-open .r-sheet .sheet-body { min-height: 0; }
+  body.kb-open .hub-sheet .sheet-body, body.kb-open .tw-history-sheet .sheet-body { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+}
+
 /* ---------- ThemeSelector ---------- */
 .set-theme { display: grid; gap: 14px; }
 .set-theme > div b { display: block; font-size: 15px; }
@@ -251,3 +259,4 @@ select.is-enhanced { display: none !important; }
 .theme-tick .ic { width: 14px; height: 14px; stroke-width: 3; }
 .theme-opt input:checked + .theme-card .theme-tick { opacity: 1; transform: none; }
 @media (max-width: 480px) { .theme-sel { gap: 8px; } .theme-card { padding: 7px; border-radius: 14px; } .theme-meta small { display: none; } .theme-tick { top: 12px; right: 12px; width: 20px; height: 20px; } }
+
