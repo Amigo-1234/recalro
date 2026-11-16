@@ -436,7 +436,7 @@
       if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing && !document.querySelector("dialog[open]"))) { e.preventDefault(); R.openCommand(); }
     });
     SmartMobileNavigation();
-    // Virtual keyboard: hide the bottom bar while typing so inputs and the tutor composer stay visible.
+    // Keep inputs and their scrollable lists in the actual visual viewport while the keyboard is up.
     const vv = window.visualViewport;
     if (vv) {
       const onVV = () => {
@@ -444,14 +444,19 @@
         const typing = !!active?.matches?.('input:not([type="button"]):not([type="submit"]):not([type="checkbox"]), textarea, select, [contenteditable="true"]');
         const layoutHeight = window.innerHeight || document.documentElement.clientHeight;
         const screenHeight = window.screen?.height || layoutHeight;
-        const open = typing && (layoutHeight - vv.height > 120 || vv.height < Math.min(layoutHeight * .8, screenHeight * .68));
+        const keyboardVisible = layoutHeight - vv.height > 100 || vv.height < screenHeight * .78;
+        const open = typing && keyboardVisible;
         document.body.classList.toggle("kb-open", open);
         document.documentElement.style.setProperty("--vvh", `${vv.height}px`);
         document.documentElement.style.setProperty("--vv-top", `${Math.max(0, vv.offsetTop || 0)}px`);
       };
-      vv.addEventListener("resize", onVV); vv.addEventListener("scroll", onVV); onVV();
-      document.addEventListener("focusin", () => requestAnimationFrame(onVV));
-      document.addEventListener("focusout", () => setTimeout(onVV, 60));
+      const settle = () => { onVV(); setTimeout(onVV, 120); setTimeout(onVV, 320); };
+      vv.addEventListener("resize", onVV, { passive: true });
+      vv.addEventListener("scroll", onVV, { passive: true });
+      window.addEventListener("resize", onVV, { passive: true });
+      onVV();
+      document.addEventListener("focusin", () => requestAnimationFrame(settle));
+      document.addEventListener("focusout", () => { setTimeout(onVV, 80); setTimeout(onVV, 360); });
     }
   }
 

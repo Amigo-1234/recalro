@@ -12,12 +12,12 @@
   const PROFILE_REWARDS = [
     { id: "first-recall-frame", achievement: "first-review", kind: "frame", value: "recall", name: "Recall Frame", icon: "cards", tone: "teal", rarity: "Starter" },
     { id: "memory-banner", achievement: "reviews-50", kind: "banner", value: "memory", name: "Memory Banner", icon: "brain", tone: "teal", rarity: "Rare" },
-    { id: "mastery-frame", achievement: "reviews-200", kind: "frame", value: "mastery", name: "Mastery Frame", icon: "brain", tone: "orange", rarity: "Epic" },
+    { id: "mastery-frame", achievement: "reviews-200", kind: "frame", value: "mastery", name: "Mastery Frame", icon: "brain", tone: "orange", rarity: "Legendary" },
     { id: "exam-accent", achievement: "first-exam", kind: "accent", value: "exam", name: "Exam Focus Accent", icon: "clipboard", tone: "teal", rarity: "Starter" },
-    { id: "perfect-frame", achievement: "perfect-exam", kind: "frame", value: "perfect", name: "Flawless Frame", icon: "star", tone: "orange", rarity: "Epic" },
+    { id: "perfect-frame", achievement: "perfect-exam", kind: "frame", value: "perfect", name: "Flawless Frame", icon: "star", tone: "orange", rarity: "Legendary" },
     { id: "momentum-accent", achievement: "streak-3", kind: "accent", value: "momentum", name: "Momentum Accent", icon: "flame", tone: "orange", rarity: "Rare" },
-    { id: "week-frame", achievement: "streak-7", kind: "frame", value: "week", name: "Week Laurel Frame", icon: "flame", tone: "orange", rarity: "Epic" },
-    { id: "scholar-banner", achievement: "level-5", kind: "banner", value: "scholar", name: "Scholar Banner", icon: "award", tone: "teal", rarity: "Epic" },
+    { id: "week-frame", achievement: "streak-7", kind: "frame", value: "week", name: "Week Laurel Frame", icon: "flame", tone: "orange", rarity: "Legendary" },
+    { id: "scholar-banner", achievement: "level-5", kind: "banner", value: "scholar", name: "Scholar Banner", icon: "award", tone: "teal", rarity: "Legendary" },
     { id: "curator-banner", achievement: "vault-5", kind: "banner", value: "curator", name: "Curator Banner", icon: "archive", tone: "teal", rarity: "Rare" },
     { id: "mentor-accent", achievement: "explainer", kind: "accent", value: "mentor", name: "Mentor Accent", icon: "quote", tone: "teal", rarity: "Starter" },
     { id: "mastery-banner", achievement: "module-master", kind: "banner", value: "mastery", name: "Mastery Banner", icon: "map", tone: "orange", rarity: "Rare" },
@@ -253,9 +253,9 @@
     const activeTab = ctx.query.tab === "decorations" ? "decorations" : "overview";
     const activeFilter = ["all", "frame", "banner", "accent"].includes(ctx.query.filter) ? ctx.query.filter : "all";
     const next = list.filter((a) => !a.unlockedAt).sort((a, b) => (b.value / b.target) - (a.value / a.target))[0];
-    const activities = [...R.state.activity].slice(-5).reverse();
-    const activityTitles = { review: "Reviewed flashcards", answer: "Practised a question", exam: "Completed a practice exam", summary: "Made a study summary", explain: "Explained a concept", chat: "Studied with AI Tutor", vault: "Saved a Knowledge Vault item", material: "Added a study material", quest: "Completed a daily quest", bonus: "Earned a study bonus" };
-    const activityIcons = { review: "cards", answer: "zap", exam: "clipboard", summary: "file", explain: "quote", chat: "sparkles", vault: "archive", material: "upload", quest: "check-circle", bonus: "award" };
+    const activities = [...R.state.activity].filter((a) => !["chat", "ai", "tutor", "explain"].includes(String(a.t || "").toLowerCase())).slice(-5).reverse();
+    const activityTitles = { review: "Reviewed flashcards", answer: "Practised a question", exam: "Completed a practice exam", summary: "Made a study summary", vault: "Saved a Knowledge Vault item", material: "Added a study material", quest: "Completed a daily quest", bonus: "Earned a study bonus" };
+    const activityIcons = { review: "cards", answer: "zap", exam: "clipboard", summary: "file", vault: "archive", material: "upload", quest: "check-circle", bonus: "award" };
     const activityMarkup = activities.length ? `<ol class="profile-history">${activities.map((a) => `<li><span class="profile-history-icon">${icon(activityIcons[a.t] || "book")}</span><span><b>${activityTitles[a.t] || "Study session"}</b><small>${esc(R.subject(a.subject)?.name || "Independent study")} · ${R.relTime(a.at)}</small></span>${a.xp ? `<em>+${R.fmt(a.xp)} XP</em>` : ""}</li>`).join("")}</ol>` : `<div class="profile-empty">${icon("book")}<b>Your study history starts with your next session</b><span>Your real study activity will appear here.</span>${ui.link("Start learning", "subjects", { tone: "soft", size: "sm", icon: "arrow-right" })}</div>`;
     const overviewMarkup = () => {
       const showcase = unlocked.slice(0, 4);
@@ -277,7 +277,7 @@
         }).join("")}</div></section>`;
     };
     view.innerHTML = `<div class="profile-page profile-accent-${R.state.equipped.accent || "none"}">
-      <section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="profile-cover-art" aria-hidden="true"><span>${icon(R.state.equipped.banner ? "award" : "sparkles")}</span></div>
+      <section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="profile-cover-art" aria-hidden="true">${R.state.profile.photo ? `<img class="profile-cover-photo" src="${esc(R.state.profile.photo)}" alt="">` : ""}<span>${icon(R.state.equipped.banner ? "award" : "sparkles")}</span></div>
         <div class="profile-hero-main"><div class="profile-photo-control"><div class="profile-avatar-frame">${R.ui.avatar(92)}</div><label class="profile-photo-button" for="profilePhotoInput" aria-label="Change profile picture">${icon("image")}</label><input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload profile photo" hidden></div>
           <div class="profile-identity"><span class="profile-username">${esc(username)}</span><h1>${esc(R.displayName())}</h1><p>${esc(studyContext || "Your personal learning space")}</p><div class="profile-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} tier`, "neutral", "shield")}${ui.pill(`${R.plural(streak.current, "day")} streak`, "neutral", "flame")}</div><div class="profile-level-progress"><div><span>Progress to level ${lv.level + 1}</span><b>${R.fmt(lv.into)} / ${R.fmt(lv.needed)} XP</b></div>${ui.progress(lv.pct, { tone: "orange", size: "thin", label: "Progress to next level" })}</div></div>
           <div class="profile-hero-actions"><button type="button" class="btn btn-soft" data-editprofile>${icon("edit")}Edit profile</button><button type="button" class="btn btn-primary" data-profile-tab="decorations">${icon("award")}Customize</button>${R.state.profile.photo ? `<button type="button" class="profile-remove-photo" data-removephoto>Remove photo</button>` : ""}</div>

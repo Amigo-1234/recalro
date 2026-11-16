@@ -421,3 +421,206 @@ body.dark #app .btn-primary { color: #fff; }
   #app .progress i, #app .dash-modern .hero-card::before { animation: none !important; transition: none !important; }
 }
 
+/* ---------------- Layered liquid glass workspace ----------------
+   Keep the refraction on broad surfaces and use restrained bevels on cards,
+   so text and study controls stay crisp on small screens. */
+#app {
+  --glass-highlight: rgba(255, 255, 255, .72);
+  --glass-edge: rgba(255, 255, 255, .62);
+  --glass-shadow: 0 18px 38px -28px rgba(13, 52, 57, .32);
+}
+body.dark #app {
+  --glass-highlight: rgba(255, 255, 255, .16);
+  --glass-edge: rgba(255, 255, 255, .17);
+  --glass-shadow: 0 20px 40px -28px rgba(0, 0, 0, .75);
+}
+#app .sidebar, #app .topbar, #app .tabbar, .r-sheet, .r-dialog, .popover {
+  background-color: color-mix(in srgb, var(--surface) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.42) blur(22px);
+  backdrop-filter: saturate(1.42) blur(22px);
+  box-shadow: inset 0 1px 0 var(--glass-highlight),
+    inset 3px -2px 7px color-mix(in srgb, var(--glass-highlight) 56%, transparent),
+    inset -6px 6px 17px color-mix(in srgb, var(--glass-highlight) 66%, transparent),
+    var(--glass-shadow);
+}
+#app .sidebar, #app .topbar, #app .tabbar {
+  border-color: color-mix(in srgb, var(--workspace-edge) 62%, var(--glass-edge));
+}
+#app .card, #app .stat, #app .profile-panel, #app .profile-stat,
+#app .profile-decoration-card, #app .badge, #app .store-item,
+#app .hub-tile, #app .r-sheet, #app .r-dialog {
+  background-color: color-mix(in srgb, var(--surface) 84%, transparent);
+  -webkit-backdrop-filter: saturate(1.2) blur(13px);
+  backdrop-filter: saturate(1.2) blur(13px);
+  box-shadow: inset 0 1px 0 var(--glass-highlight),
+    inset 3px -2px 7px color-mix(in srgb, var(--glass-highlight) 36%, transparent),
+    inset -6px 6px 17px color-mix(in srgb, var(--glass-highlight) 42%, transparent),
+    var(--workspace-shadow, 0 14px 28px -24px rgba(13, 52, 57, .3));
+}
+#app .tw-head, #app .tw-dock, #app .tw-input, #app .tw-history {
+  background-color: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: saturate(1.28) blur(17px);
+  backdrop-filter: saturate(1.28) blur(17px);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), inset 3px -2px 7px rgba(255,255,255,.18);
+}
+body.dark #app .card, body.dark #app .stat, body.dark #app .profile-panel,
+body.dark #app .profile-stat, body.dark #app .profile-decoration-card,
+body.dark #app .badge, body.dark #app .store-item, body.dark #app .hub-tile {
+  border-color: color-mix(in srgb, var(--line) 68%, var(--glass-edge));
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  #app .sidebar, #app .topbar, #app .tabbar, #app .card, #app .stat,
+  #app .profile-panel, #app .profile-stat, #app .profile-decoration-card,
+  #app .badge, .r-sheet, .r-dialog, .popover { background-color: var(--surface); }
+}
+
+/* Profile card inspired by the dark portrait references. The uploaded photo
+   becomes the cover; the fallback remains richly lit without demo imagery. */
+#app .profile-hero {
+  position: relative;
+  min-height: 310px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 28px;
+  background: #101a1d;
+  color: #fff;
+  box-shadow: 0 26px 62px -34px rgba(5, 23, 27, .72), inset 0 1px 0 rgba(255,255,255,.22);
+}
+#app .profile-cover-art { position: absolute; inset: 0; height: auto; background: radial-gradient(ellipse at 82% 10%, rgba(247,117,3,.38), transparent 32%), radial-gradient(ellipse at 12% 82%, rgba(20,160,159,.55), transparent 50%), linear-gradient(135deg, #10191b, #183c3d 54%, #111b20); }
+#app .profile-cover-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 38%; filter: saturate(.82) brightness(.74); }
+#app .profile-cover-art::before { z-index: 1; background: radial-gradient(circle at 79% 18%, rgba(255,255,255,.28) 0 2px, transparent 3px), radial-gradient(circle at 85% 31%, rgba(255,255,255,.2) 0 2px, transparent 3px), repeating-linear-gradient(135deg, transparent 0 28px, rgba(255,255,255,.035) 29px 30px, transparent 31px 58px); }
+#app .profile-cover-art::after { z-index: 1; inset: 0; width: auto; height: auto; top: 0; right: 0; border: 0; border-radius: inherit; background: linear-gradient(0deg, rgba(8,17,19,.98) 0%, rgba(8,17,19,.83) 24%, rgba(8,17,19,.18) 72%, rgba(8,17,19,.1) 100%); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
+#app .profile-cover-art > span { z-index: 2; top: 18px; right: 20px; border-color: rgba(255,255,255,.24); background: rgba(238,248,248,.1); color: #fff; -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 8px 24px rgba(0,0,0,.16); }
+#app .profile-hero.banner-memory .profile-cover-art, #app .profile-hero.banner-curator .profile-cover-art { background: radial-gradient(ellipse at 80% 12%, rgba(91,226,208,.35), transparent 34%), linear-gradient(130deg, #0c2930, #087978 58%, #163638); }
+#app .profile-hero.banner-scholar .profile-cover-art, #app .profile-hero.banner-mastery .profile-cover-art { background: radial-gradient(ellipse at 76% 12%, rgba(255,177,80,.32), transparent 35%), linear-gradient(130deg, #152527, #075d61 58%, #133b3d); }
+#app .profile-hero.banner-exam .profile-cover-art, #app .profile-hero.banner-perfect .profile-cover-art { background: radial-gradient(ellipse at 78% 12%, rgba(255,190,96,.37), transparent 36%), linear-gradient(130deg, #29190f, #9c4305 58%, #422512); }
+#app .profile-hero-main { z-index: 2; align-items: flex-end; min-height: 310px; gap: 18px; padding: 24px; margin: 0; }
+#app .profile-photo-control { width: 92px; height: 92px; align-self: flex-end; }
+#app .profile-avatar-frame { width: 92px; height: 92px; border: 4px solid rgba(255,255,255,.9); background: rgba(255,255,255,.14); box-shadow: 0 0 0 1px rgba(255,255,255,.25), 0 12px 28px rgba(0,0,0,.3); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+#app .profile-avatar-frame .avatar { --av: 84px !important; }
+#app .profile-photo-button { right: 1px; bottom: 1px; border-color: #152426; background: var(--teal-600); box-shadow: 0 2px 12px rgba(0,0,0,.3); }
+#app .profile-identity { padding: 0; }
+#app .profile-username { color: rgba(227,255,249,.78); }
+#app .profile-identity h1 { color: #fff; text-shadow: 0 2px 18px rgba(0,0,0,.32); }
+#app .profile-identity > p { color: rgba(239,248,248,.76); }
+#app .profile-pills .pill { border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.1); color: rgba(255,255,255,.91); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+#app .profile-pills .pill-orange { color: #ffe2bd; background: rgba(247,117,3,.2); }
+#app .profile-level-progress > div:first-child, #app .profile-level-progress b { color: rgba(248,252,252,.88); }
+#app .profile-level-progress .progress { background: rgba(255,255,255,.17); }
+#app .profile-hero-actions { align-self: flex-end; padding: 0; }
+#app .profile-hero-actions .btn-soft { border-color: rgba(255,255,255,.32); background: rgba(241,250,249,.12); color: #fff; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 7px 20px rgba(0,0,0,.15); }
+#app .profile-hero-actions .btn-primary { border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.94); color: #113d3d; box-shadow: 0 9px 22px rgba(0,0,0,.2), inset 0 1px 0 #fff; }
+#app .profile-remove-photo { color: rgba(255,255,255,.78); }
+
+/* Earnable milestones read like collectible medals, with clear rarity cues. */
+#app .badge { position: relative; overflow: hidden; border: 1px solid color-mix(in srgb, var(--teal) 16%, var(--line)); border-radius: 20px; transition: transform .22s var(--ease), border-color .22s, box-shadow .22s; }
+#app .badge::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(132deg, rgba(255,255,255,.34), transparent 38%); opacity: .62; }
+#app .badge:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--teal) 46%, var(--line)); box-shadow: 0 16px 28px -20px rgba(11,124,123,.55), inset 0 1px 0 var(--glass-highlight); }
+#app .badge .badge-art { position: relative; display: grid; place-items: center; overflow: visible; width: 58px; height: 58px; margin-bottom: 8px; border: 1px solid rgba(20,160,159,.25); border-radius: 50%; background: radial-gradient(circle at 35% 23%, #fff, #dff5f1 39%, #9cd8cc 100%); color: #087c79; box-shadow: inset 3px -2px 7px rgba(255,255,255,.7), inset -5px 5px 14px rgba(255,255,255,.72), 0 8px 18px -11px rgba(4,85,82,.56); }
+#app .badge .badge-art::before, #app .badge .badge-art::after { content: ""; position: absolute; z-index: 0; top: 36px; width: 15px; height: 21px; background: linear-gradient(150deg, #d5a34c, #f7d78b); clip-path: polygon(0 0, 100% 0, 76% 100%, 50% 78%, 20% 100%); }
+#app .badge .badge-art::before { left: 11px; transform: rotate(13deg); }
+#app .badge .badge-art::after { right: 11px; transform: rotate(-13deg); }
+#app .badge .badge-art .ic { position: relative; z-index: 1; width: 26px; height: 26px; filter: drop-shadow(0 2px 2px rgba(12,81,80,.2)); }
+#app .badge.is-unlocked { border-color: color-mix(in srgb, var(--orange) 32%, var(--line)); background-image: radial-gradient(ellipse at 12% 0%, rgba(255,190,99,.2), transparent 48%); }
+#app .badge.is-unlocked .badge-art { border-color: rgba(245,160,40,.55); background: radial-gradient(circle at 34% 22%, #fff9df, #ffd577 48%, #f08b17); color: #70400b; box-shadow: inset 3px -2px 7px rgba(255,255,255,.64), inset -5px 5px 14px rgba(255,255,255,.62), 0 8px 20px -10px rgba(168,87,7,.55); }
+#app .badge.rarity-rare .badge-art { background: radial-gradient(circle at 34% 22%, #fff, #c8f5ee 45%, #62c6b3); color: #075f5e; }
+#app .badge.rarity-epic .badge-art { background: radial-gradient(circle at 34% 22%, #fff8e9, #ffc776 45%, #ea7c20); color: #71400b; }
+#app .badge.rarity-legendary { border-color: rgba(232,156,43,.5); background-image: radial-gradient(ellipse at 12% 0%, rgba(255,180,71,.24), transparent 56%); }
+#app .badge.rarity-legendary .badge-art { border-color: rgba(235,170,66,.8); background: radial-gradient(circle at 31% 20%, #fff, #ffe7a5 34%, #f3a632 68%, #bb6b10); color: #5d3507; box-shadow: inset 3px -2px 7px rgba(255,255,255,.7), inset -6px 6px 17px rgba(255,255,255,.72), 0 0 0 4px rgba(242,174,69,.12), 0 10px 24px -10px rgba(177,102,13,.62); }
+#app .badge.rarity-legendary .badge-art::before, #app .badge.rarity-legendary .badge-art::after { background: linear-gradient(150deg, #f4d58a, #a96c19); }
+#app .badge-rarity { position: relative; z-index: 1; }
+#app .badge.rarity-legendary .badge-rarity { background: #fff0cf; color: #995407; }
+#app .badge-prize { position: relative; z-index: 1; }
+#app .profile-reward-mark { box-shadow: inset 3px -2px 7px rgba(255,255,255,.4), inset -6px 6px 17px rgba(255,255,255,.44), 0 8px 18px -14px rgba(13,52,57,.55); }
+#app .profile-decoration-card.is-equipped { border-color: var(--teal); box-shadow: inset 0 1px 0 var(--glass-highlight), 0 0 0 1px var(--teal), 0 16px 26px -20px rgba(11,124,123,.65); }
+
+/* Keep search results and the tutor composer in the visible iPhone viewport,
+   instead of letting the document's larger layout viewport cover them. */
+@media (max-width: 767px) {
+  body.kb-open .cmd-dialog {
+    position: fixed;
+    top: calc(var(--vv-top, 0px) + 8px);
+    right: 12px;
+    bottom: auto;
+    left: 12px;
+    width: auto;
+    height: calc(var(--vvh, 100dvh) - 16px);
+    max-height: calc(var(--vvh, 100dvh) - 16px);
+    margin: 0;
+    transform: none;
+  }
+  body.kb-open .cmd-dialog .r-dialog-body { min-height: 0; flex: 1 1 0; }
+  body.kb-open .cmd-list { min-height: 0; max-height: none; flex: 1 1 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  body.kb-open .r-dialog:not(.cmd-dialog) {
+    position: fixed;
+    top: calc(var(--vv-top, 0px) + 8px);
+    right: 12px;
+    bottom: auto;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(var(--vvh, 100dvh) - 16px);
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body.kb-open .r-sheet-bottom {
+    inset: calc(var(--vv-top, 0px) + 6px) 0 auto;
+    width: 100%;
+    height: calc(var(--vvh, 100dvh) - 12px);
+    max-height: calc(var(--vvh, 100dvh) - 12px);
+    margin: 0;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+  }
+  body.kb-open .r-sheet-bottom .sheet-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  body.kb-open #app .shell[data-route="tutor"] #view.view-tutor {
+    position: fixed;
+    z-index: 45;
+    top: var(--vv-top, 0px);
+    right: 0;
+    bottom: auto;
+    left: 0;
+    width: 100%;
+    height: var(--vvh, 100dvh);
+    max-height: var(--vvh, 100dvh);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body.kb-open #app .shell[data-route="tutor"] .tw {
+    --tw-h: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body.kb-open #app .shell[data-route="tutor"] .tw-main { height: 100%; min-height: 0; overflow: hidden; }
+  body.kb-open #app .shell[data-route="tutor"] .tw-body { flex: 1 1 0; min-height: 0; overflow: hidden; }
+  body.kb-open #app .shell[data-route="tutor"] .tw-scroll { flex: 1 1 0; height: auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+  body.kb-open #app .shell[data-route="tutor"] .tw-dock { flex: none; padding: 5px 10px max(8px, env(safe-area-inset-bottom)); }
+  #app .profile-hero { min-height: 350px; border-radius: 24px; }
+  #app .profile-hero-main { display: grid; grid-template-columns: 76px minmax(0,1fr); align-content: end; align-items: end; gap: 0 12px; min-height: 350px; padding: 18px 15px 15px; }
+  #app .profile-photo-control, #app .profile-avatar-frame { width: 76px; height: 76px; }
+  #app .profile-avatar-frame { border-width: 4px; }
+  #app .profile-avatar-frame .avatar { --av: 68px !important; }
+  #app .profile-identity { min-width: 0; }
+  #app .profile-identity h1 { font-size: clamp(22px, 7vw, 29px); }
+  #app .profile-identity > p { font-size: 11px; }
+  #app .profile-pills { gap: 4px; margin-top: 7px; }
+  #app .profile-pills .pill { padding: 4px 7px; font-size: 9px; }
+  #app .profile-level-progress { margin-top: 8px; }
+  #app .profile-level-progress > div:first-child, #app .profile-level-progress b { font-size: 9px; }
+  #app .profile-hero-actions { grid-column: 1 / -1; display: flex; width: 100%; justify-content: stretch; gap: 7px; margin-top: 14px; }
+  #app .profile-hero-actions .btn { flex: 1; min-width: 0; min-height: 40px; padding-inline: 9px; font-size: 11px; }
+  #app .profile-remove-photo { color: rgba(255,255,255,.84); }
+  #app .badge-grid { gap: 9px; }
+  #app .badge { min-height: 240px; }
+  #app .badge .badge-art { width: 50px; height: 50px; }
+  #app .badge .badge-art::before, #app .badge .badge-art::after { top: 31px; width: 13px; height: 17px; }
+}
+@media (max-width: 380px) {
+  #app .profile-hero, #app .profile-hero-main { min-height: 374px; }
+  #app .profile-identity h1 { font-size: 21px; }
+}
+
