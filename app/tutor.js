@@ -212,7 +212,10 @@
     let chat = mode === "chat" && !ctx.query.new ? st.chats.find((c) => c.id === ctx.query.chat) || null : null;
     let subject = ctx.query.subject || chat?.subject || R.subjects()[0]?.id || "";
     if (!R.subject(subject)) subject = R.subjects()[0]?.id || "";
-    let streaming = null, attachment = null, learningMode = "ask", voiceSession = false, voiceScreen = null;
+    let streaming = null, attachment = null, learningMode = "ask", voiceSession = false, voiceConnecting = false, voiceScreen = null;
+    let voicePeer = null, voiceChannel = null, voiceStream = null, voiceAudio = null, voiceAudioBlocked = false;
+    let voiceLevelContext = null, voiceLevelAnalyser = null, voiceLevelFrame = 0, voiceMicMuted = false;
+    let pendingVoiceUser = null, pendingVoiceAssistantText = "";
     const shell = R.$("#shell");
     const syncTutorNavigation = () => shell?.classList.toggle("hide-tutor-nav", !!st.settings.hideTutorNavigation);
     syncTutorNavigation();
@@ -423,7 +426,7 @@
       drawHistory();
       return m;
     }
-    async function send(text, { voiceReply = false } = {}) {
+    async function send(text) {
       text = (text || "").trim();
       if ((!text && !attachment) || streaming) return;
       if (!chat) { chat = { id: R.uid(), title: (text || "Image question").slice(0, 60), subject, messages: [], updatedAt: new Date().toISOString() }; st.chats.push(chat); R.replaceRoute(`tutor?chat=${chat.id}`); }
@@ -439,12 +442,6 @@
       attachment = pendingAttachment;
       const reply = await respond(text || `Please help me understand the attached ${pendingAttachment?.name || "file"}.`);
       attachment = null;
-      if (voiceReply && voiceSession && reply && !reply.error) {
-        const parsed = document.createElement("div"); parsed.innerHTML = R.md(reply.md || reply.text || "");
-        const spoken = parsed.innerText || parsed.textContent || "";
-        voiceState("speaking", 0, spoken.slice(0, 260));
-        await speakText(spoken, (state, level) => voiceState(state, level, state === "speaking" ? spoken.slice(0, 260) : ""));
-      }
       return reply;
     }
 
@@ -455,8 +452,6 @@
       onAttach: (a) => { attachment = a; }, onUnattach: () => { attachment = null; },
       onModeChange: (m) => { learningMode = m; },
       onVoiceMode: startVoiceMode,
-      onVoiceTurn: handleVoiceTurn,
-      onVoiceLevel: (level) => { if (voiceSession) voiceScreen.querySelector("[data-voice-orb]")?.style.setProperty("--voice-scale", (1 + Math.min(1, level) * .14).toFixed(3)); },
       onVoice: async (blob) => {
         try { composer.setValue(await transcribeAudio(blob)); }
         catch (err) { R.toast(err.message || "Voice transcription failed.", { icon: "info" }); }
@@ -481,53 +476,172 @@
       const changed = voiceScreen.dataset.state !== state;
       voiceScreen.dataset.state = state;
       const status = voiceScreen.querySelector("[data-voice-status]"), mic = voiceScreen.querySelector("[data-voice-toggle]"), orb = voiceScreen.querySelector("[data-voice-orb]");
-      const labels = { listening: "Listening…", transcribing: "One moment…", thinking: "Thinking it through…", speaking: "Recalro is speaking", finished: "Listening…", error: "I couldn't play that reply" };
+      const labels = { connecting: "Starting voice chat…", listening: "Listening…", thinking: "Thinking it through…", speaking: "Recalro is speaking", muted: "Microphone muted", error: "Voice chat couldn't connect" };
       if (changed) status.textContent = labels[state] || "Voice chat";
       if (caption !== undefined) { const cap = voiceScreen.querySelector("[data-voice-caption]"); if (cap.textContent !== caption) cap.textContent = caption; }
       orb.style.setProperty("--voice-scale", (1 + Math.min(1, Math.max(0, level)) * .14).toFixed(3));
       if (changed) {
-        mic.disabled = ["transcribing", "thinking", "finished"].includes(state);
-        mic.setAttribute("aria-label", state === "speaking" ? "Interrupt and speak" : state === "listening" ? "Finish speaking" : "Microphone unavailable");
-        mic.classList.toggle("is-live", state === "listening");
+        mic.disabled = state === "connecting";
+        mic.setAttribute("aria-label", state === "speaking" ? "Interrupt Recalro" : state === "error" ? "Retry voice chat" : voiceMicMuted ? "Unmute microphone" : "Mute microphone");
+        mic.classList.toggle("is-live", state === "listening" && !voiceMicMuted);
+        mic.classList.toggle("is-muted", voiceMicMuted);
       }
     }
+    function ensureVoiceChat() {
+      if (chat) return chat;
+      chat = { id:R.uid(), title:"Voice conversation", subject, messages:[], updatedAt:new Date().toISOString() };
+      st.chats.push(chat); R.replaceRoute(`tutor?chat=${chat.id}`);
+      return chat;
+    }
+    function addVoiceMessage(role, text) {
+      const current = ensureVoiceChat(), value = String(text || "").trim();
+      if (!value) return null;
+      const msg = { role, text:value, at:new Date().toISOString() };
+      current.messages.push(msg); current.updatedAt = msg.at; current.subject = subject;
+      if (role === "user" && current.messages.filter((item) => item.role === "user").length === 1) current.title = value.slice(0, 60);
+      R.save(); drawHistory(); drawThread();
+      if (role === "user") R.record({ t:"chat", subject, xp:R.content.xp.chat });
+      return msg;
+    }
+    function updateVoiceUserTranscript(text) {
+      const transcript = String(text || "").trim();
+      if (!transcript) return;
+      if (!pendingVoiceUser) pendingVoiceUser = addVoiceMessage("user", transcript);
+      else {
+        pendingVoiceUser.text = transcript; pendingVoiceUser.at = new Date().toISOString();
+        if (chat?.messages[0] === pendingVoiceUser) chat.title = transcript.slice(0, 60);
+        chat.updatedAt = pendingVoiceUser.at; R.save(); drawHistory(); drawThread();
+      }
+      pendingVoiceUser = null;
+    }
+    function saveVoiceAssistantTranscript(text = pendingVoiceAssistantText) {
+      const transcript = String(text || "").trim();
+      if (transcript) addVoiceMessage("assistant", transcript);
+      pendingVoiceAssistantText = "";
+    }
+    function handleRealtimeEvent(event) {
+      if (!voiceSession || !event?.type) return;
+      if (event.type === "session.created" || event.type === "session.updated") {
+        voiceConnecting = false; voiceState("listening", 0, "Speak naturally. Recalro will answer out loud.");
+      } else if (event.type === "input_audio_buffer.speech_started") {
+        voiceState("listening", 0, "I'm listening.");
+      } else if (event.type === "input_audio_buffer.speech_stopped") {
+        if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
+        pendingVoiceUser = addVoiceMessage("user", "Voice message…");
+        voiceState("thinking", 0, "Let me think that through.");
+      } else if (event.type === "conversation.item.input_audio_transcription.completed") {
+        updateVoiceUserTranscript(event.transcript);
+      } else if (event.type === "response.created") {
+        voiceState("thinking", 0, "Working on a clear answer.");
+      } else if (event.type === "output_audio_buffer.started") {
+        voiceState("speaking", .35, pendingVoiceAssistantText || "Recalro is answering.");
+      } else if (event.type === "response.output_audio_transcript.delta") {
+        pendingVoiceAssistantText += event.delta || "";
+        voiceState("speaking", .65, pendingVoiceAssistantText.slice(-280) || "Recalro is answering.");
+      } else if (event.type === "response.output_audio_transcript.done") {
+        if (event.transcript) pendingVoiceAssistantText = event.transcript;
+        if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
+      } else if (event.type === "output_audio_buffer.stopped") {
+        if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
+        voiceState("listening", 0, "Your turn. I'm listening.");
+      } else if (event.type === "response.done") {
+        if (event.response?.status === "failed") voiceState("error", 0, event.response?.status_details?.error?.message || "The voice response failed. Tap the mic to try again.");
+        else if (voiceScreen.dataset.state !== "speaking") voiceState("listening", 0, "Your turn. I'm listening.");
+      } else if (event.type === "error") {
+        const message = event.error?.message || "The voice connection returned an error.";
+        voiceState("error", 0, message); R.toast(message, { icon:"info" });
+      }
+    }
+    function startVoiceLevelMeter() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass || !voiceStream) return;
+      try {
+        voiceLevelContext = new AudioContextClass(); voiceLevelAnalyser = voiceLevelContext.createAnalyser(); voiceLevelAnalyser.fftSize = 256;
+        voiceLevelContext.createMediaStreamSource(voiceStream).connect(voiceLevelAnalyser);
+        const samples = new Uint8Array(voiceLevelAnalyser.fftSize);
+        const sample = () => {
+          if (!voiceLevelAnalyser || !voiceSession) return;
+          voiceLevelAnalyser.getByteTimeDomainData(samples);
+          const rms = Math.sqrt(samples.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / samples.length);
+          if (!voiceMicMuted && voiceScreen.dataset.state === "listening") voiceScreen.querySelector("[data-voice-orb]")?.style.setProperty("--voice-scale", (1 + Math.min(1, rms * 5) * .14).toFixed(3));
+          voiceLevelFrame = requestAnimationFrame(sample);
+        };
+        void voiceLevelContext.resume().then(() => { voiceLevelFrame = requestAnimationFrame(sample); }).catch(() => {});
+      } catch { voiceLevelAnalyser = null; }
+    }
+    function stopVoiceTransport() {
+      cancelAnimationFrame(voiceLevelFrame); voiceLevelFrame = 0;
+      if (voiceLevelContext && voiceLevelContext.state !== "closed") voiceLevelContext.close().catch(() => {});
+      voiceLevelContext = null; voiceLevelAnalyser = null;
+      voiceChannel?.close(); voiceChannel = null;
+      voicePeer?.close(); voicePeer = null;
+      voiceStream?.getTracks().forEach((track) => track.stop()); voiceStream = null;
+      if (voiceAudio) { voiceAudio.pause(); voiceAudio.srcObject = null; voiceAudio.remove(); voiceAudio = null; }
+      voiceAudioBlocked = false; voiceConnecting = false;
+    }
     async function startVoiceMode() {
-      if (voiceSession) return;
-      voiceSession = true; voiceScreen.hidden = false; root.classList.add("is-voice");
-      R.setFocusMode(true); voiceState("listening", 0, "Speak naturally. I’ll answer out loud.");
-      const started = await composer.startVoiceCapture();
-      if (!started) closeVoiceMode();
+      if (voiceConnecting || (voiceSession && voicePeer?.connectionState === "connected")) return;
+      stopVoiceTransport(); voiceSession = true; voiceMicMuted = false;
+      voiceScreen.hidden = false; root.classList.add("is-voice"); R.setFocusMode(true);
+      voiceState("connecting", 0, "Connecting securely to your tutor…");
+      try {
+        if (!navigator.mediaDevices?.getUserMedia || !window.RTCPeerConnection) throw new Error("Live voice requires a supported browser on HTTPS or localhost.");
+        voiceStream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+        if (!voiceSession) { stopVoiceTransport(); return; }
+        startVoiceLevelMeter();
+        voicePeer = new RTCPeerConnection();
+        voiceAudio = document.createElement("audio"); voiceAudio.autoplay = true; voiceAudio.playsInline = true; voiceAudio.setAttribute("aria-hidden", "true");
+        Object.assign(voiceAudio.style, { position:"absolute", width:"1px", height:"1px", opacity:"0", pointerEvents:"none" }); voiceScreen.append(voiceAudio);
+        voicePeer.ontrack = (event) => {
+          voiceAudio.srcObject = event.streams[0] || new MediaStream([event.track]);
+          voiceAudio.play().catch(() => { voiceAudioBlocked = true; voiceState("error", 0, "Tap the microphone button to enable voice playback."); });
+        };
+        voicePeer.onconnectionstatechange = () => {
+          if (voicePeer?.connectionState === "failed" && voiceSession) voiceState("error", 0, "The voice connection dropped. Tap the microphone button to reconnect.");
+        };
+        voiceStream.getAudioTracks().forEach((track) => voicePeer.addTrack(track, voiceStream));
+        voiceChannel = voicePeer.createDataChannel("oai-events");
+        voiceChannel.onopen = () => { voiceConnecting = false; voiceState("listening", 0, "Speak naturally. Recalro will answer out loud."); };
+        voiceChannel.onmessage = (message) => { try { handleRealtimeEvent(JSON.parse(message.data)); } catch { /* Ignore non-JSON transport messages. */ } };
+        voiceChannel.onclose = () => { if (voiceSession) voiceState("error", 0, "The voice session ended. Tap the microphone button to reconnect."); };
+        const offer = await voicePeer.createOffer();
+        await voicePeer.setLocalDescription(offer);
+        const history = (chat?.messages || []).filter((message) => ["user", "assistant"].includes(message.role)).slice(-8).map((message) => ({ role:message.role, content:message.text || message.md || message.errorMessage || "" }));
+        const response = await fetch("/api/voice-session", { method:"POST", headers:{ "Content-Type":"application/json", ...(await apiAuthHeaders()) }, body:JSON.stringify({ sdp:voicePeer.localDescription?.sdp || offer.sdp, subject:R.subject(subject)?.name || "general learning", history }) });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "Voice chat couldn't connect. Check your OpenAI API settings.");
+        }
+        const answer = await response.text();
+        if (!voiceSession) { stopVoiceTransport(); return; }
+        await voicePeer.setRemoteDescription({ type:"answer", sdp:answer });
+      } catch (error) {
+        stopVoiceTransport(); voiceSession = true;
+        const message = error.message || "Voice chat couldn't connect. Check your microphone and try again.";
+        voiceState("error", 0, message); R.toast(message, { icon:"info" });
+      }
     }
     function closeVoiceMode() {
-      if (!voiceSession) return;
-      voiceSession = false; speechCancel(); composer.stopVoiceCapture(true); voiceScreen.hidden = true;
+      if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
+      voiceSession = false; speechCancel(); stopVoiceTransport(); voiceScreen.hidden = true;
       root.classList.remove("is-voice"); R.setFocusMode(false);
     }
     async function toggleVoiceCapture() {
       if (!voiceSession) return;
-      if (voiceScreen.dataset.state === "speaking") { speechCancel(); voiceState("listening", 0, "Go ahead. I’m listening."); await composer.startVoiceCapture(); return; }
-      if (["transcribing", "thinking"].includes(voiceScreen.dataset.state)) return;
-      composer.stopVoiceCapture();
-    }
-    async function handleVoiceTurn(blob) {
-      if (!voiceSession) return;
-      try {
-        voiceState("transcribing", 0, "Turning your words into a question…");
-        const transcript = await transcribeAudio(blob);
-        if (!voiceSession) return;
-        if (!transcript) { voiceState("listening", 0, "I didn’t catch that. Try again."); await composer.startVoiceCapture(); return; }
-        voiceState("thinking", 0, `You: ${transcript.slice(0, 220)}`);
-        const reply = await send(transcript, { voiceReply: true });
-        if (!voiceSession) return;
-        if (reply?.error) voiceState("listening", 0, reply.errorMessage || "I couldn't answer that. Try again.");
-        else voiceState("listening", 0, "Your turn. I’m listening.");
-        await composer.startVoiceCapture();
-      } catch (err) {
-        if (!voiceSession) return;
-        voiceState("listening", 0, err.message || "Voice chat couldn't continue. Try again.");
-        R.toast(err.message || "Voice chat couldn't continue.", { icon: "info" });
-        await composer.startVoiceCapture();
+      if (voiceAudioBlocked && voiceAudio) {
+        try { await voiceAudio.play(); voiceAudioBlocked = false; voiceState("listening", 0, "Speak naturally. Recalro will answer out loud."); } catch { voiceState("error", 0, "Audio is blocked. Tap again to enable playback."); }
+        return;
       }
+      if (voiceScreen.dataset.state === "error") { await startVoiceMode(); return; }
+      if (!voiceChannel || voiceChannel.readyState !== "open") { await startVoiceMode(); return; }
+      if (voiceScreen.dataset.state === "speaking") {
+        voiceChannel.send(JSON.stringify({ type:"response.cancel" }));
+        voiceChannel.send(JSON.stringify({ type:"output_audio_buffer.clear" }));
+        voiceState("listening", 0, "Go ahead. I'm listening."); return;
+      }
+      voiceMicMuted = !voiceMicMuted;
+      voiceStream?.getAudioTracks().forEach((track) => { track.enabled = !voiceMicMuted; });
+      voiceState(voiceMicMuted ? "muted" : "listening", 0, voiceMicMuted ? "Your microphone is off." : "I'm listening.");
     }
     voiceScreen.addEventListener("click", (e) => {
       if (e.target.closest("[data-voice-end]") || e.target.closest("[data-voice-exit]")) closeVoiceMode();
@@ -572,12 +686,12 @@
     drawThread();
     if (ctx.query.topic) composer.setValue(`Help me understand ${ctx.query.topic}`);
     if (!phone()) composer.focus();
-    return () => { closeVoiceMode(); stopStream(); document.removeEventListener("keydown", onKey); };
+    return () => { closeVoiceMode(); composer.stopDictation(); stopStream(); document.removeEventListener("keydown", onKey); };
   }
   let explainWs = null;
 
   /* ======================= MessageComposer ======================= */
-  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach, onModeChange, onVoice, onVoiceMode, onVoiceTurn, onVoiceLevel }) {
+  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach, onModeChange, onVoice, onVoiceMode }) {
     el.innerHTML = `<form class="tw-form" novalidate>
         <div class="tw-attach" hidden></div>
         <div class="tw-input">
@@ -635,56 +749,37 @@
       const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(f);
       file.value = "";
     });
-    let recorder = null, chunks = [], recordStream = null, recordContext = null, recordAnalyser = null, recordFrame = 0, stopTimer = 0, recordPurpose = "dictation", discardRecording = false;
+    let recorder = null, chunks = [], recordStream = null, stopTimer = 0, discardRecording = false;
     const mimeType = () => ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"].find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
     const stopRecording = (discard = false) => {
       if (discard) discardRecording = true;
-      clearTimeout(stopTimer); cancelAnimationFrame(recordFrame);
+      clearTimeout(stopTimer);
       if (recorder?.state === "recording") recorder.stop();
     };
-    const startRecording = async (purpose = "dictation") => {
+    const startRecording = async () => {
       if (recorder?.state === "recording") return true;
       if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { R.toast("Voice recording requires a supported browser on HTTPS or localhost.", { icon: "info" }); return false; }
       try {
-        recordPurpose = purpose; discardRecording = false; chunks = []; recordStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        discardRecording = false; chunks = []; recordStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
         const type = mimeType(); recorder = new MediaRecorder(recordStream, type ? { mimeType: type } : undefined);
         recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
         recorder.onstop = () => {
           const blob = new Blob(chunks, { type: recorder.mimeType || recordStream?.getAudioTracks()[0]?.getSettings?.().mimeType || "audio/webm" });
           recordStream?.getTracks().forEach((track) => track.stop()); recordStream = null;
-          if (recordContext && recordContext.state !== "closed") recordContext.close().catch(() => {}); recordContext = null; recordAnalyser = null;
           if (discardRecording) { discardRecording = false; return; }
-          if (recordPurpose === "voice") onVoiceTurn?.(blob); else onVoice?.(blob);
+          onVoice?.(blob);
         };
         recorder.start();
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        let startedTalking = false, lastLoud = Date.now();
-        if (AudioContextClass) try {
-          recordContext = new AudioContextClass(); recordAnalyser = recordContext.createAnalyser(); recordAnalyser.fftSize = 512;
-          recordContext.createMediaStreamSource(recordStream).connect(recordAnalyser); await recordContext.resume();
-          const samples = new Uint8Array(recordAnalyser.fftSize);
-          const sample = () => {
-            if (!recordAnalyser || recorder?.state !== "recording") return;
-            recordAnalyser.getByteTimeDomainData(samples);
-            const rms = Math.sqrt(samples.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / samples.length);
-            onVoiceLevel?.(Math.min(1, rms * 5));
-            if (rms > .035) { startedTalking = true; lastLoud = Date.now(); }
-            if (purpose === "voice" && startedTalking && Date.now() - lastLoud > 1150) { stopRecording(); return; }
-            recordFrame = requestAnimationFrame(sample);
-          };
-          recordFrame = requestAnimationFrame(sample);
-        } catch { recordAnalyser = null; }
-        stopTimer = setTimeout(() => stopRecording(), purpose === "voice" ? 60000 : 30000);
+        stopTimer = setTimeout(() => stopRecording(), 30000);
         return true;
       } catch (err) { recordStream?.getTracks().forEach((track) => track.stop()); R.toast("Microphone permission was not granted.", { icon: "info" }); return false; }
     };
     micBtn.addEventListener("click", async () => {
       if (recorder?.state === "recording") { stopRecording(); micBtn.classList.remove("is-recording"); micBtn.setAttribute("aria-label", "Dictate a message"); return; }
-      const started = await startRecording("dictation");
+      const started = await startRecording();
       if (started) { micBtn.classList.add("is-recording"); micBtn.setAttribute("aria-label", "Stop dictation"); }
     });
-    api.startVoiceCapture = () => startRecording("voice");
-    api.stopVoiceCapture = (discard = false) => stopRecording(discard);
+    api.stopDictation = () => stopRecording(true);
     prev.addEventListener("click", (e) => { if (e.target.closest("[data-unattach]")) { hasAttachment = false; prev.hidden = true; prev.innerHTML = ""; onUnattach(); sync(); ta.focus(); } });
     return api;
   }

@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const crypto = require('crypto');
 
 const PORT = Number(process.env.PORT || 8000);
 const PUBLIC_DIR = __dirname;
@@ -153,6 +154,41 @@ async function handleRequest(req, res) {
       const answer = result.output?.flatMap(o => o.content || []).filter(c => c.type === 'output_text').map(c => c.text).join('\n').trim();
       if (!answer) throw new Error('The AI returned an empty response. Please try again.');
       return json(res,200,{answer,follow:['Give me a practical example','Quiz me on this topic','Explain that in simpler terms']});
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice-session') {
+      if (!requireKey(res)) return;
+      const user = await requireSupabaseUser(req, res);
+      if (!user) return;
+      const body = await readBody(req);
+      const sdp = String(body.sdp || '');
+      if (!sdp.trim() || sdp.length > 64*1024) return json(res,400,{error:'A valid voice connection offer is required.'});
+      const subject = String(body.subject || 'general learning').slice(0,120).replace(/[\r\n]/g,' ');
+      const history = (Array.isArray(body.history) ? body.history : []).slice(-8).filter(m => ['user','assistant'].includes(m?.role)).map(m => `${m.role === 'assistant' ? 'Recalro' : 'Learner'}: ${String(m.content || '').slice(0,1600)}`).join('\n').slice(0,10000);
+      const instructions = `You are Recalro, a warm, accurate academic tutor in a natural spoken conversation. The learner is studying ${subject}. Keep each first response brief and conversational (usually 2–4 short sentences), then let the learner guide the depth. Use the language the learner speaks. Explain clearly, ask a helpful follow-up when useful, and preserve context across turns. Do not use Markdown, stage directions, or announce that you are an AI. Never invent facts or claim to have searched the web. If an idea is uncertain, say so plainly.${history ? `\\n\\nRecent conversation for context:\\n${history}` : ''}`;
+      const session = {
+        type:'realtime',
+        model:process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime-2.1-mini',
+        instructions,
+        audio:{
+          input:{
+            noise_reduction:{type:'near_field'},
+            transcription:{model:'gpt-realtime-whisper'},
+            turn_detection:{type:'server_vad',threshold:0.45,prefix_padding_ms:300,silence_duration_ms:500,create_response:true,interrupt_response:true}
+          },
+          output:{voice:process.env.OPENAI_REALTIME_VOICE || 'marin'}
+        }
+      };
+      const form = new FormData(); form.set('sdp',sdp); form.set('session',JSON.stringify(session));
+      const safetyId = crypto.createHash('sha256').update(String(user.id)).digest('hex');
+      const upstream = await fetch('https://api.openai.com/v1/realtime/calls',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'OpenAI-Safety-Identifier':safetyId},body:form,signal:AbortSignal.timeout(30000)});
+      const answer = await upstream.text();
+      if (!upstream.ok) {
+        let message = 'Realtime voice could not start. Check the OpenAI API configuration and try again.';
+        try { message = JSON.parse(answer).error?.message || message; } catch { if (answer.trim()) message = answer.trim().slice(0,300); }
+        return json(res,502,{error:message});
+      }
+      res.writeHead(200,{'Content-Type':'application/sdp','Cache-Control':'no-store'});
+      return res.end(answer);
     }
     if (req.method === 'POST' && url.pathname === '/api/transcribe') {
       if (!requireKey(res)) return;

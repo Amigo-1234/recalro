@@ -307,12 +307,14 @@ body.dark .tw-send:not(.is-stop) { color: #05201F; }
 .tw-voice-screen[data-state="speaking"] .tw-voice-orb::after { animation: tw-voice-ring .9s ease-out .35s infinite; opacity: 1; }
 .tw-voice-screen[data-state="speaking"] .tw-voice-orb img { animation: tw-voice-logo .72s ease-in-out infinite alternate; }
 .tw-voice-screen[data-state="thinking"] .tw-voice-orb { animation: tw-voice-think 1.5s ease-in-out infinite; }
+.tw-voice-screen[data-state="connecting"] .tw-voice-orb { animation: tw-voice-think 1.3s ease-in-out infinite; }
 .tw-voice-stage h1 { margin: 0 !important; font: 700 clamp(20px, 5vw, 26px)/1.25 Manrope, sans-serif; letter-spacing: -.025em; }
 .tw-voice-stage p { max-width: 520px; max-height: 5.2em; margin: 9px 0 0 !important; overflow: auto; color: var(--text-2); font-size: 15px; line-height: 1.6; }
 .tw-voice-controls { display: flex; align-items: center; justify-content: center; gap: 16px; flex: none; padding-top: 12px; }
 .tw-voice-mic, .tw-voice-end { display: grid; place-items: center; width: 60px; height: 60px; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; transition: transform .18s ease, background .18s ease; }
 .tw-voice-mic { background: var(--surface); color: var(--ink); }
 .tw-voice-mic.is-live { border-color: var(--teal); background: var(--teal-700); color: white; }
+.tw-voice-mic.is-muted { border-color: var(--bad); background: var(--bad-50); color: var(--bad); }
 .tw-voice-mic:disabled { opacity: .5; cursor: default; }
 .tw-voice-end { border-color: #111; background: #111; color: white; }
 .tw-voice-mic .ic, .tw-voice-end .ic { width: 23px; height: 23px; }
