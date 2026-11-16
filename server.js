@@ -26,7 +26,32 @@ function supabaseConfig() {
     key:isSupabasePublicKey(key) ? key : ''
   };
 }
-function readBody(req) { return new Promise((resolve, reject) => { let size=0, chunks=[]; req.on('data', c => { size += c.length; if (size > MAX_BODY) { reject(Object.assign(new Error('Request is too large. Keep uploads under 12 MB.'), { status:413 })); req.destroy(); } else chunks.push(c); }); req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { reject(Object.assign(new Error('Invalid JSON request.'), { status:400 })); } }); req.on('error', reject); }); }
+function readBody(req) {
+  // Vercel parses JSON before invoking a Node.js Function; the local server streams it.
+  if (req.body !== undefined) {
+    if (typeof req.body === 'string') {
+      try { return Promise.resolve(JSON.parse(req.body || '{}')); }
+      catch { return Promise.reject(Object.assign(new Error('Invalid JSON request.'), { status:400 })); }
+    }
+    return Promise.resolve(req.body);
+  }
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', c => {
+      size += c.length;
+      if (size > MAX_BODY) {
+        reject(Object.assign(new Error('Request is too large. Keep uploads under 12 MB.'), { status:413 }));
+        req.destroy();
+      } else chunks.push(c);
+    });
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); }
+      catch { reject(Object.assign(new Error('Invalid JSON request.'), { status:400 })); }
+    });
+    req.on('error', reject);
+  });
+}
 function requireKey(res) { if (!process.env.OPENAI_API_KEY) { json(res, 503, { error:'AI is not configured yet. Add OPENAI_API_KEY to your server environment and restart Recalro.' }); return false; } return true; }
 async function requireSupabaseUser(req, res) {
   const config = supabaseConfig();
@@ -61,7 +86,7 @@ function extractDocxText(buffer) {
 }
 function dataUrlParts(value) { const m = /^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/.exec(value || ''); if (!m) throw new Error('The attachment could not be read. Please upload it again.'); return { mime:m[1], buffer:Buffer.from(m[2], 'base64') }; }
 
-const server = http.createServer(async (req, res) => {
+async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
     if (req.method === 'GET' && url.pathname === '/api/config') {
@@ -156,5 +181,9 @@ const server = http.createServer(async (req, res) => {
       if(req.method==='HEAD') return res.end(); fs.createReadStream(filePath).pipe(res);
     });
   } catch (err) { console.error(err); if (!res.headersSent) json(res,err.status || 500,{error:err.message || 'Unexpected server error.'}); }
-});
-server.listen(PORT,()=>console.log(`Recalro running at http://localhost:${PORT}/`));
+}
+
+module.exports = handleRequest;
+if (require.main === module) {
+  http.createServer(handleRequest).listen(PORT,()=>console.log(`Recalro running at http://localhost:${PORT}/`));
+}
