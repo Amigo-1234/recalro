@@ -1,13 +1,12 @@
 /* ==========================================================================
-   Community, Rewards and Account: Study Groups, Challenges, Leaderboards,
-   Daily Quests, Achievements, Avatar & Reward Store, Profile, Settings.
-   Community members and league peers are sample data (no backend yet).
+   Rewards and Account: Weekly Goals, Daily Quests, Achievements, Avatar &
+   Reward Store, Profile and Settings.
    ========================================================================== */
 (function () {
   "use strict";
   const R = window.R, ui = R.ui, { esc, icon } = { esc: R.esc, icon: R.icon };
-  const initials = (n) => n.split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-  const peerAv = (n) => `<span class="avatar peer" style="--hue:${R.hash(n) % 360}" aria-hidden="true">${esc(initials(n))}</span>`;
+  const initials = (name) => name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const peerAv = (name) => `<span class="avatar peer" style="--hue:${R.hash(name) % 360}" aria-hidden="true">${esc(initials(name))}</span>`;
   const checkRewards = () => R.record([]); // settles achievements without logging an activity
 
   async function prepareProfilePhoto(file) {
@@ -88,14 +87,14 @@
   R.page("challenges", { title: "Challenges", render(view) {
     const list = R.weeklyChallenges();
     const end = R.addDays(R.startOfWeek(), 7), daysLeft = Math.ceil((end - Date.now()) / 86400000);
-    view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Weekly challenges", desc: "Bigger goals that reset every Monday. Finish them for bonus XP and gems.", meta: `${ui.pill(`${R.plural(daysLeft, "day")} left this week`, "neutral", "clock")} ${ui.demo("Demo rewards")}` })}
+    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Weekly goals", desc: "Personal study goals that reset every Monday. Complete them to earn XP and virtual gems.", meta: ui.pill(`${R.plural(daysLeft, "day")} left this week`, "neutral", "clock") })}
       <div class="challenge-list">${list.map((c) => `<article class="challenge ${c.done ? "is-done" : ""} ${c.claimed ? "is-claimed" : ""}">
           <span class="ch-icon">${icon(c.icon)}</span>
           <div class="ch-body"><h3>${esc(c.title)}</h3>${ui.progress((c.progress / c.target) * 100, { tone: c.done ? "teal" : "orange", label: c.title })}<small>${R.fmt(c.progress)} / ${R.fmt(c.target)}</small></div>
           <div class="ch-reward"><span class="reward-chip">${icon("bolt")}+${c.xp} XP</span><span class="reward-chip gem">${icon("gem")}+${c.gems}</span></div>
           ${c.claimed ? ui.pill("Claimed", "teal", "check") : c.done ? ui.btn("Claim reward", { attrs: `data-claim="${c.id}"` }) : `<span class="muted small">${R.fmt(c.target - c.progress)} to go</span>`}
         </article>`).join("")}</div>
-      ${ui.card(`<div class="priority"><span class="rec-icon">${icon("users")}</span><div><h3>Group missions</h3><p>Team up in a study group and contribute your reviews to a shared weekly goal.</p></div>${ui.link("Study groups", "groups", { tone: "soft", size: "sm" })}</div>`)}`;
+      `;
     view.addEventListener("click", (e) => {
       const c = e.target.closest("[data-claim]");
       if (c) { const res = R.claimChallenge(c.dataset.claim); if (res) { const ch = R.content.challenges.find((x) => x.id === c.dataset.claim); R.burst(c, { count: 24, spread: 110 }); R.celebrate({ eyebrow: "Challenge complete", title: ch.title, subtitle: "A week of real effort, rewarded.", icon: ch.icon, tone: "orange", rewards: `<span class="reward-chip">${icon("bolt")}+${ch.xp} XP</span><span class="reward-chip gem">${icon("gem")}+${ch.gems} gems</span>`, onCta: () => R.refresh() }); } }
@@ -130,7 +129,7 @@
     const quests = R.todaysQuests(), st = R.streak(), done = quests.filter((q) => q.done).length;
     const midnight = R.addDays(R.startOfDay(), 1);
     const left = () => { const s = Math.max(0, Math.floor((midnight - Date.now()) / 1000)); return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`; };
-    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Daily quests", desc: "Three small objectives a day. They track your activity automatically and pay out the moment you finish.", meta: `${ui.pill(`Resets in <span id="qReset">${left()}</span>`, "neutral", "clock")} ${ui.demo("Demo rewards")}` })}
+    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Daily quests", desc: "Small daily objectives tracked from your study activity.", meta: ui.pill(`Resets in <span id="qReset">${left()}</span>`, "neutral", "clock") })}
       <div class="grid-12">
         <div class="span-8 stack">
           <div class="quest-list">${quests.map((q) => `<article class="quest ${q.done ? "is-done" : ""}">
@@ -179,20 +178,20 @@
     const items = R.content.store.filter((i) => kind === "all" || i.kind === kind);
     const preview = (i) => i.kind === "frame" ? `<span class="avatar frame-${i.value}" style="--av:64px">${R.state.equipped.avatar ? `<span class="avatar-emoji">${R.state.equipped.avatar}</span>` : esc(R.initials())}</span>` : i.kind === "avatar" ? `<span class="avatar ${R.state.equipped.frame ? "frame-" + R.state.equipped.frame : ""}" style="--av:64px"><span class="avatar-emoji">${i.value}</span></span>` : `<span class="banner-prev banner-${i.value}"></span>`;
     view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Avatar & reward store", desc: "Personalise your space with cosmetic rewards earned through learning." })}
-      <section class="store-hero"><div class="sh-balance">${icon("gem")}<div><b id="gemBal">${R.fmt(R.state.gems)}</b><span>demo gems</span></div></div><div class="sh-earn"><span>${icon("check-circle")}+5 per daily quest</span><span>${icon("award")}Achievements</span><span>${icon("arrow-up-right")}+15 per level up</span><span>${icon("swords")}Weekly challenges</span></div></section>
+      <section class="store-hero"><div class="sh-balance">${icon("gem")}<div><b id="gemBal">${R.fmt(R.state.gems)}</b><span>virtual gems</span></div></div><div class="sh-earn"><span>${icon("check-circle")}+5 per daily quest</span><span>${icon("award")}Achievements</span><span>${icon("arrow-up-right")}+15 per level up</span><span>${icon("target")}Weekly goals</span></div></section>
       ${ui.tabs([["all", "All"], ["frame", "Frames"], ["avatar", "Avatars"], ["banner", "Banners"]].map(([id, label]) => ({ id, label, route: `store${id === "all" ? "" : `?kind=${id}`}` })), kind, "Item type")}
       <div class="store-grid">${items.map((i) => {
         const owned = R.state.purchases.includes(i.id), equipped = R.state.equipped[i.kind] === i.value, afford = R.state.gems >= i.cost;
         return `<article class="store-item ${equipped ? "is-equipped" : ""}"><div class="si-prev">${preview(i)}</div><h3>${esc(i.name)}</h3><p>${esc(i.desc)}</p>
           ${owned ? ui.btn(equipped ? "Equipped" : "Equip", { tone: equipped ? "soft" : "primary", size: "sm", icon: equipped ? "check" : "", attrs: `data-equip="${i.id}"` }) : `<button type="button" class="btn ${afford ? "btn-gem" : "btn-ghost"} btn-sm" data-buy="${i.id}" ${afford ? "" : `aria-disabled="true" data-tip="You need ${R.fmt(i.cost - R.state.gems)} more gems"`}>${icon("gem")}<span>${R.fmt(i.cost)}</span></button>`}
         </article>`; }).join("")}</div>
-      <p class="muted small">${icon("info")} Purchases use demo gems stored only in this browser. No real currency is involved.</p>`;
+      <p class="muted small">${icon("info")} Virtual gems are earned through study activity and have no monetary value.</p>`;
     view.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-buy]");
       if (b) {
         const i = R.content.store.find((x) => x.id === b.dataset.buy);
         if (R.state.gems < i.cost) { R.toast(`You need ${R.fmt(i.cost - R.state.gems)} more gems for ${i.name}.`, { icon: "gem" }); return; }
-        const ok = await R.confirm({ title: `Get ${esc(i.name)}?`, body: `This costs <b>${R.fmt(i.cost)} demo gems</b>. You'll have ${R.fmt(R.state.gems - i.cost)} left.`, confirmLabel: "Buy & equip" });
+        const ok = await R.confirm({ title: `Get ${esc(i.name)}?`, body: `This costs <b>${R.fmt(i.cost)} virtual gems</b>. You'll have ${R.fmt(R.state.gems - i.cost)} left.`, confirmLabel: "Buy & equip" });
         if (!ok) return;
         R.update((st) => { st.gems -= i.cost; st.purchases.push(i.id); st.equipped[i.kind] = i.value; });
         R.celebrate({ eyebrow: "New reward", title: i.name, subtitle: "Unlocked and equipped. Check out your new look.", emoji: i.kind === "avatar" ? i.value : null, icon: "bag", tone: "orange", onCta: () => R.refresh() });
@@ -206,12 +205,12 @@
   R.page("profile", { title: "Profile", render(view) {
     const lv = R.levelInfo(), st = R.streak(), stats = R.stats(), ach = R.achievementList().filter((a) => a.unlockedAt).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
     const user = window.RecalroAuth?.currentUser() || {};
-    view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "Demo account")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} league`, "neutral", "shield")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
+    view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
         <div class="ph-actions">${ui.btn("Edit name", { tone: "glass", icon: "edit", attrs: "data-editname" })}${ui.link("Customise", "store", { tone: "glass", icon: "bag" })}</div></div></section>
-      <div class="stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(st.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Exams taken", R.fmt(stats.exams), "clipboard"]].map(([l, v, ic]) => `<div class="stat"><div class="stat-top"><span>${l}</span><span class="stat-ic">${icon(ic)}</span></div><strong>${v}</strong></div>`).join("")}</div>
+      <div class="stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(st.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Subjects", R.fmt(R.subjects().length), "book"]].map(([l, v, ic]) => `<div class="stat"><div class="stat-top"><span>${l}</span><span class="stat-ic">${icon(ic)}</span></div><strong>${v}</strong></div>`).join("")}</div>
       <div class="grid-12">
         ${ui.card(ach.length ? `<div class="showcase">${ach.slice(0, 6).map((a) => `<div class="sc-badge-sm"><span class="badge-art">${icon(a.icon)}</span><b>${esc(a.name)}</b><small>${R.fmtDate(a.unlockedAt)}</small></div>`).join("")}</div>` : `<p class="muted small">Unlocked achievements will be showcased here.</p>`, { title: "Achievement showcase", icon: "award", cls: "span-7", action: ui.link("All", "achievements", { tone: "ghost", size: "sm" }) })}
-        ${ui.card(R.chart.hbars(R.subjects().map((s) => ({ label: s.name, value: R.subjectMastery(s.id), color: `var(--s${R.subjectIndex(s.id) % 4})` }))), { title: "Subject mastery", icon: "map", cls: "span-5" })}
+        ${ui.card(R.subjects().length ? R.chart.hbars(R.subjects().map((s) => ({ label: s.name, value: R.subjectMastery(s.id), color: `var(--s${R.subjectIndex(s.id) % 4})` }))) : ui.empty({ icon: "book", title: "No subjects yet", body: "Add a subject to track mastery." }), { title: "Subject mastery", icon: "map", cls: "span-5" })}
         ${ui.card(R.chart.heatmap(16), { title: "Study activity", icon: "calendar", cls: "span-12" })}
       </div>`;
     view.addEventListener("click", (e) => {
@@ -260,18 +259,17 @@
       <div class="settings">
         ${ui.card(`<div class="set-theme"><div><b>Theme</b><small>Light, dark, or follow your device. Your choice applies everywhere in Recalro.</small></div>${ui.themeSelector(theme)}</div>` + row("Reduce motion", "Turn off celebrations, confetti and transitions.", toggle("reduceMotion", s.reduceMotion, "Reduce motion")), { title: "Appearance", icon: "sun" })}
         ${ui.card(row("Daily study goal", `${s.dailyGoal} minutes per day (estimated from activity)`, ui.btn("Edit", { tone: "soft", size: "sm", attrs: "data-goal" })), { title: "Learning", icon: "target" })}
-        ${ui.card(row("In-app notifications", "Show updates and reminders in the notification bell.", toggle("notificationsEnabled", s.notificationsEnabled !== false, "In-app notifications")) + row("Review reminders", "Remind me when flashcards are due for review.", toggle("reviewReminders", s.reviewReminders !== false, "Review reminders")) + row("Weekly report", "Remind me on Sunday to check my weekly report.", toggle("weeklyReport", s.weeklyReport, "Weekly report reminder")) + '<p class="muted small">Reminders appear when you open Recalro. Email and device push notifications are not connected yet.</p>', { title: "Notifications", icon: "bell" })}
-        ${ui.card(row("Private on leaderboards", "Show “You” instead of your name in league rankings.", toggle("leaderboardPrivate", s.leaderboardPrivate, "Private on leaderboards")), { title: "Privacy", icon: "shield" })}
-        ${ui.card(row("Export your data", "Download everything this workspace has recorded as JSON.", ui.btn("Export", { tone: "soft", size: "sm", icon: "download", attrs: "data-export" })) + row("Reset demo data", "Clear all progress, XP, gems and saved items on this device.", ui.btn("Reset", { tone: "danger", size: "sm", attrs: "data-reset" })), { title: "Data", icon: "archive" })}
-        ${ui.card(`${row("Signed in as", esc(user.email || "Demo account"), ui.btn("Sign out", { tone: "ghost", size: "sm", icon: "logout", attrs: "data-signout" }))}<p class="muted small">${icon("info")} Authentication is a front-end demo. Connect your identity provider before production.</p>`, { title: "Account", icon: "user" })}
-        ${ui.card(`<ul class="shortcuts"><li>${ui.kbd(/Mac|iP/.test(navigator.platform) ? "⌘" : "Ctrl")}${ui.kbd("K")}<span>Search & commands</span></li><li>${ui.kbd("/")}<span>Search</span></li><li>${ui.kbd("Space")}<span>Flip flashcard</span></li><li>${ui.kbd("1")}–${ui.kbd("4")}<span>Rate card / pick answer</span></li><li>${ui.kbd("F")}<span>Flag exam question</span></li><li>${ui.kbd("←")}${ui.kbd("→")}<span>Previous / next exam question</span></li></ul>`, { title: "Keyboard shortcuts", icon: "keyboard" })}
+        ${ui.card(row("In-app notifications", "Show updates and reminders in the notification bell.", toggle("notificationsEnabled", s.notificationsEnabled !== false, "In-app notifications")) + row("Review reminders", "Remind me when flashcards are due for review.", toggle("reviewReminders", s.reviewReminders !== false, "Review reminders")) + row("Weekly report", "Remind me on Sunday to check your weekly report.", toggle("weeklyReport", s.weeklyReport, "Weekly report reminder")) + '<p class="muted small">Reminders appear when you open Recalro.</p>', { title: "Notifications", icon: "bell" })}
+        ${ui.card(row("Export your data", "Download everything this workspace has recorded as JSON.", ui.btn("Export", { tone: "soft", size: "sm", icon: "download", attrs: "data-export" })) + row("Reset learning data", "Clear progress, saved items and history from this workspace.", ui.btn("Reset", { tone: "danger", size: "sm", attrs: "data-reset" })), { title: "Data", icon: "archive" })}
+        ${ui.card(`${row("Signed in as", esc(user.email || ""), ui.btn("Sign out", { tone: "ghost", size: "sm", icon: "logout", attrs: "data-signout" }))}<p class="muted small">${icon("info")} Your account uses Supabase authentication.</p>`, { title: "Account", icon: "user" })}
+        ${ui.card(`<ul class="shortcuts"><li>${ui.kbd(/Mac|iP/.test(navigator.platform) ? "⌘" : "Ctrl")}${ui.kbd("K")}<span>Search & commands</span></li><li>${ui.kbd("/")}<span>Search</span></li><li>${ui.kbd("Space")}<span>Flip flashcard</span></li><li>${ui.kbd("1")}–${ui.kbd("4")}<span>Rate a flashcard</span></li></ul>`, { title: "Keyboard shortcuts", icon: "keyboard" })}
       </div>`;
     view.addEventListener("change", (e) => { if (e.target.matches("[data-theme-choice]")) { R.setTheme(e.target.value); R.toast(`Theme: ${e.target.value === "system" ? "System (follows your device)" : e.target.value[0].toUpperCase() + e.target.value.slice(1)}`, { icon: e.target.value === "dark" ? "moon" : "sun" }); } });
     view.addEventListener("click", async (e) => {
       const seg = e.target.closest("[data-seg='theme']"); if (seg) { R.setTheme(seg.dataset.value); R.refresh(); }
       if (e.target.closest("[data-goal]")) R.formDialog({ title: "Daily study goal", description: "Choose a daily target between 5 minutes and 24 hours.", fields: [{ name: "minutes", label: "Minutes per day", type: "number", value: s.dailyGoal, min: 5, max: 1440, step: 5, required: true }], submitLabel: "Save goal", onSubmit: (v) => { R.update((st) => (st.settings.dailyGoal = Math.round(Number(v.minutes)))); R.toast("Daily goal saved."); R.refresh(); } });
       if (e.target.closest("[data-export]")) R.exportData();
-      if (e.target.closest("[data-reset]") && (await R.confirm({ title: "Reset all demo data?", body: "This permanently clears your progress, XP, gems, saved items and history on this device. Export first if you want a copy.", confirmLabel: "Reset everything", tone: "danger" }))) { R.resetDemo(); R.toast("Demo data reset."); R.refresh(); }
+      if (e.target.closest("[data-reset]") && (await R.confirm({ title: "Reset learning data?", body: "This permanently clears your progress, XP, gems, saved items and history from this workspace. Export first if you want a copy.", confirmLabel: "Reset everything", tone: "danger" }))) { R.resetLearningData(); R.toast("Learning data reset."); R.refresh(); }
       if (e.target.closest("[data-signout]")) R.signOut();
     });
     view.addEventListener("change", (e) => { const t = e.target.closest("[data-toggle]"); if (t) { R.update((st) => (st.settings[t.dataset.toggle] = t.checked)); if (t.dataset.toggle === "notificationsEnabled" && t.checked) R.checkReminders(); R.toast("Preference saved."); } });

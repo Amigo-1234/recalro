@@ -104,15 +104,6 @@
 .sw-link:hover { text-decoration-color: currentColor; }
 .sw-switch { margin-top: 18px; text-align: center; font-size: 14px; color: var(--au-muted); }
 
-/* Account step extras */
-.sw-google { width: 100%; min-height: 50px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--au-line); border-radius: 14px; background: var(--au-surface); color: var(--au-ink); font: 600 15px "DM Sans", sans-serif; cursor: pointer; transition: border-color .2s, background .2s; }
-.sw-google:hover { border-color: color-mix(in srgb, var(--au-teal) 60%, var(--au-line)); background: var(--au-surface-2); }
-.sw-google svg { width: 18px; height: 18px; }
-.sw-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px !important; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--au-teal) 9%, var(--au-surface)); font-size: 13px; line-height: 1.5; color: var(--au-text); }
-.sw-note .ic { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--au-teal-600); }
-.sw-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 12px; color: var(--au-muted); }
-.sw-divider::before, .sw-divider::after { content: ""; flex: 1; height: 1px; background: var(--au-line); }
-
 /* ---------- OTP ---------- */
 .sw-inbox { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding: 12px 12px 12px 14px; border-radius: 16px; background: color-mix(in srgb, var(--au-orange) 8%, var(--au-surface)); border: 1px dashed color-mix(in srgb, var(--au-orange) 45%, var(--au-line)); }
 .sw-inbox-ic { display: grid; place-items: center; width: 36px; height: 36px; flex: none; border-radius: 11px; background: var(--au-orange); color: #151C20; }
@@ -293,10 +284,10 @@
 .sw-spinner { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff; animation: au-spin .7s linear infinite; }
 .sw-next[aria-busy="true"] .sw-spinner { display: block; }
 
-.sw-dialog { width: min(420px, calc(100% - 32px)); padding: 24px; border: 1px solid var(--au-line); border-radius: 22px; background: var(--au-surface); color: var(--au-ink); box-shadow: var(--au-shadow); }
+.sw-dialog { width: min(620px, calc(100% - 32px)); max-height: min(85vh, 760px); overflow-y: auto; padding: 24px; border: 1px solid var(--au-line); border-radius: 22px; background: var(--au-surface); color: var(--au-ink); box-shadow: var(--au-shadow); }
 .sw-dialog::backdrop { background: rgba(15, 22, 26, .5); }
 .sw-dialog h2 { font-size: 20px; font-weight: 800; }
-.sw-dialog p { margin: 10px 0 20px !important; font-size: 14px; line-height: 1.6; color: var(--au-text); }
+.sw-dialog p { margin: 10px 0 20px !important; font-size: 14px; line-height: 1.6; color: var(--au-text); white-space: pre-line; }
 .sw-dialog .sw-next { width: 100%; }
 
 /* ---------- Dark mode bits not covered by tokens ---------- */

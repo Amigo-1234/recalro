@@ -1,29 +1,9 @@
-/* ==========================================================================
-   Static options for the signup wizard. This is prototype reference data, not a
-   complete registry: institution lists are short samples and every list offers
-   an "Other / not listed" route. Replace with the real catalogue API later.
-   ========================================================================== */
+/* Static options for the signup wizard. */
 (function () {
   "use strict";
   const COUNTRIES = ["Nigeria", "Ghana", "Kenya", "South Africa", "United Kingdom", "United States", "Canada", "India", "Other"];
 
-  const INSTITUTIONS = {
-    Nigeria: [
-      "University of Lagos", "University of Ibadan", "Obafemi Awolowo University", "Ahmadu Bello University", "University of Nigeria, Nsukka", "Ekiti State University, Ado-Ekiti",
-      "University of Benin", "University of Ilorin", "Lagos State University", "Covenant University", "Babcock University",
-      "Federal University of Technology, Akure", "Federal University of Technology, Minna", "Federal University of Technology, Owerri",
-      "Nnamdi Azikiwe University", "University of Port Harcourt", "Rivers State University", "Bayero University Kano",
-      "University of Abuja", "Ladoke Akintola University of Technology", "Olabisi Onabanjo University", "Federal University of Agriculture, Abeokuta",
-      "Nigerian Defence Academy", "Pan-Atlantic University", "American University of Nigeria", "Yaba College of Technology",
-    ],
-    Ghana: ["University of Ghana", "Kwame Nkrumah University of Science and Technology", "University of Cape Coast", "Ashesi University", "University of Education, Winneba"],
-    Kenya: ["University of Nairobi", "Kenyatta University", "Strathmore University", "Moi University", "Jomo Kenyatta University of Agriculture and Technology"],
-    "South Africa": ["University of Cape Town", "University of the Witwatersrand", "Stellenbosch University", "University of Pretoria", "University of Johannesburg"],
-    "United Kingdom": ["University of Oxford", "University of Cambridge", "Imperial College London", "University College London", "University of Manchester", "University of Edinburgh"],
-    "United States": ["Massachusetts Institute of Technology", "Stanford University", "Harvard University", "University of California, Berkeley", "University of Michigan", "Georgia Institute of Technology"],
-    Canada: ["University of Toronto", "McGill University", "University of British Columbia", "University of Waterloo"],
-    India: ["Indian Institute of Technology Bombay", "Indian Institute of Technology Delhi", "University of Delhi", "Indian Institute of Science"],
-  };
+  const INSTITUTIONS = {};
 
   const PATHS = [
     { id: "secondary", title: "Secondary School Student", desc: "Junior or senior secondary, preparing for school exams.", img: "assets/notebook-3d.webp" },

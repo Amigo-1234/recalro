@@ -1,7 +1,7 @@
 {
   "name": "recalro",
   "version": "1.0.0",
-  "description": "Recalro \u2014 standalone product prototype",
+  "description": "Recalro \u2014 a personalized learning and AI tutoring workspace",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server.js",
     "start": "node --env-file-if-exists=.env server.js",
@@ -10,7 +10,7 @@
   "keywords": [
     "learning",
     "education",
-    "prototype"
+    "ai-tutor"
   ],
   "license": "MIT"
 }

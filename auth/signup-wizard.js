@@ -14,6 +14,28 @@
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const TOTAL = 8, REVIEW = 6;
+  const POLICY = {
+    terms: [
+      "Recalro Terms of Service",
+      "Recalro is a learning service. For questions about these terms, contact info@recalro.com.",
+      "You are responsible for keeping your account credentials secure and for activity under your account. Provide accurate account information and use the service only when legally able to agree to these terms. If you are not able to consent under applicable law, get permission from a parent or legal guardian.",
+      "You keep ownership of the notes, files, prompts and other content you add. You give Recalro permission to host, store and process that content only as needed to provide and maintain the service.",
+      "When you use AI features, the text, prompts and files you submit may be sent to OpenAI to generate a response. AI responses can be inaccurate or incomplete; check important information against reliable sources.",
+      "Do not use Recalro unlawfully, infringe another person's rights, attempt to access another account, or disrupt the service. Recalro may limit or suspend access when needed to protect learners or the service.",
+      "The service may change over time and is provided as available. To the extent allowed by applicable law, Recalro is not responsible for indirect losses arising from use of the service. Nothing in these terms limits rights that cannot legally be limited.",
+      "These terms are governed by the laws of Nigeria, subject to any mandatory protections that apply to you. You can contact info@recalro.com with questions or requests about your account.",
+    ].join("\n\n"),
+    privacy: [
+      "Recalro Privacy Policy",
+      "Recalro uses the information described here to provide the learning workspace. For privacy questions or requests, contact info@recalro.com.",
+      "Information may include your name, username, email address, academic and onboarding details, study materials, flashcards, summaries, tutor conversations, and learning activity. The app also stores a local cache in your browser.",
+      "Supabase is used for authentication and to store your profile and synced learning state. When you use AI features, the prompts, text or files you submit are sent through Recalro's server to OpenAI to provide the requested response. Hosting and infrastructure providers may process technical request data needed to operate the service.",
+      "Information is used to create and secure your account, save and sync your learning space, provide requested features, and respond to support or privacy requests. Recalro does not sell personal information.",
+      "Service providers may process information in countries where they operate. Data is retained while needed to provide the service and for legitimate operational or legal needs. You may request access, correction or deletion by emailing info@recalro.com; some data may remain in backups or where retention is required by law.",
+      "Recalro uses reasonable safeguards, but no online service can guarantee absolute security. If you are not able to consent to data processing under applicable law, use Recalro only with permission from a parent or legal guardian.",
+      "This policy may be updated as the service changes. Material updates will be reflected here.",
+    ].join("\n\n"),
+  };
 
   const blank = () => ({
     step: 0, furthest: 0, returnTo: null,
@@ -74,12 +96,6 @@
     label: "Account",
     render: () => `
       ${head("Create your account", "Let's get you started.", "Create your Recalro account and start building a smarter learning routine.")}
-      <button type="button" class="sw-google" data-google>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.2 14.6 2.2 12 2.2 6.6 2.2 2.2 6.6 2.2 12s4.4 9.8 9.8 9.8c5.7 0 9.4-4 9.4-9.6 0-.6-.1-1.1-.2-1.6H12z"/></svg>
-        Continue with Google
-      </button>
-      <p class="sw-note" data-google-note role="status" hidden>${icon("info")}<span>Google sign-in is a visual prototype, so nothing connects to Google yet. Continue with email to try the full journey.</span></p>
-      <div class="sw-divider"><span>or sign up with email</span></div>
       <div class="sw-form">
         ${UI.FormField({ id: "sw-name", label: "Full name", bind: "account.name", value: S.account.name, placeholder: "Ada Okafor", autocomplete: "name" })}
         ${UI.FormField({ id: "sw-username", label: "Username", bind: "account.username", value: S.account.username, placeholder: "ada_okafor", autocomplete: "username", hint: "3–24 characters. Use lowercase letters, numbers and underscores." })}
@@ -170,7 +186,7 @@
       } else if (k === "secondary") {
         body = `
           ${countryField(k)}
-          ${UI.FormField({ id: "sw-school", label: "School name", bind: b("school"), value: a.school || "", placeholder: "Type your school's full name", autocomplete: "organization", hint: "Use the name on your school records so future papers can be matched correctly." })}
+          ${UI.FormField({ id: "sw-school", label: "School name", bind: b("school"), value: a.school || "", placeholder: "Type your school's full name", autocomplete: "organization", hint: "Use the official name of your school." })}
           ${UI.ChoiceGroup({ id: "sw-grade", legend: "Current class or grade", content: chips("radio", "sw-grade", b("grade"), D.classesFor(a.country), a.grade) })}
           ${UI.ChoiceGroup({ id: "sw-exams", legend: "Examinations you're preparing for", optional: true, hint: "Choose all that apply.", content: chips("checkbox", "sw-exams", b("exams"), D.examsFor(a.country), a.exams) })}`;
       } else if (k === "postgraduate") {
@@ -272,7 +288,7 @@
   const LearningInterestsStep = {
     label: "Interests",
     render: () => `
-      ${head("Learning interests", "What would you like to learn?", "Pick as many as you like. We'll suggest subjects and starter decks to match.")}
+      ${head("Learning interests", "What would you like to learn?", "Pick as many as you like to personalise your learning space.")}
       <div class="sw-search">${icon("search")}<label class="sr-only" for="sw-isearch">Search subjects</label><input id="sw-isearch" type="search" placeholder="Search subjects" autocomplete="off"><span class="sw-count" aria-live="polite">${countLabel()}</span></div>
       ${UI.ChoiceGroup({ id: "sw-interests", legend: "Subjects", cls: "sw-group-grid sw-legend-hidden", content: D.INTERESTS.map((i) => UI.SelectionCard({ type: "checkbox", name: "sw-interests", value: i.id, checked: S.interests.includes(i.id), title: i.label, ic: i.icon, bind: "interests", compact: true })).join("") })}
       <p class="sw-empty" hidden>No subjects match. Choose “Other” and tell us.</p>
@@ -387,11 +403,11 @@
           <h1 id="sw-title-7" tabindex="-1">Your next chapter starts here.</h1>
           <p class="sw-greet">Welcome, <b>${esc(firstName())}</b>. ${where ? `Your learning space for <b>${esc(where)}</b> is ready.` : "Your learning space is ready."}${mins ? ` We'll aim for <b>${esc(mins.label)}</b> a day.` : ""}</p>
           <ul class="sw-first">
-            <li style="--i:0"><span>${icon("upload")}</span><b>Add your first notes</b><small>Upload a PDF or paste text.</small></li>
-            <li style="--i:1"><span>${icon("cards")}</span><b>Try a 5-minute review</b><small>Starter cards are waiting.</small></li>
+            <li style="--i:0"><span>${icon("book")}</span><b>Add your first subject</b><small>Organise your learning around a course or topic.</small></li>
+            <li style="--i:1"><span>${icon("cards")}</span><b>Create flashcards</b><small>Build a deck from your own study material.</small></li>
             <li style="--i:2"><span>${icon("sparkles")}</span><b>Meet your AI tutor</b><small>Ask about any topic.</small></li>
           </ul>
-          <p class="sw-proto">${icon("info")}${S.accountCreated ? "Your profile and learning progress will sync to your account." : "Prototype: no account was created. Your name and email stay in this browser only."}</p>
+          <p class="sw-proto">${icon("check")}Your profile and learning progress will sync to your account.</p>
         </div>`;
     },
     mount(el) {
@@ -449,12 +465,11 @@
       eye.setAttribute("aria-pressed", String(showIt)); eye.setAttribute("aria-label", showIt ? "Hide password" : "Show password");
       return;
     }
-    if (t.closest("[data-google]")) { const n = root.querySelector("[data-google-note]"); n.hidden = false; window.RecalroMotion?.animate(n, [{ opacity: 0, transform: "translateY(-4px)" }, { opacity: 1, transform: "none" }], { duration: 250 }); return; }
     const legal = t.closest("[data-legal]");
     if (legal) {
       const dlg = root.querySelector(".sw-dialog"), terms = legal.dataset.legal === "terms";
       dlg.querySelector("h2").textContent = terms ? "Terms of Service" : "Privacy Policy";
-      dlg.querySelector("p").textContent = "Recalro will store your account profile and learning activity in its configured Supabase project. Read the published Terms of Service and Privacy Policy before launch."
+      dlg.querySelector("p").textContent = POLICY[terms ? "terms" : "privacy"];
       dlg.showModal(); return;
     }
     const goBtn = t.closest("[data-go]");

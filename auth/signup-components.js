@@ -166,7 +166,7 @@
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
       items = [...new Set([...all.filter((o) => words.every((w) => o.toLowerCase().includes(w))), ...getSuggested()])].slice(0, 8);
       list.innerHTML = items.map((o, i) => `<li role="option" id="${list.id}-${i}" data-i="${i}" aria-selected="false">${mark(o, q)}</li>`).join("")
-        + (q && !items.length ? `<li class="sw-combo-empty" aria-hidden="true">No match in our sample list</li>` : "")
+        + (q && !items.length ? `<li class="sw-combo-empty" aria-hidden="true">No matching institutions. You can enter the name manually.</li>` : "")
         + `<li role="option" id="${list.id}-not" data-i="${items.length}" class="sw-combo-not" aria-selected="false">${icon("plus")}${esc(notListed)}</li>`;
       items.push(NOT);
       active = -1; input.removeAttribute("aria-activedescendant");

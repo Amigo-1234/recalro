@@ -4,8 +4,7 @@
      - DesktopNavigation  links + animated indicator + scroll-spy
      - FeaturesMegaMenu   grouped feature links (click, hover-intent, keyboard)
      - MobileNavigation   a full-height sheet built on <dialog> (focus trap, Esc)
-   Feature links point at the live demos further down the page, so every item
-   lands somewhere that actually shows the feature.
+   Feature links point to the launch product overview.
    ========================================================================== */
 (function () {
   "use strict";
@@ -16,31 +15,27 @@
 
   const FEATURES = [
     { title: "AI Learning", items: [
-      { label: "AI Tutor", desc: "Step-by-step help grounded in your notes.", icon: "sparkles", demo: "tutor" },
-      { label: "AI Summaries", desc: "Long chapters condensed to what matters.", icon: "file", href: "#story-2" },
-      { label: "Smart Study Materials", desc: "Upload notes and PDFs, get organised topics.", icon: "upload", href: "#story-1" },
+    { label: "AI Tutor", desc: "Ask questions about the topics you are studying.", icon: "sparkles", href: "#platform" },
+    { label: "Study Materials", desc: "Add plain-text and Markdown notes to a subject.", icon: "file", href: "#platform" },
+    { label: "Summaries", desc: "Work through key ideas from your study notes.", icon: "upload", href: "#platform" },
     ] },
     { title: "Memory & Revision", items: [
-      { label: "Flashcards", desc: "Recall-first cards that flip, rate and adapt.", icon: "cards", demo: "flashcards" },
-      { label: "Spaced Repetition", desc: "Reviews timed just before you'd forget.", icon: "refresh", demo: "curve" },
-      { label: "Knowledge Vault", desc: "Formulas, laws and definitions, sorted.", icon: "archive", demo: "vault" },
-      { label: "Forgetting Curve", desc: "See memory fade and how reviews lift it.", icon: "brain", demo: "curve" },
+      { label: "Flashcards", desc: "Create cards and review them with spaced repetition.", icon: "cards", href: "#platform" },
+      { label: "Knowledge Vault", desc: "Save useful notes and ideas for quick recall.", icon: "archive", href: "#platform" },
+      { label: "Study Planner", desc: "Plan study sessions and keep deadlines in view.", icon: "calendar", href: "#platform" },
     ] },
     { title: "Performance", items: [
-      { label: "Learning Analytics", desc: "Streaks, accuracy and study time at a glance.", icon: "chart", href: "#platform" },
-      { label: "Weakness Detector", desc: "Pinpoints the topics costing you marks.", icon: "target", href: "#story-5" },
-      { label: "Exam Readiness", desc: "Timed practice and a readiness score.", icon: "gauge", demo: "exam" },
-      { label: "Personal Roadmap", desc: "Topics and milestones in a clear path.", icon: "map", demo: "roadmap" },
-      { label: "Progress & Rewards", desc: "Streaks, quests and earned achievements.", icon: "trophy", demo: "rewards" },
+      { label: "Learning Analytics", desc: "See trends from the study activity you record.", icon: "chart", href: "#platform" },
+      { label: "Personal Roadmap", desc: "Organise modules and milestones for a subject.", icon: "map", href: "#platform" },
+      { label: "Progress & Rewards", desc: "Track streaks, study goals and achievements.", icon: "trophy", href: "#platform" },
     ] },
   ];
   const LINKS = [
     { id: "platform", label: "Platform", href: "#platform" },
-    { id: "how", label: "How it works", href: "#how" },
-    { id: "features", label: "Features", href: "#features", mega: true },
+    { id: "features", label: "Features", href: "#platform", mega: true },
   ];
-  const itemHref = (it) => it.href || `#demo-${it.demo}`;
-  const itemAttrs = (it) => `href="${itemHref(it)}" data-nav-target${it.demo ? ` data-demo="${it.demo}"` : ""}`;
+  const itemHref = (it) => it.href || "#platform";
+  const itemAttrs = (it) => `href="${itemHref(it)}" data-nav-target`;
   const brand = `<a class="mk-brand" href="#top" data-nav-target aria-label="Recalro home"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span>recal<span class="mk-orange">ro</span></span></a>`;
 
   /* ---------- Markup ---------- */
@@ -54,11 +49,11 @@
           </section>`).join("")}
       </div>
       <div class="mk-mega-foot">
-        <a class="mk-mega-feature" href="#top" data-nav-target data-focus-demo>
+        <a class="mk-mega-feature" href="#platform" data-nav-target>
           <span class="mk-mega-feature-ic">${icon("play")}</span>
-          <span><b>Try a live review</b><small>Flip a card, rate it, earn XP. No account needed.</small></span>
+          <span><b>Start with your own learning</b><small>Create a subject and add your study materials.</small></span>
         </a>
-        <a class="mk-mega-all" href="#features" data-nav-target>See every feature in action ${icon("arrow-right")}</a>
+        <a class="mk-mega-all" href="#platform" data-nav-target>Explore the platform ${icon("arrow-right")}</a>
       </div>
     </div>`;
 
@@ -82,7 +77,7 @@
                 </div></li>`
             : `<li style="--i:${i}"><a class="mk-mnav-link" href="${l.href}" data-nav-target data-spy="${l.id}"><span>${l.label}</span>${icon("arrow-right")}</a></li>`).join("")}
         </ul>
-        <a class="mk-mnav-try" href="#top" data-nav-target data-focus-demo style="--i:4"><span class="mk-mega-feature-ic">${icon("play")}</span><span><b>Try a live review</b><small>Interactive preview, no account needed</small></span></a>
+        <a class="mk-mnav-try" href="#platform" data-nav-target style="--i:4"><span class="mk-mega-feature-ic">${icon("book")}</span><span><b>Explore the platform</b><small>See what you can build in your workspace</small></span></a>
       </nav>
       <div class="mk-mnav-foot">
         <button type="button" class="mk-btn mk-btn-primary mk-btn-lg mk-btn-block" data-nav-action="signup">Get started free <span class="arrow-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
@@ -91,7 +86,7 @@
       </div>
     </dialog>`;
 
-  function MarketingNavbar(root, { onLogin, onSignup, onDemo }) {
+  function MarketingNavbar(root, { onLogin, onSignup }) {
     root.innerHTML = `
       <nav class="mk-nav" aria-label="Main navigation">
         ${brand}
@@ -111,11 +106,9 @@
     /* ---------- Navigation actions + smooth anchor scrolling ---------- */
     function go(link) {
       const href = link.getAttribute("href") || "";
-      if (link.hasAttribute("data-focus-demo")) { scrollToEl(document.body, 0); onDemo?.(); return; }
       if (href === "#top") { scrollToEl(document.body, 0); return; }
       const target = $(href);
       if (!target) return;
-      if (link.dataset.demo) window.RecalroMarketing?.showDemo?.(link.dataset.demo);
       scrollToEl(target);
       // Move keyboard focus to the destination so screen-reader and keyboard users land there too.
       if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");

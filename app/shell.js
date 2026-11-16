@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Recalro app shell: grouped navigation, hash router, top bar with live
-   gamification chips, notifications, command palette, theme and mobile nav.
+   Recalro app shell: grouped navigation, hash router, progress indicators,
+   notifications, command palette, theme and mobile nav.
    Routes look like  #/app/<page>[/<sub>][?key=value]
    ========================================================================== */
 (function () {
@@ -22,24 +22,17 @@
     { id: "study", label: "Study Tools", icon: "cards", items: [
       { route: "flashcards", label: "Flashcards", icon: "cards", badge: "due", keywords: "cards decks recall" },
       { route: "review", label: "Review Center", icon: "refresh", keywords: "due queue spaced repetition" },
-      { route: "practice", label: "Quick Practice", icon: "zap", keywords: "quiz questions" },
-      { route: "exam", label: "Exam Simulator", icon: "clipboard", keywords: "test timed mock" },
-      { route: "pastq", label: "Past Questions", icon: "cap", keywords: "eksu cbt past questions exam practice gst mth phy chm" },
       { route: "tutor", label: "AI Tutor", icon: "sparkles", keywords: "chat ask explain it to me" },
       { route: "summaries", label: "Summaries", icon: "file", keywords: "notes read aloud listen audio" } ] },
     { id: "insights", label: "Insights", icon: "chart", items: [
       { route: "analytics", label: "Analytics", icon: "chart", keywords: "stats charts trends" },
       { route: "weakness", label: "Weakness Detector", icon: "target", keywords: "mistakes weak topics" },
       { route: "memory", label: "Memory Center", icon: "brain", keywords: "forgetting curve retention" },
-      { route: "readiness", label: "Exam Readiness", icon: "gauge", keywords: "prepared score" },
       { route: "reports", label: "Weekly Reports", icon: "report", keywords: "summary week export" } ] },
-    { id: "community", label: "Community", icon: "users", items: [
-      { route: "groups", label: "Study Groups", icon: "users", keywords: "team collaborate" },
-      { route: "challenges", label: "Challenges", icon: "swords", keywords: "weekly goals" },
-      { route: "leaderboards", label: "Leaderboards", icon: "trophy", keywords: "league ranking" } ] },
     { id: "rewards", label: "Rewards", icon: "award", items: [
       { route: "achievements", label: "Achievements", icon: "award", keywords: "badges" },
       { route: "quests", label: "Daily Quests", icon: "check-circle", keywords: "goals today" },
+      { route: "challenges", label: "Weekly Goals", icon: "target", keywords: "weekly goals" },
       { route: "store", label: "Reward Store", icon: "bag", keywords: "shop gems avatar frame" } ] },
   ];
   R.ACCOUNT = [
@@ -50,12 +43,12 @@
   const TABS = [
     { id: "home", label: "Home", icon: "home", route: "dashboard", covers: ["dashboard"] },
     { id: "learn", label: "Learn", icon: "book", route: "subjects", covers: ["subjects", "roadmap", "planner", "vault"] },
-    { id: "practice", label: "Practice", icon: "cards", route: "review", covers: ["review", "flashcards", "practice", "exam", "pastq"], badge: "due" },
+    { id: "practice", label: "Review", icon: "cards", route: "review", covers: ["review", "flashcards"], badge: "due" },
     { id: "tutor", label: "AI Tutor", icon: "sparkles", route: "tutor", covers: ["tutor", "summaries"] },
   ];
   const navItem = (route) => { for (const g of R.NAV) for (const it of g.items) if (it.route === route) return { ...it, group: g }; const a = R.ACCOUNT.find((x) => x.route === route); return a ? { ...a, group: { id: "account", label: "Account" } } : null; };
   // Names used by the marketing page and older code.
-  const LEGACY = { Dashboard: "dashboard", "AI Tutor": "tutor", Flashcards: "flashcards", "Exam Simulator": "exam", Roadmap: "roadmap", "Knowledge Vault": "vault", "Memory Center": "memory", "Study Planner": "planner", "Study Groups": "groups", Subjects: "subjects", "Exam Readiness": "readiness", "Weekly Reports": "reports", Settings: "settings" };
+  const LEGACY = { Dashboard: "dashboard", "AI Tutor": "tutor", Flashcards: "flashcards", Roadmap: "roadmap", "Knowledge Vault": "vault", "Memory Center": "memory", "Study Planner": "planner", Subjects: "subjects", "Weekly Reports": "reports", Settings: "settings" };
 
   /* ---------- Page registry & router ---------- */
   R.pages = {};
@@ -73,6 +66,11 @@
     if (!appEl || appEl.classList.contains("hidden")) return;
     const ctx = R.parseRoute();
     if (!ctx) return;
+    if (ctx.page === "tutor" && ctx.sub[0] === "explain") { R.go("tutor"); return; }
+    if (["practice", "exam", "pastq", "groups", "group", "leaderboards", "readiness"].includes(ctx.page)) {
+      R.go(ctx.page === "practice" || ctx.page === "exam" || ctx.page === "pastq" ? "subjects" : "dashboard");
+      return;
+    }
     const def = R.pages[ctx.page] || R.pages.dashboard;
     // Let the current page veto navigation (e.g. leaving an exam in progress).
     if (current && current.def.leave && lastHash && lastHash !== ctx.hash) {
@@ -233,7 +231,7 @@
     }
     R.$("#chipStreak").classList.toggle("is-cold", !st.todayDone);
     R.$("#chipStreak").setAttribute("data-tip", st.todayDone ? `${st.current}-day streak. You've studied today.` : st.current ? `${st.current}-day streak. Study today to keep it going.` : "Start a streak by studying today.");
-    R.$("#chipGem").setAttribute("data-tip", `${R.fmt(R.state.gems)} demo gems. Spend them in the reward store.`);
+    R.$("#chipGem").setAttribute("data-tip", `${R.fmt(R.state.gems)} virtual gems. Spend them in the reward store.`);
     R.$("#chipXp").setAttribute("data-tip", `Level ${lv.level} · ${R.fmt(lv.into)} / ${R.fmt(lv.needed)} XP to level ${lv.level + 1}`);
     R.$("[data-xp-sr]").textContent = `, ${Math.round(lv.pct)}% to next level`;
     R.$("[data-xpbar]").style.setProperty("--p", `${lv.pct}%`);
@@ -456,9 +454,7 @@
     R.ACCOUNT.forEach((it) => out.push({ kind: "Go to", label: it.label, sub: "Account", icon: it.icon, keywords: it.keywords, run: () => R.go(it.route) }));
     out.push(
       { kind: "Action", label: "Start a review session", icon: "refresh", keywords: "flashcards due", run: () => R.go("review") },
-      { kind: "Action", label: "Start a practice exam", icon: "clipboard", keywords: "test", run: () => R.go("exam") },
       { kind: "Action", label: "Ask the AI Tutor", icon: "sparkles", keywords: "chat new", run: () => R.go("tutor?new=1") },
-      { kind: "Action", label: "Explain it to me", icon: "quote", keywords: "teach back feynman", run: () => R.go("tutor/explain") },
       { kind: "Action", label: "Read text aloud", icon: "volume", keywords: "audio speech listen", run: () => R.go("summaries/listen") },
       { kind: "Action", label: "Save to Knowledge Vault", icon: "bookmark", keywords: "add formula definition", run: () => R.go("vault?new=1") },
       { kind: "Action", label: "Add a subject", icon: "plus", keywords: "create course", run: () => R.go("subjects?new=1") },

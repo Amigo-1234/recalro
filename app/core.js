@@ -1,11 +1,9 @@
 /* ==========================================================================
-   Recalro app core: helpers, sample course content, local store, spaced
+   Recalro app core: helpers, learner state, spaced
    repetition scheduler, gamification engine and derived learning statistics.
 
-   IMPORTANT: this prototype has no backend. Everything personal (XP, streaks,
-   accuracy, mastery, recommendations) is computed from activity recorded in
-   this browser's localStorage. Sample course content and sample peers are
-   labelled as such in the UI. See README "Integration points".
+   Learner state is cached locally and synced for authenticated users. New
+   accounts start without prefilled subjects, cards, or study materials.
    ========================================================================== */
 (function () {
   "use strict";
@@ -46,7 +44,7 @@
   R.on = (evt, fn) => { (listeners[evt] = listeners[evt] || []).push(fn); return () => (listeners[evt] = listeners[evt].filter((f) => f !== fn)); };
   R.emit = (evt, data) => (listeners[evt] || []).slice().forEach((fn) => { try { fn(data); } catch (e) { console.error(`Recalro: "${evt}" listener failed`, e); } });
 
-  /* ---------- Sample course content (clearly labelled "Sample course" in UI) ---------- */
+  /* ---------- Content defaults ---------- */
   const C = (R.content = {});
   C.subjects = [
     { id: "thermo", name: "Thermodynamics", field: "Mechanical Engineering", sample: true,
@@ -184,6 +182,16 @@
     { id: "wk-days", title: "Study on 5 different days", icon: "calendar", target: 5, xp: 70, gems: 25, count: (a) => new Set(a.map((x) => R.dayKey(x.at))).size },
     { id: "wk-accuracy", title: "Answer 25 questions correctly", icon: "target", target: 25, xp: 50, gems: 20, count: (a) => a.filter((x) => (x.t === "answer" && x.correct) || (x.t === "review" && (x.rating === "Good" || x.rating === "Easy"))).length },
   ];
+  C.subjects = [];
+  C.cards = [];
+  C.vault = [];
+  C.questions = [];
+  C.groups = [];
+  C.peers = [];
+  C.leagues = [];
+  C.achievements = C.achievements.filter((item) => !["first-exam", "perfect-exam", "social"].includes(item.id));
+  C.questPool = C.questPool.filter((item) => item.id !== "answer-10" && item.id !== "correct-5");
+  C.challenges = C.challenges.filter((item) => item.id !== "wk-exams");
   // Estimated minutes per activity, used for "est. study time".
   C.minutes = { review: 0.5, answer: 1.5, exam: 0, summary: 3, explain: 5, chat: 1, vault: 1, quest: 0, bonus: 0, material: 0 };
   C.xp = { review: { Again: 4, Hard: 7, Good: 10, Easy: 10 }, answerCorrect: 10, answerWrong: 3, examFinish: 20, summary: 10, explain: 15, chat: 2, vault: 5 };
@@ -195,7 +203,7 @@
     activity: [], cards: {}, customCards: [], subjects: [], materials: [],
     favorites: [], savedVault: [], milestones: [], planner: [], deadlines: [], customQuests: [],
     questClaims: {}, challengeClaims: {}, joinedGroups: [], customGroups: [],
-    purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 340, achievements: {},
+    purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 0, achievements: {},
     examHistory: [], chats: [], summaries: [], explanations: [], notifications: [],
     profile: { displayName: "", photo: "" },
     settings: { dailyGoal: 45, notificationsEnabled: true, reviewReminders: true, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, navOpen: {} },
@@ -256,7 +264,7 @@
     R.emit("change");
   };
   if (R.migrated) R.save();
-  R.resetDemo = () => { const keep = R.state.settings; R.state = defaults(); R.state.settings = { ...R.state.settings, sidebarCollapsed: keep.sidebarCollapsed, navOpen: keep.navOpen }; R.save(); R.emit("change"); };
+  R.resetLearningData = () => { const keep = R.state.settings; R.state = defaults(); R.state.settings = { ...R.state.settings, sidebarCollapsed: keep.sidebarCollapsed, navOpen: keep.navOpen }; R.save(); R.emit("change"); };
   R.update = (fn) => { fn(R.state); R.save(); R.emit("change"); };
 
   /* ---------- Lookups ---------- */
@@ -509,11 +517,11 @@
     }
     if (due.length) recs.push({ icon: "refresh", tone: "teal", title: `${R.plural(due.length, "card")} ready for review`, body: "These are due now according to your spaced-repetition schedule. Reviewing on time strengthens recall.", action: { label: "Start review", route: "review" }, reason: "From your review schedule" });
     const soon = R.state.deadlines.map((d) => ({ ...d, days: Math.round((R.startOfDay(d.date) - R.startOfDay()) / 86400000) })).filter((d) => d.days >= 0 && d.days <= 14).sort((a, b) => a.days - b.days)[0];
-    if (soon) recs.push({ icon: "gauge", tone: "teal", title: `${soon.title} is ${R.inDays(soon.date)}`, body: "Check how prepared you are and what to focus on before then.", action: { label: "Check readiness", route: `readiness?subject=${soon.subject || "thermo"}` }, reason: "From your planner deadlines" });
-    if (!R.state.examHistory.length && R.state.activity.length) recs.push({ icon: "clipboard", tone: "teal", title: "Calibrate with a practice exam", body: "You haven't tried a practice exam yet. Five questions show where you stand.", action: { label: "Start practice", route: "practice" }, reason: "No exam attempts recorded" });
+    if (soon) recs.push({ icon: "calendar", tone: "teal", title: `${soon.title} is ${R.inDays(soon.date)}`, body: "Review your study plan and set aside time before the deadline.", action: { label: "Open planner", route: "planner" }, reason: "From your planner deadlines" });
     const active = R.subjects().map((s) => ({ s, mod: R.moduleStatus(s).find((m) => m.status === "active") })).find((x) => x.mod && R.lastStudied(x.s.id));
     if (active) recs.push({ icon: "map", tone: "teal", title: `Continue ${active.mod.name}`, body: `You're ${Math.round(active.mod.mastery)}% through this module in ${active.s.name}.`, action: { label: "Continue", route: `flashcards?module=${active.mod.id}` }, reason: "From your roadmap progress" });
-    if (!R.state.activity.length) recs.push({ icon: "sparkles", tone: "teal", title: "Start with your first review", body: "Recalro learns from what you do. Review a few sample cards and your insights will start to appear here.", action: { label: "Review sample cards", route: "flashcards" }, reason: "No activity recorded yet" });
+    if (!R.subjects().length) recs.push({ icon: "book", tone: "teal", title: "Set up your first subject", body: "Add a course or topic before creating study materials.", action: { label: "Add a subject", route: "subjects?new=1" }, reason: "Your workspace is empty" });
+    else if (!R.cards().length && !R.state.activity.length) recs.push({ icon: "cards", tone: "teal", title: "Create your first flashcards", body: "Add a few questions and answers to start reviewing and tracking progress.", action: { label: "Open subjects", route: "subjects" }, reason: "No study activity recorded yet" });
     return recs;
   };
 })();
