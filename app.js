@@ -6,6 +6,11 @@
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => [...root.querySelectorAll(s)];
 const marketing = $("#marketing"), app = $("#app");
+const workspaceBoot = $("#workspaceBoot");
+function clearWorkspaceBoot() {
+  document.documentElement.classList.remove("workspace-booting");
+  workspaceBoot?.remove();
+}
 const toast = (msg, opts) => window.R.toast(msg, opts);
 
 /* Replace arrow glyphs in marketing copy with crisp inline SVG icons. */
@@ -84,12 +89,14 @@ function openApp(page = "dashboard") {
   marketing.classList.add("hidden"); $("#auth").classList.add("hidden");
   updateHeroMotion();
   window.R.openApp(page);
+  clearWorkspaceBoot();
   window.scrollTo(0, 0);
   syncCanvas();
 }
 function goLanding() {
   window.R.closeApp();
   app.classList.add("hidden"); $("#auth").classList.add("hidden"); marketing.classList.remove("hidden");
+  clearWorkspaceBoot();
   window.R.applyTheme();
   updateHeroMotion(); window.scrollTo(0, 0);
   nav?.refresh(); syncCanvas();
@@ -253,6 +260,7 @@ function openAuth(mode = "login", next = "dashboard") {
   if (mode !== "recover" && readSession()) { openApp(next); return; }
   authScreen.dataset.nextRoute = next;
   marketing.classList.add("hidden"); app.classList.add("hidden"); authScreen.classList.remove("hidden");
+  clearWorkspaceBoot();
   updateHeroMotion(); window.scrollTo(0, 0); setAuthMode(mode); syncCanvas();
   if (mode === "recover") $("#authPassword").focus({ preventScroll: true });
   else if (mode !== "signup") $("#authEmail").focus({ preventScroll: true });
@@ -534,7 +542,7 @@ $("#newsletterForm").addEventListener("submit", (event) => {
 /* ---------- Deep links: #/app/... opens the app (or asks to log in first) ---------- */
 function routeFromHash() {
   const ctx = window.R.parseRoute();
-  if (!ctx) return;
+  if (!ctx) { clearWorkspaceBoot(); return; }
   const target = ctx.path + (location.hash.includes("?") ? "?" + location.hash.split("?")[1] : "");
   if (readSession()) { if (app.classList.contains("hidden")) openApp(target); }
   else openAuth("login", target);
