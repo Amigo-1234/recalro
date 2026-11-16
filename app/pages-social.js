@@ -207,7 +207,7 @@
     const lv = R.levelInfo(), st = R.streak(), stats = R.stats(), ach = R.achievementList().filter((a) => a.unlockedAt).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
     const user = window.RecalroAuth?.currentUser() || {};
     view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "Demo account")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} league`, "neutral", "shield")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
-        <div class="ph-actions">${ui.btn("Edit name", { tone: "glass", icon: "edit", attrs: "data-editname" })}${ui.link("Customise", "store", { tone: "glass", icon: "bag" })}</div></div></section>
+        <div class="ph-actions">${ui.btn("Edit profile", { tone: "glass", icon: "edit", attrs: "data-editprofile" })}${ui.link("Customise", "store", { tone: "glass", icon: "bag" })}</div></div></section>
       <div class="stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(st.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Exams taken", R.fmt(stats.exams), "clipboard"]].map(([l, v, ic]) => `<div class="stat"><div class="stat-top"><span>${l}</span><span class="stat-ic">${icon(ic)}</span></div><strong>${v}</strong></div>`).join("")}</div>
       <div class="grid-12">
         ${ui.card(ach.length ? `<div class="showcase">${ach.slice(0, 6).map((a) => `<div class="sc-badge-sm"><span class="badge-art">${icon(a.icon)}</span><b>${esc(a.name)}</b><small>${R.fmtDate(a.unlockedAt)}</small></div>`).join("")}</div>` : `<p class="muted small">Unlocked achievements will be showcased here.</p>`, { title: "Achievement showcase", icon: "award", cls: "span-7", action: ui.link("All", "achievements", { tone: "ghost", size: "sm" }) })}
@@ -215,7 +215,41 @@
         ${ui.card(R.chart.heatmap(16), { title: "Study activity", icon: "calendar", cls: "span-12" })}
       </div>`;
     view.addEventListener("click", (e) => {
-      if (e.target.closest("[data-editname]")) R.formDialog({ title: "Edit display name", fields: [{ name: "name", label: "Display name", required: true, maxLength: 40, value: R.displayName() }], onSubmit: (v) => { R.update((st2) => (st2.profile.displayName = v.name.trim().replace(/\s+/g, " "))); R.toast("Display name updated."); R.refresh(); } });
+      if (e.target.closest("[data-editprofile]")) {
+        const onboarding = R.state.profile.onboarding || {}, details = onboarding.details || {};
+        const pathOptions = [["", "Not set"], ["university", "University"], ["secondary", "Secondary school"], ["postgraduate", "Postgraduate"], ["professional", "Professional study"], ["independent", "Independent learning"]];
+        R.formDialog({
+          title: "Your profile and study details",
+          description: "Add the information you skipped during signup. You can change it again anytime.",
+          submitLabel: "Save profile",
+          fields: [
+            { name: "name", label: "Display name", required: true, maxLength: 40, value: R.displayName() },
+            { name: "username", label: "Username", maxLength: 24, placeholder: "letters, numbers and underscores", value: onboarding.username || "" },
+            { name: "path", label: "Study path", type: "select", options: pathOptions, value: onboarding.path || "" },
+            { name: "country", label: "Country", maxLength: 60, placeholder: "Your country", value: onboarding.country || "" },
+            { name: "institution", label: "School or institution", maxLength: 120, placeholder: "Your school, college or university", value: onboarding.institution || details.school || "" },
+            { name: "field", label: "Course or field", maxLength: 120, placeholder: "Your course, department or field", value: details.department || details.field || details.proField || details.topics || "" },
+            { name: "level", label: "Level, class or programme", maxLength: 80, placeholder: "Your current level or class", value: details.level || details.grade || details.programme || details.stage || details.cert || "" },
+          ],
+          onSubmit: async (v) => {
+            const username = v.username.trim().toLowerCase();
+            if (username && !/^[a-z][a-z0-9_]{2,23}$/.test(username)) { R.toast("Use 3–24 characters: start with a letter, then use letters, numbers or underscores.", { icon: "info" }); return; }
+            const path = v.path, institution = v.institution.trim(), field = v.field.trim(), level = v.level.trim();
+            const nextDetails = { ...details };
+            if (path === "secondary") { nextDetails.school = institution; nextDetails.grade = level; }
+            else if (path === "university") { nextDetails.institution = institution; nextDetails.department = field; nextDetails.level = level; }
+            else if (path === "postgraduate") { nextDetails.institution = institution; nextDetails.field = field; nextDetails.programme = level; }
+            else if (path === "professional") { nextDetails.cert = level; nextDetails.proField = field; }
+            else if (path === "independent") nextDetails.topics = field;
+            const nextOnboarding = { ...onboarding, path, country:v.country.trim(), institution, username:username || null, details:nextDetails };
+            try {
+              const saved = await window.RecalroAuth.updateProfile({ name:v.name.trim().replace(/\s+/g, " "), username, onboarding:nextOnboarding });
+              R.update((state) => { state.profile.displayName = saved.display_name; state.profile.onboarding = saved.onboarding || nextOnboarding; });
+              R.toast("Profile saved."); R.refresh();
+            } catch (error) { R.toast(error.message || "Could not save your profile. Please try again.", { icon: "info" }); }
+          },
+        });
+      }
     });
   } });
 

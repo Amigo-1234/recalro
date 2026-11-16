@@ -200,12 +200,12 @@ body.dark .chip-btn.is-on { color: #05201F; }
 .reward-chip.done { background: var(--teal-50); color: var(--teal-700); }
 
 /* Command palette */
-.cmd-dialog { width: min(640px, calc(100% - 24px)); align-self: start; margin-top: 12vh; }
-.cmd-dialog .r-dialog-body { padding: 0; }
+.cmd-dialog { display: flex; flex-direction: column; width: min(640px, calc(100% - 24px)); max-height: min(88vh, 820px); align-self: start; margin-top: 12vh; overflow: hidden; }
+.cmd-dialog .r-dialog-body { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; padding: 0; }
 .cmd-input { display: flex; align-items: center; gap: 10px; padding: 6px 16px; border-bottom: 1px solid var(--line); }
 .cmd-input .ic { color: var(--text-3); }
 .cmd-input input { border: 0 !important; box-shadow: none !important; padding: 12px 0; font-size: 16px; background: transparent; }
-.cmd-list { list-style: none; margin: 0; padding: 8px; max-height: min(60vh, 480px); overflow: auto; }
+.cmd-list { flex: 0 1 auto; min-height: 0; list-style: none; margin: 0; padding: 8px; max-height: min(60vh, 480px); overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y; }
 .cmd-group { padding: 10px 10px 6px; font: 700 11px "DM Sans", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
 .cmd-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
 .cmd-item > .ic { color: var(--text-2); }
@@ -1231,7 +1231,9 @@ body.dark .msg-user .msg-text { color: #05201F; }
   .sh-earn { margin-left: 0; }
   .ph-inner { padding: 20px; }
   .r-dialog { max-height: 92vh; }
-  .cmd-dialog { margin-top: 8px; }
+  .cmd-dialog { margin-top: 8px; max-height: calc(100vh - 16px); max-height: calc(var(--vvh, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 16px); }
+  .cmd-dialog .r-dialog-body { flex: 1 1 auto; }
+  .cmd-list { flex: 1 1 auto; max-height: calc(var(--vvh, 100dvh) - 84px); }
 }
 @media (max-width: 380px) {
   .stat-row, .queue { grid-template-columns: 1fr; }

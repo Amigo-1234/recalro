@@ -60,7 +60,7 @@
   const allInstitutions = () => [...new Set(Object.values(D.INSTITUTIONS).flat())].sort();
   const institutionsFor = (country) => country === "Other" ? [] : (country && D.INSTITUTIONS[country]) || allInstitutions();
   const countryName = (a) => a.country === "Other" ? (a.countryOther || "").trim() : a.country || "";
-  const firstName = () => (S.account.name.trim().split(/\s+/)[0] || "there");
+  const firstName = () => (S.account.name.trim().split(/\s+/)[0] || "Learner");
 
   /* ---------- Shared bits of markup ---------- */
   const head = (kicker, title, desc) => `<header class="sw-head"><span class="sw-kicker">${kicker}</span><h1 id="sw-title-${S.step}" tabindex="-1">${title}</h1>${desc ? `<p>${desc}</p>` : ""}</header>`;
@@ -102,8 +102,8 @@
       </button>
       <div class="sw-divider"><span>or sign up with email</span></div>
       <div class="sw-form">
-        ${UI.FormField({ id: "sw-name", label: "Full name", bind: "account.name", value: S.account.name, placeholder: "Ada Okafor", autocomplete: "name" })}
-        ${UI.FormField({ id: "sw-username", label: "Username", bind: "account.username", value: S.account.username, placeholder: "ada_okafor", autocomplete: "username", hint: "3–24 characters. Use lowercase letters, numbers and underscores." })}
+        ${UI.FormField({ id: "sw-name", label: "Full name", bind: "account.name", value: S.account.name, placeholder: "Ada Okafor", autocomplete: "name", optional: true })}
+        ${UI.FormField({ id: "sw-username", label: "Username", bind: "account.username", value: S.account.username, placeholder: "ada_okafor", autocomplete: "username", optional: true, hint: "Add one now, or choose it later in your profile. Use 3–24 lowercase letters, numbers or underscores." })}
         ${UI.FormField({ id: "sw-email", label: "Email address", bind: "account.email", value: S.account.email, type: "email", placeholder: "you@example.com", autocomplete: "email", inputmode: "email", hint: "We'll send a confirmation link after you finish setting up your learning space." })}
         <div class="sw-row">
           ${UI.PasswordField({ id: "sw-password", label: "Password", bind: "account.password", value: S.account.password, placeholder: "Create a password", strength: true })}
@@ -126,8 +126,8 @@
     mount(el) { updateMatch(el); },
     validate() {
       const a = S.account, e = [];
-      if (a.name.trim().length < 2) e.push(["sw-name", "Enter your full name."]);
-      if (!/^[a-z][a-z0-9_]{2,23}$/.test(a.username.trim().toLowerCase())) e.push(["sw-username", "Use 3–24 characters: start with a letter, then use letters, numbers or underscores."]);
+      if (a.name.trim() && a.name.trim().length < 2) e.push(["sw-name", "Enter at least 2 characters, or leave this blank for now."]);
+      if (a.username.trim() && !/^[a-z][a-z0-9_]{2,23}$/.test(a.username.trim().toLowerCase())) e.push(["sw-username", "Use 3–24 characters: start with a letter, then use letters, numbers or underscores."]);
       if (!a.email.trim()) e.push(["sw-email", "Enter your email address."]);
       else if (!EMAIL.test(a.email.trim())) e.push(["sw-email", "Enter a valid email address, like you@example.com."]);
       if (!UI.passwordValid(a.password)) e.push(["sw-password", "Use at least 8 characters, including a letter and a number."]);
@@ -148,20 +148,21 @@
   const EmailVerificationStep = {
     label: "Email confirmation",
     render: () => `
-      ${head("Email confirmation", "Your email will be verified securely.", `After you finish setting up your learning space, Supabase will send a confirmation link to <b class="sw-break">${esc(S.verify.email)}</b>. <button type="button" class="sw-link" data-go="0">Change email</button>`)}
+      ${head("Email confirmation", "Your email will be verified securely.", `After account creation, Supabase will send a confirmation link to <b class="sw-break">${esc(S.verify.email)}</b>. <button type="button" class="sw-link" data-go="0">Change email</button>`)}
       <div class="sw-inbox" role="note">
         <span class="sw-inbox-ic">${icon("bell")}</span>
-        <div><b>One more step at the end</b><span>We create your account after you review your details. Then open the link in your inbox to verify your email.</span></div>
+        <div><b>Set up only what you need</b><span>You can skip your school, course and learning preferences now, then add them later in your profile.</span></div>
       </div>
-      <p class="sw-hint">No email is sent yet. The confirmation link is sent when you create your account on the review step.</p>`,
+      <p class="sw-hint">Your account is created after the review step. The confirmation link is sent then.</p>`,
     validate: () => [],
   };
   const AcademicPathStep = {
     label: "Academic path",
     render: () => `
-      ${head("Your academic path", "What are you currently studying?", "Use your real school, level and course details. They will help us match the right past questions when verified papers become available.")}
-      ${UI.ChoiceGroup({ id: "sw-path", legend: "Academic path", cls: "sw-group-tiles sw-legend-hidden", content: D.PATHS.map((p) => UI.SelectionCard({ name: "sw-path", value: p.id, checked: S.path === p.id, title: p.title, desc: p.desc, img: p.img, bind: "path" })).join("") })}`,
-    validate: () => (S.path ? [] : [["sw-path", "Choose the option that fits you best."]]),
+      ${head("Your academic path", "What are you currently studying?", "This helps personalise your workspace. You can skip it and add your details later in your profile.")}
+      ${UI.ChoiceGroup({ id: "sw-path", legend: "Academic path", optional: true, cls: "sw-group-tiles sw-legend-hidden", content: D.PATHS.map((p) => UI.SelectionCard({ name: "sw-path", value: p.id, checked: S.path === p.id, title: p.title, desc: p.desc, img: p.img, bind: "path" })).join("") })}`,
+    validate: () => [],
+    beforeNext() { return { to: S.path ? 3 : REVIEW }; },
   };
 
   const ACADEMIC_COPY = {
@@ -216,7 +217,7 @@
           ${UI.ChoiceGroup({ id: "sw-skills", legend: "Skills you want to develop", optional: true, hint: "Choose any that apply.", content: chips("checkbox", "sw-skills", b("skills"), D.SKILLS, a.skills) })}
           ${UI.FormField({ id: "sw-skills-other", label: "Anything else?", bind: b("skillsOther"), value: a.skillsOther || "", placeholder: "e.g. Photography", optional: true })}`;
       }
-      return `${head("Academic details", title, desc)}${pathPill()}<div class="sw-form">${body}</div>`;
+      return `${head("Academic details", title, `${desc} All fields are optional; you can skip this step.`)}${pathPill()}<div class="sw-form">${body}</div>`;
     },
     mount(el) {
       const input = el.querySelector("#sw-inst");
@@ -258,42 +259,14 @@
         }, 280);
       });
     },
-    validate() {
-      const a = A(), k = S.path, e = [];
-      const need = (v, id, msg) => { if (!String(v ?? "").trim()) e.push([id, msg]); };
-      if (k === "university") {
-        need(a.country, "sw-country", "Select your country.");
-        const inst = validInstitution(a); if (inst) e.push(inst);
-        need(a.faculty, "sw-faculty", "Enter your faculty or school.");
-        need(a.department, "sw-dept", "Enter your department or course.");
-        need(a.level, "sw-level", "Choose your current level.");
-        if (a.level === "Other") need(a.levelOther, "sw-level-other", "Tell us your level.");
-      } else if (k === "secondary") {
-        need(a.country, "sw-country", "Select your country.");
-        need(a.school, "sw-school", "Enter your school's full name.");
-        need(a.grade, "sw-grade", "Choose your class or grade.");
-      } else if (k === "postgraduate") {
-        const inst = validInstitution(a); if (inst) e.push(inst);
-        need(a.field, "sw-field", "Enter your field of study.");
-        need(a.programme, "sw-programme", "Select your programme.");
-        need(a.stage, "sw-stage", "Choose your current stage.");
-      } else if (k === "professional") {
-        need(a.country, "sw-country", "Select your country.");
-        need(a.cert, "sw-cert", "Choose your certification or examination.");
-        if (a.cert === "Other") need(a.certOther, "sw-cert-other", "Tell us which certification.");
-        need(a.proField, "sw-profield", "Enter your professional field.");
-      } else if (k === "independent") {
-        need(a.topics, "sw-topics", "Tell us what you'd like to learn.");
-      } else e.push(["sw-title-3", "Choose an academic path first."]);
-      if (a.country === "Other") need(a.countryOther, "sw-country-other", "Enter your country name.");
-      return e;
-    },
+    // Academic fields are optional during signup; partial details can still help personalize the account.
+    validate: () => [],
   };
 
   const LearningInterestsStep = {
     label: "Interests",
     render: () => `
-      ${head("Learning interests", "What would you like to learn?", "Pick as many as you like to personalise your learning space.")}
+      ${head("Learning interests", "What would you like to learn?", "Optional. Pick any subjects to personalise your learning space, or skip this step.")}
       <div class="sw-search">${icon("search")}<label class="sr-only" for="sw-isearch">Search subjects</label><input id="sw-isearch" type="search" placeholder="Search subjects" autocomplete="off"><span class="sw-count" aria-live="polite">${countLabel()}</span></div>
       ${UI.ChoiceGroup({ id: "sw-interests", legend: "Subjects", cls: "sw-group-grid sw-legend-hidden", content: D.INTERESTS.map((i) => UI.SelectionCard({ type: "checkbox", name: "sw-interests", value: i.id, checked: S.interests.includes(i.id), title: i.label, ic: i.icon, bind: "interests", compact: true })).join("") })}
       <p class="sw-empty" hidden>No subjects match. Choose “Other” and tell us.</p>
@@ -308,8 +281,6 @@
     },
     validate() {
       const e = [];
-      if (!S.interests.length) e.push(["sw-interests", "Choose at least one subject."]);
-      if (S.interests.includes("other") && !S.interestsOther.trim()) e.push(["sw-interests-other", "Tell us what else you'd like to learn."]);
       return e;
     },
   };
@@ -338,10 +309,10 @@
   function makeProfile() {
     const a = A(), inst = a.notListed ? a.institutionCustom : a.institution;
     return {
-      name: S.account.name.trim().replace(/\s+/g, " "), username: S.account.username, email: S.account.email,
+      name: S.account.name.trim().replace(/\s+/g, " "), username: S.account.username.trim().toLowerCase() || null, email: S.account.email,
       onboarding: {
-        path: S.path, country: countryName(a), institution: inst || a.school || "", institutionRorId: a.institutionRor || "", username: S.account.username, details: Object.fromEntries(pathDetails()),
-        interests: S.interests.map((id) => (id === "other" ? S.interestsOther : D.INTERESTS.find((i) => i.id === id)?.label)),
+        path: S.path, country: countryName(a), institution: inst || a.school || "", institutionRorId: a.institutionRor || "", username: S.account.username.trim().toLowerCase() || null, details: Object.fromEntries(pathDetails()),
+        interests: S.interests.map((id) => (id === "other" ? S.interestsOther : D.INTERESTS.find((i) => i.id === id)?.label)).filter(Boolean),
         goals: S.goals.map((id) => D.GOALS.find((g) => g.id === id)?.label),
         minutes: S.minutes, completedAt: new Date().toISOString(),
       },
@@ -357,11 +328,11 @@
       const goals = S.goals.map((id) => D.GOALS.find((g) => g.id === id)?.label).filter(Boolean);
       const mins = D.MINUTES.find((m) => m.v === S.minutes);
       return `
-        ${head("Review", "Your learning space is almost ready.", "Check your details. You can edit any section before you finish.")}
+        ${head("Review", "Your learning space is almost ready.", "Check anything you added. You can finish your profile details later.")}
         <div class="sw-review">
-          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim())}</b><small>@${esc(S.account.username)} · ${esc(S.account.email)} <span class="sw-verified">${icon("mail")}Verify by email link</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
-          ${section("Academic path", 2, `<p class="sw-rv-path"><img src="${pathMeta()?.img}" alt="" width="200" height="200">${esc(pathMeta()?.title || "")}</p>`)}
-          ${section("Academic details", 3, dl(pathDetails()))}
+          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim() || "Learner")}</b><small>${S.account.username ? `@${esc(S.account.username)} · ` : "Profile details optional · "}${esc(S.account.email)} <span class="sw-verified">${icon("mail")}Verify by email link</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
+          ${section("Academic path", 2, pathMeta() ? `<p class="sw-rv-path"><img src="${pathMeta().img}" alt="" width="200" height="200">${esc(pathMeta().title)}</p>` : `<p class="sw-none">Not set. You can add this later in your profile.</p>`)}
+          ${section("Academic details", 3, pathDetails().length ? dl(pathDetails()) : `<p class="sw-none">Not set. You can add these later in your profile.</p>`)}
           ${section("Learning interests", 4, tagList(interests))}
           ${section("Learning goals", 5, tagList(goals) + (mins ? `<p class="sw-rv-time">${icon("clock")}Daily study time: <b>${mins.label}</b></p>` : ""))}
         </div>`;
@@ -557,8 +528,8 @@
     if (S.returnTo != null && res.to == null) {
       to = S.returnTo;
       for (let n = S.step + 1; n < REVIEW; n++) if (STEPS[n].validate().length) { to = n; break; }
-      if (to === REVIEW) S.returnTo = null;
     }
+    if (S.returnTo != null && to === S.returnTo) S.returnTo = null;
     go(to, 1);
   }
   function go(n, dir) {
@@ -623,7 +594,7 @@
     let label = "Continue";
     if (n === 0) label = "Create account";
 
-    if (n === 5 && !S.goals.length && !S.minutes) label = "Skip for now";
+    if ((n === 2 && !S.path) || (n === 3 && !pathDetails().length) || (n === 4 && !S.interests.length) || (n === 5 && !S.goals.length && !S.minutes)) label = "Skip for now";
     if (S.returnTo != null && n < REVIEW && n !== 1) label = "Save and review";
     if (n === REVIEW) label = "Create my learning space";
     if (last) label = S.verify.confirmationPending ? "Go to sign in" : "Continue to dashboard";

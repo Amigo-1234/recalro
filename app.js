@@ -129,7 +129,11 @@ async function ensureProfile() {
   if (!user?.id) return null;
   const { data, error } = await client.from("profiles").select("id, display_name, username, onboarding").eq("id", user.id).maybeSingle();
   if (error) throw error;
-  if (data) return data;
+  if (data) {
+    const onboarding = { ...(data.onboarding || {}), username:data.username || data.onboarding?.username || null };
+    if (String(data.display_name || "").trim()) return { ...data, onboarding };
+    return saveProfile({ name:user.name, username:data.username || null, email:user.email, onboarding });
+  }
   const meta = user.raw.user_metadata || {};
   return saveProfile({ name:meta.full_name || user.name, username:meta.username || null, email:user.email, onboarding:meta.onboarding || {} });
 }
@@ -156,13 +160,16 @@ const RecalroAuth = {
   },
   async signUp(profile, password) {
     const client = await authClient();
-    const { data: available, error: availabilityError } = await client.rpc("username_available", { candidate:profile.username });
-    if (availabilityError) throw availabilityError;
-    if (!available) throw new Error("That username is already taken. Please choose another.");
+    const username = String(profile.username || "").trim().toLowerCase();
+    if (username) {
+      const { data: available, error: availabilityError } = await client.rpc("username_available", { candidate:username });
+      if (availabilityError) throw availabilityError;
+      if (!available) throw new Error("That username is already taken. Please choose another.");
+    }
     const redirectTo = `${location.origin}${location.pathname}?auth=confirm`;
     const { data, error } = await client.auth.signUp({
       email:profile.email, password,
-      options:{ emailRedirectTo:redirectTo, data:{ full_name:profile.name, username:profile.username, onboarding:profile.onboarding } },
+      options:{ emailRedirectTo:redirectTo, data:{ full_name:profile.name || "", username:username || null, onboarding:profile.onboarding } },
     });
     if (error) throw error;
     supabaseSession = data.session;
@@ -186,6 +193,20 @@ const RecalroAuth = {
     const client = await authClient();
     const { error } = await client.auth.updateUser({ password });
     if (error) throw error;
+  },
+  async updateProfile(profile) {
+    const user = authUser();
+    if (!user?.id) throw new Error("Sign in before updating your profile.");
+    const username = String(profile.username || "").trim().toLowerCase();
+    const currentUsername = String(window.R?.state?.profile?.onboarding?.username || user.raw.user_metadata?.username || "").trim().toLowerCase();
+    if (username && username !== currentUsername) {
+      const client = await authClient();
+      const { data: available, error } = await client.rpc("username_available", { candidate:username });
+      if (error) throw error;
+      if (!available) throw new Error("That username is already taken. Please choose another.");
+    }
+    const onboarding = { ...(profile.onboarding || {}), username:username || null };
+    return saveProfile({ ...profile, username:username || null, onboarding });
   },
   ensureProfile,
   saveProfile,
@@ -362,19 +383,21 @@ window.RecalroSignup.init(wizardEl, {
 
     let user = RecalroAuth.currentUser();
     if (!user?.id) throw new Error("Your account is not signed in. Please log in to continue.");
+    const displayName = profile.name.trim() || user.name || nameFromEmail(profile.email);
+    const completedProfile = { ...profile, name:displayName };
     window.R.update((st) => {
-      st.profile.displayName = profile.name;
-      st.profile.onboarding = profile.onboarding;
+      st.profile.displayName = displayName;
+      st.profile.onboarding = completedProfile.onboarding;
       if (profile.onboarding.minutes) st.settings.dailyGoal = profile.onboarding.minutes;
     });
     user = RecalroAuth.currentUser();
     if (user?.id) {
-      await RecalroAuth.saveProfile(profile);
+      await RecalroAuth.saveProfile(completedProfile);
       await window.RecalroCloudSync?.activate(user.id);
       await window.RecalroCloudSync?.flush();
     }
     openApp(authScreen.dataset.nextRoute || "dashboard");
-    toast(`Welcome to Recalro, ${profile.name.split(" ")[0]}!`, { icon:"sparkles" });
+    toast(`Welcome to Recalro, ${displayName.split(" ")[0]}!`, { icon:"sparkles" });
   },
 });
 /* ---------- Marketing page ---------- */
