@@ -1006,10 +1006,12 @@ body.dark .msg-user .msg-text { color: #05201F; }
 .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .group-card { display: flex; flex-direction: column; gap: 10px; padding: 20px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); text-decoration: none; transition: transform .2s var(--ease), box-shadow .2s; }
 .group-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-2); }
+.group-card-link { display: flex; flex: 1; flex-direction: column; gap: 10px; color: inherit; text-decoration: none; }
+.group-card-link:focus-visible { outline: 3px solid color-mix(in srgb, var(--teal) 55%, transparent); outline-offset: 4px; border-radius: 8px; }
 .gc-top { display: flex; justify-content: space-between; align-items: center; }
 .gc-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(145deg, var(--teal), var(--teal-600)); color: var(--on-teal); }
 .group-card h3 { font-size: 17px; }
-.group-card > p { color: var(--text-2); font-size: 13px; }
+.group-card-link > p { color: var(--text-2); font-size: 13px; }
 .gc-goal { display: grid; gap: 6px; }
 .gc-goal small { color: var(--text-3); font-size: 12px; }
 .group-card > .btn { align-self: flex-start; margin-top: 4px; }
@@ -1247,3 +1249,4 @@ body.dark .msg-user .msg-text { color: #05201F; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
 body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+

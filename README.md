@@ -40,6 +40,8 @@ The AI Tutor and related server endpoints require a valid Supabase access token 
 
 Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-mini-transcribe`) and `OPENAI_TTS_MODEL` (default `gpt-4o-mini-tts`). Uploads are limited to 12 MB. DOCX extraction reads the main document body; complex layout, headers, footers and embedded images may not be preserved.
 
+Tutor requests keep the latest conversation turns and at most two older turns relevant to the new question. TXT, Markdown and DOCX uploads send a small set of relevant excerpts; PDFs and images are still sent as full attachments. Short learning modes use lower output limits, with one higher-limit retry if the model reports a truncated answer. Usage counters are written to server logs without prompts or transcripts; Realtime voice totals are reported after five replies or when the voice session ends.
+
 ## Project structure
 
 - `index.html`, `marketing.css`, `auth.css` — landing page, authentication views and shared styling.
@@ -51,3 +53,4 @@ Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI
 - `assets/` — local brand assets and favicon.
 
 Run `npm run check` for the project's server and entry-point JavaScript syntax checks.
+

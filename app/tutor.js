@@ -15,6 +15,31 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, R.reducedMotion() ? 0 : ms));
   const blobToBase64 = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
   async function apiAuthHeaders() { await window.RecalroAuth?.ready; const token = window.RecalroAuth?.accessToken?.(); if (!token) throw new Error("Sign in to use Recalro AI."); return { Authorization:`Bearer ${token}` }; }
+  const emptyVoiceUsage = () => ({ responses:0, total_tokens:0, input_tokens:0, output_tokens:0, input_text_tokens:0, input_audio_tokens:0, input_image_tokens:0, cached_input_tokens:0, output_text_tokens:0, output_audio_tokens:0 });
+  function readVoiceUsage(usage) {
+    if (!usage || typeof usage !== "object") return null;
+    const input = usage.input_token_details || usage.input_tokens_details || {};
+    const output = usage.output_token_details || usage.output_tokens_details || {};
+    const count = (...values) => {
+      for (const value of values) {
+        const number = Number(value);
+        if (value !== null && value !== undefined && value !== "" && Number.isSafeInteger(number) && number >= 0) return number;
+      }
+      return 0;
+    };
+    const inputTokens = count(usage.input_tokens), outputTokens = count(usage.output_tokens);
+    const totalTokens = count(usage.total_tokens) || inputTokens + outputTokens;
+    if (!totalTokens) return null;
+    return {
+      responses:1, total_tokens:totalTokens, input_tokens:inputTokens, output_tokens:outputTokens,
+      input_text_tokens:count(input.text_tokens, input.input_text_tokens),
+      input_audio_tokens:count(input.audio_tokens, input.input_audio_tokens),
+      input_image_tokens:count(input.image_tokens, input.input_image_tokens),
+      cached_input_tokens:count(input.cached_tokens, usage.input_tokens_details?.cached_tokens),
+      output_text_tokens:count(output.text_tokens, output.output_text_tokens),
+      output_audio_tokens:count(output.audio_tokens, output.output_audio_tokens),
+    };
+  }
   let speechCancel = () => {};
   async function speakText(text, onState = () => {}, onCancel = () => {}) {
     if (!text) return;
@@ -215,7 +240,7 @@
     let streaming = null, attachment = null, learningMode = "ask", voiceSession = false, voiceConnecting = false, voiceScreen = null;
     let voicePeer = null, voiceChannel = null, voiceStream = null, voiceAudio = null, voiceAudioBlocked = false;
     let voiceLevelContext = null, voiceLevelAnalyser = null, voiceLevelFrame = 0, voiceMicMuted = false;
-    let pendingVoiceUser = null, pendingVoiceAssistantText = "";
+    let pendingVoiceUser = null, pendingVoiceAssistantText = "", voiceUsageTotals = emptyVoiceUsage(), voiceUsageSending = false;
     const shell = R.$("#shell");
     const syncTutorNavigation = () => shell?.classList.toggle("hide-tutor-nav", !!st.settings.hideTutorNavigation);
     syncTutorNavigation();
@@ -519,6 +544,32 @@
       if (transcript) addVoiceMessage("assistant", transcript);
       pendingVoiceAssistantText = "";
     }
+    async function flushVoiceUsage() {
+      if (voiceUsageSending || !voiceUsageTotals.responses) return;
+      const snapshot = voiceUsageTotals;
+      voiceUsageTotals = emptyVoiceUsage();
+      voiceUsageSending = true;
+      let sent = false;
+      try {
+        const headers = await apiAuthHeaders();
+        const response = await fetch("/api/voice-usage", { method:"POST", headers:{ "Content-Type":"application/json", ...headers }, body:JSON.stringify({ usage:snapshot }), keepalive:true });
+        if (!response.ok) throw new Error("Voice usage report failed.");
+        sent = true;
+      } catch {
+        for (const key of Object.keys(snapshot)) voiceUsageTotals[key] += snapshot[key];
+      } finally {
+        voiceUsageSending = false;
+        if (sent && voiceUsageTotals.responses && (!voiceSession || document.visibilityState === "hidden")) void flushVoiceUsage();
+      }
+    }
+    function recordVoiceUsage(usage) {
+      const counts = readVoiceUsage(usage);
+      if (!counts) return;
+      for (const key of Object.keys(counts)) voiceUsageTotals[key] += counts[key];
+      if (voiceUsageTotals.responses >= 5) void flushVoiceUsage();
+    }
+    const flushVoiceUsageOnPageHide = () => { void flushVoiceUsage(); };
+    window.addEventListener("pagehide", flushVoiceUsageOnPageHide);
     function handleRealtimeEvent(event) {
       if (!voiceSession || !event?.type) return;
       if (event.type === "session.created" || event.type === "session.updated") {
@@ -545,6 +596,7 @@
         if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
         voiceState("listening", 0, "Your turn. I'm listening.");
       } else if (event.type === "response.done") {
+        recordVoiceUsage(event.response?.usage);
         if (event.response?.status === "failed") voiceState("error", 0, event.response?.status_details?.error?.message || "The voice response failed. Tap the mic to try again.");
         else if (voiceScreen.dataset.state !== "speaking") voiceState("listening", 0, "Your turn. I'm listening.");
       } else if (event.type === "error") {
@@ -581,6 +633,7 @@
     }
     async function startVoiceMode() {
       if (voiceConnecting || (voiceSession && voicePeer?.connectionState === "connected")) return;
+      void flushVoiceUsage();
       stopVoiceTransport(); voiceSession = true; voiceMicMuted = false;
       voiceScreen.hidden = false; root.classList.add("is-voice"); R.setFocusMode(true);
       voiceState("connecting", 0, "Connecting securely to your tutor…");
@@ -606,7 +659,7 @@
         voiceChannel.onclose = () => { if (voiceSession) voiceState("error", 0, "The voice session ended. Tap the microphone button to reconnect."); };
         const offer = await voicePeer.createOffer();
         await voicePeer.setLocalDescription(offer);
-        const history = (chat?.messages || []).filter((message) => ["user", "assistant"].includes(message.role)).slice(-8).map((message) => ({ role:message.role, content:message.text || message.md || message.errorMessage || "" }));
+        const history = (chat?.messages || []).filter((message) => ["user", "assistant"].includes(message.role)).slice(-20).map((message) => ({ role:message.role, content:String(message.text || message.md || message.errorMessage || "").slice(0,2000) }));
         const response = await fetch("/api/voice-session", { method:"POST", headers:{ "Content-Type":"application/json", ...(await apiAuthHeaders()) }, body:JSON.stringify({ sdp:voicePeer.localDescription?.sdp || offer.sdp, subject:R.subject(subject)?.name || "general learning", history }) });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
@@ -623,6 +676,7 @@
     }
     function closeVoiceMode() {
       if (pendingVoiceAssistantText) saveVoiceAssistantTranscript();
+      void flushVoiceUsage();
       voiceSession = false; speechCancel(); stopVoiceTransport(); voiceScreen.hidden = true;
       root.classList.remove("is-voice"); R.setFocusMode(false);
     }
@@ -686,7 +740,7 @@
     drawThread();
     if (ctx.query.topic) composer.setValue(`Help me understand ${ctx.query.topic}`);
     if (!phone()) composer.focus();
-    return () => { closeVoiceMode(); composer.stopDictation(); stopStream(); document.removeEventListener("keydown", onKey); };
+    return () => { closeVoiceMode(); composer.stopDictation(); stopStream(); document.removeEventListener("keydown", onKey); window.removeEventListener("pagehide", flushVoiceUsageOnPageHide); };
   }
   let explainWs = null;
 
@@ -875,3 +929,4 @@
     return { reset() { if (step === 1) draw(); } };
   }
 })();
+

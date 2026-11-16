@@ -91,6 +91,61 @@ function extractDocxText(buffer) {
   throw new Error('Could not read text from this DOCX file. Please export it as PDF or TXT.');
 }
 function dataUrlParts(value) { const m = /^data:([^;]+);base64,([A-Za-z0-9+/=]+)$/.exec(value || ''); if (!m) throw new Error('The attachment could not be read. Please upload it again.'); return { mime:m[1], buffer:Buffer.from(m[2], 'base64') }; }
+const SEARCH_STOPWORDS = new Set('the a an and or of to in on for is are was were be by with as at it this that from what why how when which who does do can could would should about into your you me my we our their there than then so if not no yes explain tell give make help please'.split(' '));
+function searchTerms(text) { return new Set((String(text || '').toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || []).filter(word => !SEARCH_STOPWORDS.has(word))); }
+function selectTutorHistory(history, prompt, options = {}) {
+  const messages = (Array.isArray(history) ? history : []).filter(m => ['user','assistant'].includes(m?.role)).slice(-24).map(m => ({ role:m.role, content:String(m.content || '').trim() }));
+  const maxMessages = options.maxMessages || 6, maxChars = options.maxChars || 7000, perMessage = options.perMessage || 1400;
+  const recentCount = Math.min(options.recentCount || 4, maxMessages, messages.length), selected = new Set();
+  for (let i = messages.length - recentCount; i < messages.length; i++) selected.add(i);
+  const queryTerms = searchTerms(prompt), candidates = [];
+  if (queryTerms.size) for (let i = 0; i < messages.length - recentCount; i++) {
+    const terms = searchTerms(messages[i].content); let overlap = 0;
+    for (const term of queryTerms) if (terms.has(term)) overlap++;
+    if (overlap) candidates.push({ i, score:overlap / Math.sqrt(queryTerms.size) + i / Math.max(1, messages.length) * 0.05 });
+  }
+  candidates.sort((a,b) => b.score - a.score || b.i - a.i);
+  for (const item of candidates) { if (selected.size >= maxMessages) break; selected.add(item.i); }
+  let remaining = maxChars;
+  const result = [];
+  for (const i of [...selected].sort((a,b) => b-a)) {
+    const content = messages[i].content.slice(0, Math.min(perMessage, remaining));
+    remaining -= content.length;
+    if (content) result.push({ role:messages[i].role, content });
+  }
+  return result.reverse();
+}
+function relevantExcerpts(text, prompt, options = {}) {
+  const maxChunk = options.maxChunk || 1200, maxChars = options.maxChars || 6000, maxChunks = options.maxChunks || 5;
+  const pieces = String(text || '').replace(/\r/g,'').split(/(?<=[.!?])\s+|\n+/).map(s => s.trim()).filter(Boolean), chunks = [];
+  let current = '';
+  for (const piece of pieces) {
+    if (piece.length > maxChunk) {
+      if (current) { chunks.push(current); current = ''; }
+      for (let i = 0; i < piece.length; i += maxChunk - 120) chunks.push(piece.slice(i, i + maxChunk));
+    } else if (!current || current.length + piece.length + 1 <= maxChunk) current += (current ? ' ' : '') + piece;
+    else { chunks.push(current); current = piece; }
+  }
+  if (current) chunks.push(current);
+  const terms = searchTerms(prompt);
+  const ranked = chunks.map((content,index) => {
+    const words = searchTerms(content); let hits = 0;
+    for (const word of terms) if (words.has(word)) hits++;
+    return { content,index,score:terms.size ? hits / Math.sqrt(terms.size) : 0 };
+  }).sort((a,b) => b.score - a.score || a.index - b.index);
+  const selected = []; let used = 0;
+  for (const item of ranked) {
+    if (selected.length >= maxChunks) break;
+    if (used + item.content.length > maxChars) continue;
+    selected.push(item); used += item.content.length;
+  }
+  return selected.sort((a,b) => a.index - b.index).map((item,i) => `[Excerpt ${i+1}] ${item.content}`).join('\n\n');
+}
+function logOpenAiUsage(route, model, result) {
+  const usage = result?.usage;
+  if (!usage) return;
+  console.info(JSON.stringify({ event:'recalro_openai_usage', route, model, request_id:result.id || null, input_tokens:usage.input_tokens || 0, output_tokens:usage.output_tokens || 0, cached_input_tokens:usage.input_tokens_details?.cached_tokens || 0 }));
+}
 
 async function handleRequest(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -136,21 +191,41 @@ async function handleRequest(req, res) {
       const body = await readBody(req);
       const subject = String(body.subject || 'your subject').slice(0,120);
       const modePrompts = { ask:'Answer clearly and conversationally.', simple:'Explain in plain, beginner-friendly language. Define unfamiliar terms and use a relatable everyday example.', notes:'Use the supplied study material as the primary source. Distinguish what the material says from any extra explanation.', summary:'Create a well-organized, concise summary with key ideas, definitions and takeaways.', quiz:'Act as an active-recall tutor. Ask one question at a time and wait for the student to answer; do not reveal the answer immediately.', steps:'Break the solution into numbered steps, show reasoning and check units or assumptions where relevant.' };
-      const instructions = `You are Recalro, a careful and encouraging academic tutor. The student's selected subject is ${subject}. ${modePrompts[body.mode] || modePrompts.ask} Adapt examples to the student's discipline; do not assume engineering. Explain concepts accurately, show workings for calculations, and never invent facts, citations, or claims about uploaded documents. If a question is ambiguous, state your assumption. If the uploaded material does not contain an answer, say so and clearly label general knowledge. Use readable Markdown and LaTeX for equations. Help the student learn rather than simply doing graded work for them.`;
-      const input = [];
-      for (const m of (Array.isArray(body.history) ? body.history.slice(-10) : [])) if (['user','assistant'].includes(m.role)) input.push({ role:m.role, content:String(m.content || '').slice(0,12000) });
-      const content = [{ type:'input_text', text:String(body.message || 'Please help me study.').slice(0,12000) }];
+      const message = String(body.message || 'Please help me study.').slice(0,12000);
+      const instructions = `You are Recalro, a careful and encouraging academic tutor. The student's selected subject is ${subject}. ${modePrompts[body.mode] || modePrompts.ask} Give the shortest complete answer that meets the learning mode; add detail whenever the learner asks or the problem requires it. Adapt examples to the student's discipline; do not assume engineering. Explain accurately, show required calculation steps, and never invent facts, citations, or claims about uploaded documents. If a question is ambiguous, state your assumption. If the uploaded material does not answer it, say so and label any general knowledge. Use readable Markdown and LaTeX for equations. Help the student learn rather than simply doing graded work for them.`;
+      const input = selectTutorHistory(body.history, message).map(m => ({ role:m.role, content:m.content }));
+      const content = [{ type:'input_text', text:message }];
       if (body.attachment?.data) {
         const a = body.attachment, parts = dataUrlParts(a.data);
         if (parts.buffer.length > 12*1024*1024) return json(res,413,{error:'Attachment exceeds the 12 MB limit.'});
         if (parts.mime.startsWith('image/')) content.push({ type:'input_image', image_url:a.data, detail:'high' });
         else if (parts.mime === 'application/pdf') content.push({ type:'input_file', filename:String(a.name || 'study-material.pdf'), file_data:a.data });
-        else if (parts.mime.startsWith('text/') || /\.(txt|md)$/i.test(a.name || '')) content.push({ type:'input_text', text:`\n\nUploaded text (${a.name}):\n${parts.buffer.toString('utf8').slice(0,50000)}` });
-        else if (/\.docx$/i.test(a.name || '') || parts.mime.includes('wordprocessingml')) content.push({ type:'input_text', text:`\n\nText extracted from DOCX (${a.name}):\n${extractDocxText(parts.buffer).slice(0,50000)}` });
+        else if (parts.mime.startsWith('text/') || /\.(txt|md)$/i.test(a.name || '')) {
+          const fileName = String(a.name || 'study-material.txt').replace(/[\r\n]/g,' ').slice(0,120);
+          const excerpts = relevantExcerpts(parts.buffer.toString('utf8').slice(0,50000), message);
+          content.push({ type:'input_text', text:`\n\nRelevant excerpts from uploaded text (${fileName}):\n${excerpts}` });
+        }
+        else if (/\.docx$/i.test(a.name || '') || parts.mime.includes('wordprocessingml')) {
+          const fileName = String(a.name || 'study-material.docx').replace(/[\r\n]/g,' ').slice(0,120);
+          const excerpts = relevantExcerpts(extractDocxText(parts.buffer).slice(0,50000), message);
+          content.push({ type:'input_text', text:`\n\nRelevant excerpts from uploaded DOCX (${fileName}):\n${excerpts}` });
+        }
         else return json(res,415,{error:'Unsupported attachment. Use an image, PDF, TXT or Markdown file.'});
       }
       input.push({ role:'user', content });
-      const result = await openai('responses', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ model:process.env.OPENAI_TUTOR_MODEL || 'gpt-4.1-mini', instructions, input, max_output_tokens:1800 }) });
+      const model = process.env.OPENAI_TUTOR_MODEL || 'gpt-4.1-mini';
+      const mode = ['ask','simple','notes','summary','quiz','steps'].includes(body.mode) ? body.mode : 'ask';
+      const detailedRequest = /\b(detailed|in depth|in-depth|comprehensive|step by step|step-by-step|show your work|show all workings|full explanation)\b/i.test(message);
+      const outputLimits = { ask:900, simple:900, notes:1200, summary:1200, quiz:700, steps:1800 };
+      let outputLimit = detailedRequest ? 1800 : outputLimits[mode];
+      const request = (maxOutputTokens) => openai('responses', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ model, instructions, input, max_output_tokens:maxOutputTokens }) });
+      let result = await request(outputLimit);
+      logOpenAiUsage('tutor', model, result);
+      if (result.status === 'incomplete' && result.incomplete_details?.reason === 'max_output_tokens' && outputLimit < 1800) {
+        outputLimit = 1800;
+        result = await request(outputLimit);
+        logOpenAiUsage('tutor_quality_retry', model, result);
+      }
       const answer = result.output?.flatMap(o => o.content || []).filter(c => c.type === 'output_text').map(c => c.text).join('\n').trim();
       if (!answer) throw new Error('The AI returned an empty response. Please try again.');
       return json(res,200,{answer,follow:['Give me a practical example','Quiz me on this topic','Explain that in simpler terms']});
@@ -163,7 +238,7 @@ async function handleRequest(req, res) {
       const sdp = String(body.sdp || '');
       if (!sdp.trim() || sdp.length > 64*1024) return json(res,400,{error:'A valid voice connection offer is required.'});
       const subject = String(body.subject || 'general learning').slice(0,120).replace(/[\r\n]/g,' ');
-      const history = (Array.isArray(body.history) ? body.history : []).slice(-8).filter(m => ['user','assistant'].includes(m?.role)).map(m => `${m.role === 'assistant' ? 'Recalro' : 'Learner'}: ${String(m.content || '').slice(0,1600)}`).join('\n').slice(0,10000);
+      const history = selectTutorHistory(body.history, '', { maxMessages:6, maxChars:6600, perMessage:1100, recentCount:6 }).map(m => `${m.role === 'assistant' ? 'Recalro' : 'Learner'}: ${m.content}`).join('\n');
       const instructions = `You are Recalro, a warm, accurate academic tutor in a natural spoken conversation. The learner is studying ${subject}. Keep each first response brief and conversational (usually 2–4 short sentences), then let the learner guide the depth. Use the language the learner speaks. Explain clearly, ask a helpful follow-up when useful, and preserve context across turns. Do not use Markdown, stage directions, or announce that you are an AI. Never invent facts or claim to have searched the web. If an idea is uncertain, say so plainly.${history ? `\\n\\nRecent conversation for context:\\n${history}` : ''}`;
       const session = {
         type:'realtime',
@@ -189,6 +264,20 @@ async function handleRequest(req, res) {
       }
       res.writeHead(200,{'Content-Type':'application/sdp','Cache-Control':'no-store'});
       return res.end(answer);
+    }
+    if (req.method === 'POST' && url.pathname === '/api/voice-usage') {
+      const user = await requireSupabaseUser(req, res);
+      if (!user) return;
+      const body = await readBody(req);
+      const source = body.usage && typeof body.usage === 'object' ? body.usage : {};
+      const fields = ['responses','total_tokens','input_tokens','output_tokens','input_text_tokens','input_audio_tokens','input_image_tokens','cached_input_tokens','output_text_tokens','output_audio_tokens'];
+      const usage = Object.fromEntries(fields.map(field => {
+        const value = Number(source[field]);
+        return [field, Number.isSafeInteger(value) && value >= 0 ? Math.min(value, 100000000) : 0];
+      }));
+      if (!usage.responses || !usage.input_tokens && !usage.output_tokens && !usage.total_tokens) return json(res,400,{error:'No Realtime token usage was provided.'});
+      console.info(JSON.stringify({ event:'recalro_openai_usage', route:'realtime_voice', model:process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime-2.1-mini', ...usage }));
+      return json(res,200,{ok:true});
     }
     if (req.method === 'POST' && url.pathname === '/api/transcribe') {
       if (!requireKey(res)) return;
@@ -228,3 +317,4 @@ module.exports = handleRequest;
 if (require.main === module) {
   http.createServer(handleRequest).listen(PORT,()=>console.log(`Recalro running at http://localhost:${PORT}/`));
 }
+

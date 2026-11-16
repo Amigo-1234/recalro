@@ -49,12 +49,12 @@
   });
   function groupCard(g) {
     const joined = R.state.joinedGroups.includes(g.id), p = groupProgress(g);
-    return `<a class="group-card" href="#/app/groups/${g.id}">
+    return `<article class="group-card"><a class="group-card-link" href="#/app/groups/${g.id}">
       <div class="gc-top"><span class="gc-icon">${icon(g.icon || "users")}</span>${joined ? ui.pill("Joined", "teal", "check") : ""}</div>
       <h3>${esc(g.name)}</h3><p>${esc(g.topic)} · ${R.plural(g.memberCount + (joined && !g.custom ? 1 : 0), "member")}</p>
       <div class="av-stack">${(g.members || []).slice(0, 4).map(peerAv).join("")}${joined ? ui.avatar(28) : ""}</div>
       <div class="gc-goal"><small>Weekly mission · ${R.fmt(p.total)}/${R.fmt(g.goal)} reviews</small>${ui.progress((p.total / g.goal) * 100, { size: "thin", label: "Group mission" })}</div>
-      <button type="button" class="btn ${joined ? "btn-ghost" : "btn-soft"} btn-sm" data-join="${g.id}">${joined ? "Leave" : "Join group"}</button></a>`;
+      </a><button type="button" class="btn ${joined ? "btn-ghost" : "btn-soft"} btn-sm" data-join="${g.id}">${joined ? "Leave" : "Join group"}</button></article>`;
   }
   function toggleJoin(id, anchor) {
     const g = R.groups().find((x) => x.id === id), joined = R.state.joinedGroups.includes(id);
@@ -308,3 +308,4 @@
     view.addEventListener("change", (e) => { const t = e.target.closest("[data-toggle]"); if (t) { R.update((st) => (st.settings[t.dataset.toggle] = t.checked)); if (t.dataset.toggle === "notificationsEnabled" && t.checked) R.checkReminders(); R.toast("Preference saved."); } });
   } });
 })();
+
