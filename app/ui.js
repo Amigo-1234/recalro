@@ -133,7 +133,9 @@
   R.ui.subjectDot = (id) => `<span class="sdot" style="--sc:var(--s${R.subjectIndex(id) % 4})"></span>`;
   R.ui.avatar = (size = 36) => {
     const { avatar, frame } = R.state.equipped;
-    return `<span class="avatar ${frame ? "frame-" + frame : ""}" style="--av:${size}px">${avatar ? `<span class="avatar-emoji">${avatar}</span>` : esc(R.initials())}</span>`;
+    const photo = R.state.profile?.photo;
+    const picture = typeof photo === "string" && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photo);
+    return `<span class="avatar ${frame ? "frame-" + frame : ""}" style="--av:${size}px">${picture ? `<img src="${photo}" alt="" loading="lazy">` : avatar ? `<span class="avatar-emoji">${esc(avatar)}</span>` : esc(R.initials())}</span>`;
   };
   R.ui.kbd = (k) => `<kbd>${k}</kbd>`;
   /* ThemeSelector: radio tiles with a miniature preview of each theme. */

@@ -8,10 +8,35 @@ const PORT = Number(process.env.PORT || 8000);
 const PUBLIC_DIR = __dirname;
 const MAX_BODY = 16 * 1024 * 1024;
 const MIME_TYPES = { '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.mp4':'video/mp4','.svg':'image/svg+xml','.ico':'image/x-icon','.woff2':'font/woff2' };
+const institutionCache = new Map();
+const COUNTRY_CODES = { Nigeria:'NG', Ghana:'GH', Kenya:'KE', 'South Africa':'ZA', 'United Kingdom':'GB', 'United States':'US', Canada:'CA', India:'IN' };
 
 function json(res, status, data) { res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store' }); res.end(JSON.stringify(data)); }
+function isSupabasePublicKey(key) {
+  if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)) return true;
+  const payload = key.split('.')[1];
+  if (!payload) return false;
+  try { return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')).role === 'anon'; }
+  catch { return false; }
+}
+function supabaseConfig() {
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+  return {
+    url:(process.env.SUPABASE_URL || '').replace(/\/+$/, ''),
+    key:isSupabasePublicKey(key) ? key : ''
+  };
+}
 function readBody(req) { return new Promise((resolve, reject) => { let size=0, chunks=[]; req.on('data', c => { size += c.length; if (size > MAX_BODY) { reject(Object.assign(new Error('Request is too large. Keep uploads under 12 MB.'), { status:413 })); req.destroy(); } else chunks.push(c); }); req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { reject(Object.assign(new Error('Invalid JSON request.'), { status:400 })); } }); req.on('error', reject); }); }
 function requireKey(res) { if (!process.env.OPENAI_API_KEY) { json(res, 503, { error:'AI is not configured yet. Add OPENAI_API_KEY to your server environment and restart Recalro.' }); return false; } return true; }
+async function requireSupabaseUser(req, res) {
+  const config = supabaseConfig();
+  if (!config.url || !config.key) { json(res, 503, { error:'Supabase is not configured yet. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the server environment.' }); return null; }
+  const token = /^Bearer\s+(.+)$/i.exec(req.headers.authorization || '')?.[1];
+  if (!token) { json(res, 401, { error:'Sign in to use Recalro AI.' }); return null; }
+  const response = await fetch(`${config.url}/auth/v1/user`, { headers:{ apikey:config.key, Authorization:`Bearer ${token}` } });
+  if (!response.ok) { json(res, 401, { error:'Your session has expired. Sign in again to continue.' }); return null; }
+  return response.json();
+}
 async function openai(pathname, options) { const r = await fetch(`https://api.openai.com/v1/${pathname}`, { ...options, headers: { Authorization:`Bearer ${process.env.OPENAI_API_KEY}`, ...(options.headers || {}) } }); const data = await r.json().catch(() => ({})); if (!r.ok) throw new Error(data.error?.message || `OpenAI request failed (${r.status}).`); return data; }
 function extractDocxText(buffer) {
   let cursor = 0;
@@ -39,9 +64,44 @@ function dataUrlParts(value) { const m = /^data:([^;]+);base64,([A-Za-z0-9+/=]+)
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   try {
-    if (req.method === 'GET' && url.pathname === '/api/health') return json(res, 200, { ok:true, aiConfigured:Boolean(process.env.OPENAI_API_KEY) });
+    if (req.method === 'GET' && url.pathname === '/api/config') {
+      const config = supabaseConfig();
+      return json(res, 200, { supabaseUrl:config.url, supabaseKey:config.key });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/health') {
+      const config = supabaseConfig();
+      return json(res, 200, { ok:true, aiConfigured:Boolean(process.env.OPENAI_API_KEY), supabaseConfigured:Boolean(config.url && config.key) });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/institutions') {
+      const q = String(url.searchParams.get('q') || '').trim().replace(/[+\-=!(){}\[\]^"~*?:\\/|<>]/g, ' ').replace(/\s+/g, ' ').slice(0, 80);
+      const country = String(url.searchParams.get('country') || '').trim().slice(0, 60);
+      if (q.length < 3) return json(res, 200, { items:[] });
+      const key = `${country.toLowerCase()}:${q.toLowerCase()}`;
+      const cached = institutionCache.get(key);
+      if (cached && cached.until > Date.now()) return json(res, 200, { items:cached.items });
+      const upstream = new URL('https://api.ror.org/v2/organizations');
+      upstream.searchParams.set('query', q);
+      const code = COUNTRY_CODES[country];
+      if (code) upstream.searchParams.set('filter', `types:education,country.country_code:${code}`);
+      else if (country && country !== 'Other' && /^[\p{L} .'-]+$/u.test(country)) upstream.searchParams.set('filter', `types:education,country.country_name:${country}`);
+      else upstream.searchParams.set('filter', 'types:education');
+      let response;
+      try { response = await fetch(upstream, { headers:{ Accept:'application/json' }, signal:AbortSignal.timeout(5000) }); }
+      catch { return json(res, 503, { error:'School search is temporarily unavailable. Enter your institution manually.' }); }
+      if (!response.ok) return json(res, 503, { error:'School search is temporarily unavailable. Enter your institution manually.' });
+      const data = await response.json();
+      const items = (Array.isArray(data.items) ? data.items : []).map(item => ({
+        id:item.id,
+        name:item.names?.find(n => n.types?.includes('ror_display'))?.value || item.names?.find(n => n.types?.includes('label'))?.value || '',
+        country:item.locations?.[0]?.geonames_details?.country_name || ''
+      })).filter(item => item.name).slice(0, 15);
+      if (institutionCache.size > 150) institutionCache.clear();
+      institutionCache.set(key, { items, until:Date.now() + 5*60*1000 });
+      return json(res, 200, { items });
+    }
     if (req.method === 'POST' && url.pathname === '/api/tutor') {
       if (!requireKey(res)) return;
+      if (!await requireSupabaseUser(req, res)) return;
       const body = await readBody(req);
       const subject = String(body.subject || 'your subject').slice(0,120);
       const modePrompts = { ask:'Answer clearly and conversationally.', simple:'Explain in plain, beginner-friendly language. Define unfamiliar terms and use a relatable everyday example.', notes:'Use the supplied study material as the primary source. Distinguish what the material says from any extra explanation.', summary:'Create a well-organized, concise summary with key ideas, definitions and takeaways.', quiz:'Act as an active-recall tutor. Ask one question at a time and wait for the student to answer; do not reveal the answer immediately.', steps:'Break the solution into numbered steps, show reasoning and check units or assumptions where relevant.' };
@@ -66,6 +126,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/transcribe') {
       if (!requireKey(res)) return;
+      if (!await requireSupabaseUser(req, res)) return;
       const body = await readBody(req); const audio = Buffer.from(String(body.audio || ''),'base64');
       if (!audio.length || audio.length > 12*1024*1024) return json(res,400,{error:'Audio is empty or exceeds the upload limit.'});
       const mime = String(body.mimeType || 'audio/webm').split(';')[0]; const ext = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : mime.includes('wav') ? 'wav' : 'webm';
@@ -75,6 +136,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/speech') {
       if (!requireKey(res)) return;
+      if (!await requireSupabaseUser(req, res)) return;
       const body = await readBody(req); const text = String(body.text || '').slice(0,4000);
       if (!text.trim()) return json(res,400,{error:'There is no text to read aloud.'});
       const speech = await fetch('https://api.openai.com/v1/audio/speech',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts',voice:'alloy',input:text,response_format:'mp3'})});
@@ -84,6 +146,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return json(res,405,{error:'Method not allowed.'});
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/') pathname = '/index.html';
+    if (pathname.split('/').some(part => part.startsWith('.')) || pathname === '/supabase' || pathname.startsWith('/supabase/')) return json(res,403,{error:'Forbidden'});
     const filePath = path.resolve(PUBLIC_DIR, `.${pathname}`);
     if (!filePath.startsWith(PUBLIC_DIR + path.sep)) return json(res,403,{error:'Forbidden'});
     fs.stat(filePath,(err,stat)=>{

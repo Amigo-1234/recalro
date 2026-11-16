@@ -95,17 +95,16 @@ function goLanding() {
   nav?.refresh(); syncCanvas();
 }
 
-/* ---------- Authentication UI (demo) ----------
-   Front-end only: no account service is connected. A signed-in "session" is just the
-   person's name and email kept in this browser. Passwords are never stored.
-   Log in and password reset use the form below; sign up is the SignupWizard. */
+/* ---------- Supabase authentication + local demo fallback ---------- */
 const SESSION_KEY = "recalro-demo-session";
 const authScreen = $("#auth"), authForm = $("#authForm"), authCard = $(".au-card"), wizardEl = $("#signupWizard");
 const authCopy = {
   login: { title: "Welcome back", subtitle: "Log in to pick up where you left off.", submit: "Log in", switchText: "New to Recalro?", switchLabel: "Create an account", switchTo: "signup" },
-  forgot: { title: "Reset your password", subtitle: "Enter the email you signed up with and we'll send you a reset link.", submit: "Send reset link", switchText: "Remembered it?", switchLabel: "Back to log in", switchTo: "login" },
+  forgot: { title: "Reset your password", subtitle: "Enter your email and we'll send you a reset link.", submit: "Send reset link", switchText: "Remembered it?", switchLabel: "Back to log in", switchTo: "login" },
+  recover: { title: "Choose a new password", subtitle: "Set a new password for your Recalro account.", submit: "Save new password", switchText: "Changed your mind?", switchLabel: "Back to log in", switchTo: "login" },
 };
-function readSession() {
+let supabaseClient = null, supabaseSession = null, authInitError = null;
+function readDemoSession() {
   for (const store of [localStorage, sessionStorage]) {
     try { const raw = store.getItem(SESSION_KEY); if (raw) { const user = JSON.parse(raw); if (user && user.name) return user; } }
     catch (error) { console.error("Could not read the demo session.", error); }
@@ -119,13 +118,121 @@ function writeSession(user, remember) {
 }
 function clearSession() { [localStorage, sessionStorage].forEach((store) => { try { store.removeItem(SESSION_KEY); } catch (error) { console.error("Could not clear the demo session.", error); } }); }
 function nameFromEmail(email) { return email.split("@")[0].split(/[._-]+/).filter(Boolean).map((part) => part[0].toUpperCase() + part.slice(1)).join(" ") || "Learner"; }
-function signOut() { clearSession(); goLanding(); toast("You've been signed out.", { icon: "logout" }); }
-// Used by the app shell for the user's name, email and sign-out.
-window.RecalroAuth = { currentUser: readSession, signOut };
-
+const authReady = (async () => {
+  const client = await window.RecalroSupabase?.ready;
+  if (!client) return null;
+  supabaseClient = client;
+  client.auth.onAuthStateChange((_event, session) => { supabaseSession = session; });
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  supabaseSession = data.session;
+  return supabaseSession;
+})().catch((error) => { authInitError = error; console.error("Recalro: Supabase could not initialize.", error); return null; });
+async function authClient() {
+  await authReady;
+  if (supabaseClient) return supabaseClient;
+  if (window.RecalroSupabase?.configured) throw authInitError || new Error("Supabase could not initialize. Check the project settings and reload.");
+  return null;
+}
+function authUser() {
+  if (supabaseClient) {
+    const user = supabaseSession?.user;
+    if (!user) return null;
+    return { id:user.id, email:user.email || "", name:user.user_metadata?.full_name || user.user_metadata?.name || nameFromEmail(user.email || ""), raw:user };
+  }
+  return window.RecalroSupabase?.configured ? null : readDemoSession();
+}
+async function ensureProfile() {
+  const client = await authClient(), user = authUser();
+  if (!client || !user?.id) return null;
+  const { data, error } = await client.from("profiles").select("id, display_name, username, onboarding").eq("id", user.id).maybeSingle();
+  if (error) throw error;
+  if (data) return data;
+  const meta = user.raw.user_metadata || {};
+  return saveProfile({ name:meta.full_name || user.name, username:meta.username || null, email:user.email, onboarding:meta.onboarding || {} });
+}
+async function saveProfile(profile) {
+  const client = await authClient(), user = authUser();
+  if (!client) return null;
+  if (!user?.id) throw new Error("Verify your email and sign in before saving your profile.");
+  const { data, error } = await client.from("profiles").upsert({
+    id:user.id, display_name:profile.name, username:profile.username || null, onboarding:profile.onboarding || {}, updated_at:new Date().toISOString(),
+  }, { onConflict:"id" }).select("id, display_name, username, onboarding").single();
+  if (error) throw error;
+  return data;
+}
+const RecalroAuth = {
+  ready:authReady,
+  configured:() => !!window.RecalroSupabase?.configured,
+  currentUser:() => { const user = authUser(); return user ? { id:user.id, name:user.name, email:user.email } : null; },
+  accessToken:() => supabaseSession?.access_token || null,
+  async signIn(email, password) {
+    const client = await authClient();
+    if (!client) { const user = { name:nameFromEmail(email), email }; writeSession(user, $("#authRemember").checked); return { user, demo:true }; }
+    const { data, error } = await client.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    supabaseSession = data.session;
+    return { user:data.user, session:data.session };
+  },
+  async signUp(profile, password) {
+    const client = await authClient();
+    if (!client) return { configured:false, session:null, confirmationPending:false };
+    const { data: available, error: availabilityError } = await client.rpc("username_available", { candidate:profile.username });
+    if (availabilityError) throw availabilityError;
+    if (!available) throw new Error("That username is already taken. Please choose another.");
+    const redirectTo = `${location.origin}${location.pathname}?auth=confirm`;
+    const { data, error } = await client.auth.signUp({
+      email:profile.email, password,
+      options:{ emailRedirectTo:redirectTo, data:{ full_name:profile.name, username:profile.username, onboarding:profile.onboarding } },
+    });
+    if (error) throw error;
+    supabaseSession = data.session;
+    return { configured:true, user:data.user, session:data.session, confirmationPending:!data.session };
+  },
+  async resendConfirmation(email) {
+    const client = await authClient();
+    if (!client) return { configured:false };
+    const emailRedirectTo = `${location.origin}${location.pathname}?auth=confirm`;
+    const { error } = await client.auth.resend({ type:"signup", email, options:{ emailRedirectTo } });
+    if (error) throw error;
+    return { configured:true };
+  },
+  async resetPassword(email) {
+    const client = await authClient();
+    if (!client) return { configured:false };
+    const redirectTo = `${location.origin}${location.pathname}?auth=recovery`;
+    const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+    return { configured:true };
+  },
+  async updatePassword(password) {
+    const client = await authClient();
+    if (!client) throw new Error("Password recovery is available after Supabase is configured.");
+    const { error } = await client.auth.updateUser({ password });
+    if (error) throw error;
+  },
+  ensureProfile,
+  saveProfile,
+  async signOut() {
+    try {
+      const client = await authClient();
+      if (client) {
+        await window.RecalroCloudSync?.deactivate();
+        const { error } = await client.auth.signOut();
+        if (error) throw error;
+        supabaseSession = null;
+      } else clearSession();
+      goLanding(); toast("You've been signed out.", { icon:"logout" });
+    } catch (error) { toast(error.message || "Could not sign out. Please try again.", { icon:"info" }); }
+  },
+};
+window.RecalroAuth = RecalroAuth;
+function readSession() { return RecalroAuth.currentUser(); }
+function signOut() { return RecalroAuth.signOut(); }
 function setAuthMode(mode) {
   authScreen.dataset.mode = mode;
-  $$(".au-tabs [role=tab]").forEach((tab) => { const selected = tab.dataset.authMode === mode; tab.setAttribute("aria-selected", String(selected)); tab.tabIndex = selected ? 0 : -1; });
+  const selectedMode = mode === "signup" ? "signup" : "login";
+  $$(".au-tabs [role=tab]").forEach((tab) => { const selected = tab.dataset.authMode === selectedMode; tab.setAttribute("aria-selected", String(selected)); tab.tabIndex = selected ? 0 : -1; });
   const signup = mode === "signup";
   $(".au-head").hidden = signup; $("#authFormView").hidden = signup; $("#authResetSent").hidden = true;
   wizardEl.hidden = !signup;
@@ -142,17 +249,19 @@ function setAuthMode(mode) {
   });
   $("#authTitle").textContent = copy.title;
   $("#authSubtitle").textContent = copy.subtitle;
+  $("#authPassword").autocomplete = mode === "recover" ? "new-password" : "current-password";
   $(".au-submit-label", authForm).textContent = copy.submit;
   $("#authSwitch").innerHTML = `${copy.switchText} <button type="button" class="au-link" data-auth-mode="${copy.switchTo}">${copy.switchLabel}</button>`;
   clearAuthErrors(); setAuthBusy(false);
 }
 function openAuth(mode = "login", next = "dashboard") {
-  if (readSession()) { openApp(next); return; }
+  if (mode !== "recover" && readSession()) { openApp(next); return; }
   authScreen.dataset.nextRoute = next;
   if (productDemoDialog.open) productDemoDialog.close();
   marketing.classList.add("hidden"); app.classList.add("hidden"); authScreen.classList.remove("hidden");
   updateHeroMotion(); window.scrollTo(0, 0); setAuthMode(mode); syncCanvas();
-  if (mode !== "signup") $("#authEmail").focus({ preventScroll: true });
+  if (mode === "recover") $("#authPassword").focus({ preventScroll: true });
+  else if (mode !== "signup") $("#authEmail").focus({ preventScroll: true });
 }
 function setFieldError(input, message) {
   const error = $("#" + input.id + "Error");
@@ -160,7 +269,7 @@ function setFieldError(input, message) {
   if (error) error.textContent = message || "";
 }
 function clearAuthErrors() { $$("input", authForm).forEach((input) => setFieldError(input, "")); }
-function setAuthBusy(busy) { const submit = $("#authSubmit"); submit.setAttribute("aria-busy", String(busy)); submit.disabled = busy; }
+function setAuthBusy(busy) { const submit = $("#authSubmit"); submit.setAttribute("aria-busy", String(busy)); submit.disabled = busy; $("#authResendConfirmation").disabled = busy; }
 function validateAuth(mode) {
   clearAuthErrors();
   const email = $("#authEmail"), password = $("#authPassword"), invalid = [];
@@ -169,6 +278,7 @@ function validateAuth(mode) {
   if (!emailValue) fail(email, "Enter your email address.");
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailValue)) fail(email, "Enter a valid email address, like you@example.com.");
   if (mode === "login" && !password.value) fail(password, "Enter your password.");
+  if (mode === "recover" && password.value.length < 8) fail(password, "Use at least 8 characters for your new password.");
   if (invalid.length) invalid[0].focus();
   return !invalid.length;
 }
@@ -178,27 +288,58 @@ authForm.addEventListener("submit", async (event) => {
   if ($("#authSubmit").getAttribute("aria-busy") === "true" || !validateAuth(mode)) return;
   setAuthBusy(true);
   try {
-    await new Promise((resolve) => setTimeout(resolve, 700)); // stand-in for a network request
-    const email = $("#authEmail").value.trim();
+    const email = $("#authEmail").value.trim().toLowerCase();
     if (mode === "forgot") {
-      $("#authResetMessage").textContent = `If an account exists for ${email}, a reset link would be sent there. This demo doesn't send email yet.`;
+      const result = await RecalroAuth.resetPassword(email);
+      $("#authResetMessage").textContent = result.configured
+        ? `If an account exists for ${email}, a password reset link has been sent. Check your inbox.`
+        : `If an account exists for ${email}, a reset link would be sent there. This demo doesn't send email yet.`;
       $("#authFormView").hidden = true; $("#authResetSent").hidden = false; $("#authResetSent").focus();
       return;
     }
-    const name = nameFromEmail(email);
-    writeSession({ name, email }, $("#authRemember").checked);
+    if (mode === "recover") {
+      await RecalroAuth.updatePassword($("#authPassword").value);
+      authForm.reset();
+      openApp(authScreen.dataset.nextRoute || "dashboard");
+      toast("Your password has been updated.", { icon:"check" });
+      return;
+    }
+
+    const result = await RecalroAuth.signIn(email, $("#authPassword").value);
+    const user = RecalroAuth.currentUser();
+    if (user?.id) {
+      try {
+        const profile = await RecalroAuth.ensureProfile();
+        await window.RecalroCloudSync?.activate(user.id);
+        if (profile) window.R.update((st) => { st.profile.displayName = profile.display_name; st.profile.onboarding = profile.onboarding || {}; });
+      } catch (error) {
+        console.error("Recalro: could not load the Supabase profile or learning state.", error);
+        toast("You are signed in, but cloud data isn't ready. Apply the Supabase migration and try again.", { icon:"info" });
+      }
+    }
     authForm.reset();
     openApp(authScreen.dataset.nextRoute || "dashboard");
-    const first = (window.R.state.profile.displayName || name).split(" ")[0];
-    toast(`Welcome back, ${first}.`, { icon: "sparkles" });
+    const first = (window.R.state.profile.displayName || user?.name || nameFromEmail(email)).split(" ")[0];
+    toast(result.demo ? `Welcome back, ${first}. This is a demo account.` : `Welcome back, ${first}.`, { icon:"sparkles" });
   } catch (error) {
-    console.error("Demo sign-in failed.", error);
-    toast("Something went wrong. Please try again.", { icon: "info" });
+    console.error("Recalro sign-in failed.", error);
+    toast(error.message || "Something went wrong. Please try again.", { icon:"info" });
   } finally {
     setAuthBusy(false);
   }
 });
 authForm.addEventListener("input", (event) => { if (event.target.getAttribute("aria-invalid") === "true") setFieldError(event.target, ""); });
+$("#authResendConfirmation").addEventListener("click", async () => {
+  if ($("#authSubmit").getAttribute("aria-busy") === "true" || !validateAuth("forgot")) return;
+  setAuthBusy(true);
+  try {
+    const result = await RecalroAuth.resendConfirmation($("#authEmail").value.trim().toLowerCase());
+    toast(result.configured ? "If that address has a pending signup, a confirmation link has been sent." : "Email confirmation is available after Supabase is configured.", { icon:result.configured ? "mail" : "info" });
+  } catch (error) {
+    console.error("Recalro confirmation email resend failed.", error);
+    toast(error.message || "Could not resend the confirmation link. Please try again.", { icon:"info" });
+  } finally { setAuthBusy(false); }
+});
 authScreen.addEventListener("click", (event) => {
   const modeButton = event.target.closest("[data-auth-mode]");
   if (!modeButton) return;
@@ -227,22 +368,44 @@ document.addEventListener("keydown", (event) => {
   goLanding();
 });
 
-/* SignupWizard: completing it signs the visitor in (demo session) and applies their choices. */
+/* SignupWizard: create the Supabase account at review, then persist profile and progress. */
 window.RecalroSignup.init(wizardEl, {
   journey: $("#authJourney"),
   onStep: (n) => { authScreen.dataset.wizardStep = String(n); },
-  onComplete(profile) {
-    writeSession({ name: profile.name, email: profile.email }, true);
-    openApp(authScreen.dataset.nextRoute || "dashboard");
+  async onCreateAccount({ profile, password }) {
+    const result = await RecalroAuth.signUp(profile, password);
+    if (result.session && result.user?.id) {
+      await RecalroAuth.saveProfile(profile);
+      await window.RecalroCloudSync?.activate(result.user.id);
+    }
+    return result;
+  },
+  async onComplete(profile) {
+    if (profile.confirmationPending) {
+      authForm.reset();
+      $("#authEmail").value = profile.email;
+      openAuth("login", authScreen.dataset.nextRoute || "dashboard");
+      toast(`Check ${profile.email} for your confirmation link, then sign in.`, { icon:"mail" });
+      return;
+    }
+
+    let user = RecalroAuth.currentUser();
+    if (!user?.id) writeSession({ name:profile.name, email:profile.email }, true);
     window.R.update((st) => {
       st.profile.displayName = profile.name;
       st.profile.onboarding = profile.onboarding;
       if (profile.onboarding.minutes) st.settings.dailyGoal = profile.onboarding.minutes;
     });
-    toast(`Welcome to Recalro, ${profile.name.split(" ")[0]}! This is a demo account.`, { icon: "sparkles" });
+    user = RecalroAuth.currentUser();
+    if (user?.id) {
+      await RecalroAuth.saveProfile(profile);
+      await window.RecalroCloudSync?.activate(user.id);
+      await window.RecalroCloudSync?.flush();
+    }
+    openApp(authScreen.dataset.nextRoute || "dashboard");
+    toast(user?.id ? `Welcome to Recalro, ${profile.name.split(" ")[0]}!` : `Welcome to Recalro, ${profile.name.split(" ")[0]}! This is a demo account.`, { icon:"sparkles" });
   },
 });
-
 /* ---------- Marketing page ---------- */
 const productDemoDialog = $("#productDemoDialog");
 const M = window.RecalroMotion, MK = window.RecalroMarketing;
@@ -257,13 +420,13 @@ M.RevealOnScroll(marketing);
 MK.ScrollStory($("#how"));
 MK.FeatureTheatre($("#featureTheatre"));
 
-["heroStart", "storyStart"].forEach((id) => $("#" + id)?.addEventListener("click", () => openAuth("signup")));
+$("#heroStart")?.addEventListener("click", () => openAuth("signup"));
 $(".mk-dialog-close").addEventListener("click", () => productDemoDialog.close());
 $("#heroTour")?.addEventListener("click", () => productDemoDialog.showModal());
 productDemoDialog.addEventListener("click", (event) => { if (event.target === productDemoDialog) productDemoDialog.close(); });
 $("#productDemoStart").addEventListener("click", () => { productDemoDialog.close(); openAuth("signup"); });
 const roadmapShortcut = $(".mk-roadmap-card");
-if (roadmapShortcut) { roadmapShortcut.setAttribute("role", "button"); roadmapShortcut.setAttribute("tabindex", "0"); roadmapShortcut.setAttribute("aria-label", "Continue to the Thermodynamics learning roadmap"); }
+if (roadmapShortcut) { roadmapShortcut.setAttribute("role", "button"); roadmapShortcut.setAttribute("tabindex", "0"); roadmapShortcut.setAttribute("aria-label", "Explore the learning roadmap"); }
 marketing.addEventListener("click", (event) => {
   const appLink = event.target.closest("[data-open-app]");
   if (appLink) { openAuth("login", appLink.dataset.page || "dashboard"); return; }
@@ -297,19 +460,19 @@ $("#newsletterForm").addEventListener("submit", (event) => {
 
 /* ---------- InteractiveFlashcardPreview (hero): a playable 3-card review ----------
    Question → flip → answer → rating → XP reward → progress → AI tutor feedback.
-   Uses real sample cards from the app. Nothing here is saved. */
+   Uses a simple history example. Nothing here is saved. */
 (function heroLiveDemo() {
   const card = $("#heroCard"), actions = $("#heroActions");
   if (!card || !window.R) return;
   const deck = [
-    { subject: "biology", module: "cells", front: "What is the function of the cell membrane?", back: "It controls which substances enter and leave the cell." },
-    { subject: "biology", module: "cells", front: "What does the mitochondrion do?", back: "It releases usable energy during cellular respiration." },
-    { subject: "biology", module: "cells", front: "Where is most of a cell's genetic material stored?", back: "In the nucleus, which contains most of a eukaryotic cell's DNA." },
+    { front: "When did the Berlin Wall open?", back: "On 9 November 1989." },
+    { front: "What were the Silk Roads?", back: "A network of trade routes linking communities across Asia, Europe and Africa." },
+    { front: "When did Apollo 11 land on the Moon?", back: "On 20 July 1969." },
   ];
   const XP = { Again: 4, Hard: 7, Good: 10, Easy: 10 };
   const NEXT = { Again: "10 min", Hard: "1 day", Good: "1 day", Easy: "2 days" };
   const TUTOR = {
-    Again: () => "No worries. Want a worked example on cell structures? It'll come back in 10 minutes.",
+    Again: () => "No worries. Want a quick timeline of the key events? This card will come back in 10 minutes.",
     Hard: () => "That took effort, which is exactly what makes it stick. I'll bring it back sooner.",
     Good: () => "Nice recall! I'll schedule that one for tomorrow.",
     Easy: () => "Too easy? I'll wait longer before showing it again.",
@@ -327,9 +490,9 @@ $("#newsletterForm").addEventListener("submit", (event) => {
     tutorTimer = setTimeout(() => { tutor.textContent = text; }, 650);
   };
   const show = () => {
-    const c = deck[index], subject = window.R.content.subjects.find((s) => s.id === c.subject);
+    const c = deck[index];
     flipped = false; card.classList.remove("is-flipped"); card.hidden = false;
-    $("#heroDeck").textContent = subject?.name || "Biology";
+    $("#heroDeck").textContent = "History";
     $("#heroCount").textContent = `Card ${index + 1} of ${deck.length}`;
     $("#heroProgress").style.width = `${(index / deck.length) * 100}%`;
     card.querySelector(".mk-hcard-front").innerHTML = `<small>Question</small><b>${esc(c.front)}</b><em>Tap the card or press Reveal</em>`;
@@ -383,5 +546,29 @@ function routeFromHash() {
   else openAuth("login", target);
 }
 window.addEventListener("hashchange", () => { if (app.classList.contains("hidden")) routeFromHash(); });
-routeFromHash();
-syncCanvas();
+async function bootstrapAuth() {
+  await RecalroAuth.ready;
+  if (RecalroAuth.configured()) $(".au-demo-note").hidden = true;
+  const user = readSession();
+  if (user?.id) {
+    try {
+      const profile = await RecalroAuth.ensureProfile();
+      await window.RecalroCloudSync?.activate(user.id);
+      if (profile) window.R.update((st) => { st.profile.displayName = profile.display_name; st.profile.onboarding = profile.onboarding || {}; });
+    } catch (error) {
+      console.error("Recalro: could not restore Supabase data.", error);
+      toast("You are signed in, but cloud data isn't ready. Apply the Supabase migration.", { icon:"info" });
+    }
+  }
+  const authReturn = new URLSearchParams(location.search).get("auth");
+  if (authReturn === "confirm" && user?.id) {
+    history.replaceState(null, "", location.pathname);
+    openApp("dashboard");
+    toast("Your email is verified. Your learning space is ready.", { icon:"check" });
+  } else if (authReturn === "recovery" && user?.id) {
+    $("#authEmail").value = user.email;
+    openAuth("recover");
+  } else routeFromHash();
+  syncCanvas();
+}
+void bootstrapAuth();

@@ -192,6 +192,7 @@ body.dark #auth.au {
 
 .au-switch { margin-top: 22px; text-align: center; font-size: 14px; color: var(--au-muted); }
 .au-switch .au-link { font-size: 14px; }
+.au-form .au-switch { margin-top: 0; text-align: left; }
 
 .au-success { text-align: center; padding: 8px 0; outline: none; }
 .au-success-icon {

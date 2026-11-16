@@ -37,10 +37,27 @@
     }
 
     // Active step = the one crossing the viewport's middle band.
+    const compact = () => window.matchMedia("(max-width: 600px)").matches;
     if ("IntersectionObserver" in window) {
-      const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) setActive(steps.indexOf(e.target)); }), { rootMargin: "-45% 0px -45% 0px" });
+      const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (!compact() && e.isIntersecting) setActive(steps.indexOf(e.target)); }), { rootMargin: "-45% 0px -45% 0px" });
       steps.forEach((s) => io.observe(s));
     } else steps.forEach((s) => s.classList.add("is-active"));
+
+    // On phones the scenes form one horizontal story. Keep the centered card animated.
+    let horizontalTick = false;
+    function updateHorizontal() {
+      horizontalTick = false;
+      if (!compact()) return;
+      const center = list.getBoundingClientRect().left + list.clientWidth / 2;
+      const nearest = steps.reduce((best, step, index) => {
+        const rect = step.getBoundingClientRect();
+        const distance = Math.abs(rect.left + rect.width / 2 - center);
+        return distance < best.distance ? { index, distance } : best;
+      }, { index: 0, distance: Infinity });
+      setActive(nearest.index);
+    }
+    list.addEventListener("scroll", () => { if (!horizontalTick) { horizontalTick = true; requestAnimationFrame(updateHorizontal); } }, { passive: true });
+    window.addEventListener("resize", updateHorizontal);
 
     // The rail between steps fills with reading progress.
     let ticking = false;

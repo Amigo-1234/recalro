@@ -7,6 +7,7 @@
    ========================================================================== */
 
 #marketing.mk {
+  color-scheme: light;
   --mk-teal: #14A09F;
   --mk-teal-deep: #0B7C7B;
   --mk-teal-600: #0B7C7B;
@@ -42,24 +43,6 @@
   font-family: "DM Sans", system-ui, sans-serif;
   overflow-x: clip;
   -webkit-font-smoothing: antialiased;
-}
-
-body.dark #marketing.mk {
-  --mk-bg: #151C20;
-  --mk-surface: #1B2429;
-  --mk-surface-2: #212C32;
-  --mk-ink: #EDF3F3;
-  --mk-text: #B3BEC0;
-  --mk-muted: #899395;
-  --mk-line: #2A363D;
-  --mk-teal-soft: #173A3B;
-  --mk-orange-soft: #3A2410;
-  --mk-orange-ink: #FF9A44;
-  --mk-teal-deep: #4FCFCB;
-  --mk-glass: rgba(27, 36, 41, .8);
-  --mk-glass-line: rgba(255, 255, 255, .08);
-  --mk-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px -8px rgba(0, 0, 0, .5);
-  --mk-shadow-lg: 0 32px 64px -16px rgba(0, 0, 0, .6);
 }
 
 .mk *, .mk *::before, .mk *::after { box-sizing: border-box; }

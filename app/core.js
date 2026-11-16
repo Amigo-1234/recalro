@@ -197,8 +197,8 @@
     questClaims: {}, challengeClaims: {}, joinedGroups: [], customGroups: [],
     purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 340, achievements: {},
     examHistory: [], chats: [], summaries: [], explanations: [], notifications: [],
-    profile: { displayName: "" },
-    settings: { dailyGoal: 45, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, navOpen: {} },
+    profile: { displayName: "", photo: "" },
+    settings: { dailyGoal: 45, notificationsEnabled: true, reviewReminders: true, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, navOpen: {} },
   });
   function merge(base, saved) {
     const out = { ...base, ...saved };
@@ -240,9 +240,20 @@
     return defaults();
   }
   R.state = load();
-  R.save = () => {
+  R.save = (options = {}) => {
     try { localStorage.setItem(KEY, JSON.stringify(R.state)); }
     catch (error) { console.error("Recalro: could not save learning data.", error); R.emit("save-error", error); }
+    if (!options.localOnly) window.RecalroCloudSync?.schedule();
+  };
+  R.replaceState = (saved) => {
+    R.state = merge(defaults(), saved || {});
+    R.save({ localOnly: true });
+    R.emit("change");
+  };
+  R.resetForCloudUser = () => {
+    R.state = defaults();
+    R.save({ localOnly: true });
+    R.emit("change");
   };
   if (R.migrated) R.save();
   R.resetDemo = () => { const keep = R.state.settings; R.state = defaults(); R.state.settings = { ...R.state.settings, sidebarCollapsed: keep.sidebarCollapsed, navOpen: keep.navOpen }; R.save(); R.emit("change"); };
@@ -362,8 +373,25 @@
 
   /* ---------- Notifications ---------- */
   R.notify = (text, icon = "bell", route = null) => {
+    if (R.state.settings.notificationsEnabled === false) return;
     R.state.notifications.unshift({ id: R.uid(), text, icon, route, at: new Date().toISOString(), read: false });
     R.state.notifications = R.state.notifications.slice(0, 30);
+  };
+  R.checkReminders = () => {
+    const s = R.state.settings;
+    if (s.notificationsEnabled === false) return;
+    const today = R.dayKey();
+    let changed = false;
+    if (s.reviewReminders && s.lastReviewReminderDay !== today) {
+      const due = R.dueCards().length;
+      if (due) { R.notify(`${R.plural(due, "card")} ready for review`, "refresh", "review"); changed = true; }
+      s.lastReviewReminderDay = today; changed = true;
+    }
+    if (s.weeklyReport && new Date().getDay() === 0 && s.lastWeeklyReportDay !== today) {
+      R.notify("Your weekly study report is ready to review", "report", "reports");
+      s.lastWeeklyReportDay = today; changed = true;
+    }
+    if (changed) { R.save(); R.emit("change"); }
   };
 
   /* ---------- Quests, challenges and achievements ---------- */

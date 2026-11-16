@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="marketing.css" />
   <link rel="stylesheet" href="marketing/nav.css" />
   <link rel="stylesheet" href="marketing/sections.css" />
+  <link rel="stylesheet" href="marketing/mobile-compact.css" />
   <link rel="stylesheet" href="auth.css" />
   <link rel="stylesheet" href="auth/signup.css" />
   <link rel="stylesheet" href="app/app.css" />
@@ -23,10 +24,11 @@
   <link rel="stylesheet" href="app/tutor.css" />
   <link rel="stylesheet" href="app/review.css" />
   <link rel="stylesheet" href="app/pastq.css" />
+  <link rel="stylesheet" href="app/workspace-modern.css" />
 </head>
 <body>
   <!-- ThemeProvider bootstrap: resolve Light / Dark / System before anything paints. -->
-  <script>(function(){var t="system";try{t=localStorage.getItem("recalro-theme")||"system"}catch(e){}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.body.classList.add(d?"dark":"theme-light");document.documentElement.style.colorScheme=d?"dark":"light"})();</script>
+  <script>(function(){var t="light";try{t=localStorage.getItem("recalro-theme")||"light"}catch(e){}var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.body.classList.add(d?"dark":"theme-light");document.documentElement.style.colorScheme=d?"dark":"light"})();</script>
   <div id="marketing" class="mk">
     <a class="mk-skip" href="#platform">Skip to content</a>
     <!-- MarketingNavbar (marketing/nav.js) renders the desktop bar, mega-menu and mobile sheet here. -->
@@ -66,7 +68,7 @@
           <section class="mk-live-window" aria-labelledby="heroLiveTitle">
             <header class="mk-live-bar">
               <span class="mk-live-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span id="heroLiveTitle">Review · <b id="heroDeck">Biology</b></span>
+              <span id="heroLiveTitle">Review · <b id="heroDeck">History</b></span>
               <span class="mk-live-tag">Try it</span>
             </header>
             <div class="mk-live-progress" aria-hidden="true"><i id="heroProgress"></i></div>
@@ -84,7 +86,7 @@
             <p><b>AI tutor</b><span id="heroTutorText">Stuck? I can walk you through it step by step.</span></p>
           </div>
           <div class="mk-hero-float mk-hero-float-a" aria-hidden="true"><span class="mk-hf-ic mk-hf-teal"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg></span><span><b>12 cards due</b><small>Best time: now</small></span></div>
-          <div class="mk-hero-float mk-hero-float-b" aria-hidden="true"><span class="mk-hf-ring" style="--target:92"><b>92%</b></span><span><b>Memory strength</b><small>Biology</small></span></div>
+          <div class="mk-hero-float mk-hero-float-b" aria-hidden="true"><span class="mk-hf-ring" style="--target:92"><b>92%</b></span><span><b>Memory strength</b><small>History</small></span></div>
           <p class="mk-live-note"><span class="mk-live-badge">Interactive preview</span> Nothing you do here is saved.</p>
         </div>
       </div>
@@ -147,8 +149,8 @@
           <div class="mk-showcase-side">
             <div class="mk-mini mk-roadmap-card">
               <div class="mk-mini-top"><img src="assets/roadmap-3d.webp" alt="" width="200" height="200"><small>YOUR NEXT STEP</small></div>
-              <h3>Biology</h3>
-              <p>Module 04 · Cell structure</p>
+              <h3>History</h3>
+              <p>Module 04 · World history</p>
               <div class="mk-progress"><i style="width:68%"></i></div>
               <div class="mk-mini-bottom"><span>68% complete</span><b>Continue →</b></div>
             </div>
@@ -172,13 +174,14 @@
           <p>Follow one week of class notes through Recalro, from the moment they're uploaded to the day you're ready.</p>
         </div>
         <div class="mk-story-grid">
-          <ol class="mk-story-steps">
+          <p class="mk-mobile-swipe">Swipe through the animated journey &rarr;</p>
+          <ol class="mk-story-steps" tabindex="0" aria-label="How Recalro works, seven animated steps">
             <li class="mk-story-step" id="story-1">
               <span class="mk-story-num">01</span>
               <h3>Upload your study materials</h3>
               <p>Drop in lecture notes, PDFs or slides. Recalro reads them and keeps everything for that subject in one place.</p>
               <div class="mk-scene sc-upload">
-                <div class="sc-drop"><span class="sc-file"><i>PDF</i><span><b>Biology_Week4.pdf</b><small>24 pages · 2.4 MB</small></span></span><span class="sc-bar"><i></i></span><small class="sc-status"><span class="sc-up">Uploading…</span><span class="sc-done">Ready · 24 pages read</span></small></div>
+                <div class="sc-drop"><span class="sc-file"><i>PDF</i><span><b>World_History_Notes.pdf</b><small>24 pages · 2.4 MB</small></span></span><span class="sc-bar"><i></i></span><small class="sc-status"><span class="sc-up">Uploading…</span><span class="sc-done">Ready · 24 pages read</span></small></div>
               </div>
             </li>
             <li class="mk-story-step" id="story-2">
@@ -187,8 +190,8 @@
               <p>Pages become topics and a short summary of the key ideas, so you can see the shape of the week before you start.</p>
               <div class="mk-scene sc-organise">
                 <div class="sc-lines"><i style="--w:92%"></i><i style="--w:78%"></i><i style="--w:86%"></i><i style="--w:64%"></i><i style="--w:81%"></i></div>
-                <div class="sc-chips"><span style="--i:0">Cell membrane</span><span style="--i:1">Cell structure</span><span style="--i:2">Cell division</span><span style="--i:3">Cell energy</span></div>
-                <div class="sc-summary"><b>Summary · 5 key ideas</b><small>Cell structure of an isolated system never decreases…</small></div>
+                <div class="sc-chips"><span style="--i:0">Ancient Egypt</span><span style="--i:1">Silk Roads</span><span style="--i:2">Moon landing</span><span style="--i:3">Berlin Wall</span></div>
+                <div class="sc-summary"><b>Summary · 5 key ideas</b><small>People, ideas and events connected across centuries…</small></div>
               </div>
             </li>
             <li class="mk-story-step" id="story-3">
@@ -196,9 +199,9 @@
               <h3>Flashcards are generated</h3>
               <p>Each idea becomes a question you have to answer from memory. That effort is what makes it stick.</p>
               <div class="mk-scene sc-cards">
-                <span class="sc-card" style="--i:0"><small>Card 1</small>What is the function of the cell membrane?</span>
-                <span class="sc-card" style="--i:1"><small>Card 2</small>What does the mitochondrion do?</span>
-                <span class="sc-card" style="--i:2"><small>Card 3</small>What is the role of the nucleus?</span>
+                <span class="sc-card" style="--i:0"><small>Card 1</small>What were the Silk Roads?</span>
+                <span class="sc-card" style="--i:1"><small>Card 2</small>Who built the pyramids at Giza?</span>
+                <span class="sc-card" style="--i:2"><small>Card 3</small>When did the Berlin Wall open?</span>
               </div>
             </li>
             <li class="mk-story-step" id="story-4">
@@ -206,7 +209,7 @@
               <h3>You practise recall</h3>
               <p>Flip, answer, rate how well you knew it. Every rating teaches the scheduler when to bring the card back.</p>
               <div class="mk-scene sc-recall">
-                <span class="sc-flip"><span class="sc-face sc-front">What does the mitochondrion do?</span><span class="sc-face sc-back"><span>The mitochondrion releases usable energy during cellular respiration.</span></span></span>
+                <span class="sc-flip"><span class="sc-face sc-front">When did Apollo 11 land on the Moon?</span><span class="sc-face sc-back"><span>On 20 July 1969.</span></span></span>
                 <span class="sc-rates"><i>Again</i><i>Hard</i><i class="is-picked">Good</i><i>Easy</i></span>
                 <span class="sc-xp">+10 XP</span>
               </div>
@@ -216,10 +219,10 @@
               <h3>Weaknesses are identified</h3>
               <p>Recalro notices which topics you keep missing and flags them before they cost you marks.</p>
               <div class="mk-scene sc-weak">
-                <span class="sc-topic"><b>Cell structure</b><span class="sc-track"><i style="--w:88%"></i></span><em>88%</em></span>
-                <span class="sc-topic"><b>Cell membrane</b><span class="sc-track"><i style="--w:76%"></i></span><em>76%</em></span>
-                <span class="sc-topic is-weak"><b>Cell energy</b><span class="sc-track"><i style="--w:54%"></i></span><em>54%</em></span>
-                <span class="sc-flag">Needs review: Cell energy</span>
+                <span class="sc-topic"><b>Ancient worlds</b><span class="sc-track"><i style="--w:88%"></i></span><em>88%</em></span>
+                <span class="sc-topic"><b>Trade routes</b><span class="sc-track"><i style="--w:76%"></i></span><em>76%</em></span>
+                <span class="sc-topic is-weak"><b>Modern events</b><span class="sc-track"><i style="--w:54%"></i></span><em>54%</em></span>
+                <span class="sc-flag">Needs review: Modern events</span>
               </div>
             </li>
             <li class="mk-story-step" id="story-6">
@@ -227,9 +230,9 @@
               <h3>You improve where it matters</h3>
               <p>Short, targeted sessions on the weak topic. The tutor explains, the cards come back sooner, the score climbs.</p>
               <div class="mk-scene sc-weak sc-improve">
-                <span class="sc-topic"><b>Cell structure</b><span class="sc-track"><i style="--w:90%"></i></span><em>90%</em></span>
-                <span class="sc-topic"><b>Cell membrane</b><span class="sc-track"><i style="--w:81%"></i></span><em>81%</em></span>
-                <span class="sc-topic is-up"><b>Cell energy</b><span class="sc-track"><i style="--w:82%"></i></span><em>82%</em></span>
+                <span class="sc-topic"><b>Ancient worlds</b><span class="sc-track"><i style="--w:90%"></i></span><em>90%</em></span>
+                <span class="sc-topic"><b>Trade routes</b><span class="sc-track"><i style="--w:81%"></i></span><em>81%</em></span>
+                <span class="sc-topic is-up"><b>Modern events</b><span class="sc-track"><i style="--w:82%"></i></span><em>82%</em></span>
                 <span class="sc-flag sc-flag-up">+28 points in 6 days</span>
               </div>
             </li>
@@ -244,7 +247,7 @@
               </div>
             </li>
           </ol>
-          <div class="mk-story-stage" aria-hidden="true"><div class="mk-story-device"><div class="mk-story-device-bar"><i></i><i></i><i></i><span>Biology · Week 4</span></div><div class="mk-story-scenes"></div></div></div>
+          <div class="mk-story-stage" aria-hidden="true"><div class="mk-story-device"><div class="mk-story-device-bar"><i></i><i></i><i></i><span>World history · Week 4</span></div><div class="mk-story-scenes"></div></div></div>
         </div>
       </div>
     </section>
@@ -254,28 +257,19 @@
       <div class="mk-section-head mk-reveal">
         <div class="mk-kicker">SEE IT WORK</div>
         <h2 id="featuresTitle">Every feature, <span class="mk-teal">in motion.</span></h2>
-        <p>Pick a feature and try it. These are working previews with sample content, so you can feel how Recalro responds before you sign up.</p>
+        <p>Explore your learning workspace in motion: ask the tutor, practise recall, organise ideas, prepare for exams and see your progress grow.</p>
       </div>
       <div class="mk-th mk-reveal" id="featureTheatre"></div>
     </section>
 
-    <section class="mk-section mk-wrap" id="toolkit">
-      <div class="mk-section-head mk-section-head-split mk-reveal">
-        <div>
-          <div class="mk-kicker">BUILT AROUND HOW YOU LEARN</div>
-          <h2>One platform. <span class="mk-teal">A whole lot of clarity.</span></h2>
-        </div>
-        <p>Every tool has a role. Together, they create a learning loop that helps you make sense of complex topics and keep the important things within reach.</p>
-      </div>
-      <div class="mk-bento">
-        <article class="mk-feature mk-feature-wide mk-reveal"><img src="assets/feature-tutor.jpg" alt="Student focused studying on laptop in library" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">01</span><h3>AI learning workspace</h3><p>Ask better questions, get unstuck and build understanding with subject-aware help.</p></div></article>
-        <article class="mk-feature mk-feature-tall mk-reveal"><img src="assets/feature-spaced-repetition.jpg" alt="Student using a colorful study marker while reviewing notes" width="1200" height="1800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">02</span><h3>Spaced repetition</h3><p>Bring knowledge back at the right intervals with a review flow designed for recall.</p></div></article>
-        <article class="mk-feature mk-reveal"><img src="assets/feature-vault.jpg" alt="Students studying in library with laptop and books" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">03</span><h3>Knowledge Vault</h3><p>Keep formulas, definitions, laws and personal notes organized and ready to revisit.</p></div></article>
-        <article class="mk-feature mk-reveal"><img src="assets/feature-exam-readiness.jpg" alt="Student preparing for an exam with books and notes" width="1200" height="1800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">04</span><h3>Exam readiness</h3><p>See your coverage, practise under pressure and identify what still needs attention.</p></div></article>
-        <article class="mk-feature mk-reveal"><img src="assets/feature-roadmap.jpg" alt="Student planning a study schedule on a calendar" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">05</span><h3>Personal roadmap</h3><p>Turn broad academic goals into a clear path of topics, milestones and next steps.</p></div></article>
-        <article class="mk-feature mk-feature-wide mk-reveal"><img src="assets/feature-progress.jpg" alt="Graduates celebrating their academic achievement" width="1200" height="800" loading="lazy"><div class="mk-feature-body"><span class="mk-feature-tag">06</span><h3>Progress that motivates</h3><p>Celebrate meaningful effort with streaks, quests and achievements that feel earned.</p></div></article>
-      </div>
-    </section>
+    <div class="mk-desktop-gallery mk-wrap mk-reveal" aria-label="Learning moments">
+      <figure><img src="assets/feature-tutor.jpg" alt="Student focused on learning with a laptop" width="1200" height="800" loading="lazy"><figcaption>Ask and understand</figcaption></figure>
+      <figure><img src="assets/feature-spaced-repetition.jpg" alt="Student reviewing notes with a marker" width="1200" height="1800" loading="lazy"><figcaption>Remember longer</figcaption></figure>
+      <figure><img src="assets/feature-vault.jpg" alt="Students studying together with books and a laptop" width="1200" height="800" loading="lazy"><figcaption>Keep ideas close</figcaption></figure>
+      <figure><img src="assets/feature-exam-readiness.jpg" alt="Student preparing for an exam" width="1200" height="1800" loading="lazy"><figcaption>Practise with purpose</figcaption></figure>
+      <figure><img src="assets/feature-roadmap.jpg" alt="Student planning a study schedule" width="1200" height="800" loading="lazy"><figcaption>See your path</figcaption></figure>
+      <figure><img src="assets/feature-progress.jpg" alt="Graduates celebrating their achievement" width="1200" height="800" loading="lazy"><figcaption>Celebrate progress</figcaption></figure>
+    </div>
 
     <section class="mk-section mk-wrap" id="community">
       <div class="mk-community mk-reveal">
@@ -288,21 +282,6 @@
         <div class="mk-community-media">
           <img src="assets/community-study.jpg" alt="Students collaborating over study materials in a library" width="1200" height="800" loading="lazy">
           <div class="mk-float mk-community-chip"><img src="assets/trophy-3d.webp" alt="" width="200" height="200"><span><b>Study groups</b><small>Learn alongside peers</small></span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="mk-section mk-wrap" id="stories">
-      <div class="mk-cta mk-reveal">
-        <div class="mk-cta-copy">
-          <div class="mk-kicker mk-kicker-light">MAKE EVERY SESSION COUNT</div>
-          <h2>Less second-guessing.<br><span class="mk-orange">More forward motion.</span></h2>
-          <p>Know what you understand, what needs another look and where your next focused session should begin.</p>
-          <button class="mk-btn mk-btn-primary mk-btn-lg" id="storyStart" type="button">Build your learning rhythm ↗</button>
-        </div>
-        <div class="mk-cta-stats">
-          <div><strong>01</strong><span>Clear next action</span></div>
-          <div><strong>∞</strong><span>Room to keep improving</span></div>
         </div>
       </div>
     </section>
@@ -444,7 +423,7 @@
               <p class="au-error" id="authEmailError"></p>
             </div>
 
-            <div class="au-field" data-modes="login">
+            <div class="au-field" data-modes="login recover">
               <div class="au-label-row">
                 <label for="authPassword">Password</label>
                 <button type="button" class="au-link" data-modes="login" data-auth-mode="forgot">Forgot password?</button>
@@ -462,6 +441,8 @@
               <input type="checkbox" id="authRemember" checked>
               <span>Keep me signed in on this device</span>
             </label>
+
+            <p class="au-switch" data-modes="login">Didn't receive your confirmation email? <button type="button" class="au-link" id="authResendConfirmation">Resend it</button></p>
 
             <button class="au-submit" type="submit" id="authSubmit">
               <span class="au-spinner" aria-hidden="true"></span>
@@ -482,18 +463,21 @@
           <button type="button" class="au-submit" data-auth-mode="login"><span class="au-submit-label">Back to log in</span></button>
         </div>
 
-        <p class="au-demo-note"><b>Demo only.</b> Accounts aren't connected yet. Nothing you type is sent anywhere, and passwords are never saved.</p>
+        <p class="au-demo-note"><b>Prototype mode.</b> Configure Supabase to create accounts and sync learning progress. Passwords are never saved in browser app state.</p>
       </div>
     </main>
   </div>
 
   <div id="app" class="hidden"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app/supabase.js"></script>
+  <script src="app/cloud-sync.js"></script>
   <script src="app/core.js"></script>
   <script src="app/ui.js"></script>
   <script src="app/sheets.js"></script>
   <script src="app/shell.js"></script>
   <script src="app/pages-home.js"></script>
+  <script src="app/dashboard-modern.js"></script>
   <script src="app/pages-learn.js"></script>
   <script src="app/pages-study.js"></script>
   <script src="app/tutor.js"></script>

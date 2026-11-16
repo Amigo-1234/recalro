@@ -279,7 +279,7 @@
           </ul>${list.length ? "" : `<p class="muted small">No activity recorded this week.</p>`}`, { title: "What moved forward", icon: "arrow-up-right", cls: "span-5" })}
         ${ui.card(weak ? `<div class="priority"><span class="rec-icon">${icon("target")}</span><div><h3>Focus next week: ${esc(weak.module.name)}</h3><p>Missed ${weak.errors} of ${weak.attempts} attempts so far.</p></div>${ui.link("Plan it", "planner", { size: "sm", tone: "soft" })}</div>` : `<p class="muted small">No clear weak spot yet. Keep a steady review rhythm.</p>`, { title: "Next week's priority", icon: "flag", cls: "span-12" })}
       </div>
-      <p class="muted small">${R.state.settings.weeklyReport ? "Weekly report reminders are on." : "Weekly report reminders are paused."} Email delivery needs a connected email service. ${ui.link("Settings", "settings", { tone: "link" })}</p>`;
+      <p class="muted small">${R.state.settings.weeklyReport && R.state.settings.notificationsEnabled !== false ? "Sunday in-app report reminders are on." : "Report reminders are paused."} ${ui.link("Settings", "settings", { tone: "link" })}</p>`;
     view.addEventListener("click", (e) => { const w = e.target.closest("[data-week]"); if (w && !w.disabled) R.go(`reports?week=${w.dataset.week}`); if (e.target.closest("[data-export]")) R.exportData(); });
   } });
 

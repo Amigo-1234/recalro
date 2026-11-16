@@ -28,7 +28,7 @@ The app is plain JavaScript modules with no build step, loaded in order from `in
 | `app/tutor.js` + `tutor.css` | AI Tutor workspace: collapsible conversation history (full-screen on phones), subject selector, Markdown/maths/table/code rendering, copy · regenerate · feedback · retry · stop · continue, follow-up prompts, composer with image attachments, and the 3-step Explain-it workspace |
 | `app/review.css` | Flashcard review session (focus mode, 3D flip, rating feedback, completion screen) and app-wide learning motion |
 | `app/pages-*.js` | Pages: home & insights, learning, study tools, community/rewards/account |
-| `app.js` | Marketing page, demo authentication, bridge into the app, deep links |
+| `app.js` | Marketing page, Supabase authentication, bridge into the app, deep links |
 
 Navigation groups: Overview · My Learning (Subjects, Roadmap, Planner, Vault) · Study Tools (Flashcards, Review Center, Quick Practice, Exam Simulator, AI Tutor with Explain-it-to-me, Summaries with Read-aloud) · Insights (Analytics, Weakness Detector, Memory Center, Exam Readiness, Weekly Reports) · Community (Groups, Challenges, Leaderboards) · Rewards (Daily Quests, Achievements, Store) · Account (Profile, Settings).
 
@@ -60,12 +60,12 @@ No build step and no animation library: components are small vanilla modules on 
 Mega-menu items link to the matching demo (`#demo-<id>`) or story stage (`#story-<n>`).
 
 ## Signup wizard (frontend prototype)
-`auth/signup-wizard.js` replaces the old single signup form with an 8-step journey: Account details → Email verification (6-digit OTP) → Academic path → Academic details (conditional per path) → Learning interests → Learning goals → Review → Welcome.
+`auth/signup-wizard.js` replaces the old single signup form with an 8-step journey: Account details → Email confirmation link → Academic path → Academic details (conditional per path) → Learning interests → Learning goals → Review → Welcome.
 - `auth/signup-components.js`: `FormField`, `SelectField`, `PasswordField` + `PasswordStrengthIndicator`, `SelectionCard`, `Chip`, `ChoiceGroup`, `OTPInput` (auto-advance, backspace, paste, autofill), `InstitutionSearch` (ARIA combobox with "not listed" fallback).
 - `auth/signup-data.js`: paths, countries, **sample** institution lists, levels (100–600 Level for Nigeria), classes, exams, certifications, interests, goals.
 - State is in memory for the session only; going back keeps answers, editing from Review returns to Review. Passwords are never stored.
-- **Simulated:** Google button (shows a prototype notice), the verification email (the code is shown in an on-screen "prototype inbox"), Terms/Privacy (dialog says they're not published yet). Finishing writes the same demo session as log in and applies the display name, daily goal and onboarding answers to local app state.
-- Integration points: `AccountDetailsStep.beforeNext` (send code), `checkCode` (verify), `complete()` (create account / save profile).
+- **Simulated:** Google button (shows a prototype notice), Terms/Privacy (dialog says they're not published yet). When Supabase is configured, the review step creates a real email/password account and Supabase sends its confirmation link; without configuration, signup stays in local demo mode.
+- Integration points: `ProfileReviewStep.beforeNext` (create account), `complete()` (save profile and onboarding state).
 
 ## Past Questions (EKSU) and the CBT
 Route `#/app/pastq` (Study Tools → Past Questions; the phone Practice tab covers it).
@@ -82,8 +82,10 @@ Replace `window.RecalroPastQ` with an API returning the shapes documented at the
 3. Server-side storage for attempts and answers so progress syncs across devices.
 4. Optional: server-side "similar question" matching (the prototype matches by topic).
 
+No approved paper source has been provided yet. The future import flow must run only when an admin explicitly selects an approved source and starts a pull. It should retain source URL and licence details, extract or scan the paper, review the question text and diagrams, then publish a clean readable Recalro-watermarked copy matched to institution, level, department, course and year. Download access remains disabled until a payment gate is implemented; the demo bank is for practice only.
+
 ## Theme system
-Light, Dark and System (default) in Settings → Appearance. The `body.dark` / `body.theme-light` class is the single source for every surface (marketing, auth and app). An inline script in `index.html` applies it before first paint (no flash), switches cross-fade briefly, and System follows live OS changes. Text on filled colours uses semantic tokens (`--on-teal`, `--on-orange`, `--on-status`) so contrast holds in both themes.
+Light (default), Dark and System are in Settings → Appearance. Marketing stays light; auth and workspace follow the learner's choice. An inline script in `index.html` applies it before first paint, and System follows live OS changes. Text on filled colours uses semantic tokens (`--on-teal`, `--on-orange`, `--on-status`).
 
 ## Mobile behaviour
 - Phone bottom bar (`SmartMobileNavigation` in `app/shell.js`): visible on load and near the top, slides away while scrolling down, returns on scroll-up or after a short pause. It is hidden during focused activities (flashcard review, CBT) and while the keyboard is open. Celebrations wait until a focused activity ends.
@@ -107,40 +109,39 @@ The marketing photos were downloaded from these Pexels photo sources:
 The calendar, map pin, target, trophy, notebook and computer 3D icons are from [3dicons](https://3dicons.co/) and are released under [CC0 1.0](https://github.com/realvjy/3dicons/blob/develop/LICENSE). They are used in feature cards, study steps and workspace navigation; other utility glyphs use raised, dimensional icon tiles to keep the visual treatment consistent.
 
 ## Important implementation boundary
-This is a standalone learning prototype with a connected optional OpenAI AI Tutor API. It does not include production authentication, Supabase, server-side database persistence, production SM-2 scheduling, or verified XP/gem transactions. Browser local storage is not account storage and may be cleared by the user or browser. The dedicated summary and explain-it-to-me helpers remain local learning demos; the AI Tutor uses the configured provider. UI examples and sample analytics are demonstration data. Do not present them as real user records.
+The app supports Supabase email/password authentication, per-user profiles and cloud sync for learner state. Supabase configuration and the database migration are required before those features work. Tutor, transcription and speech routes use the configured OpenAI provider and require a valid Supabase session. Browser local storage remains the offline cache. The local SM-2 scheduler, sample content, sample peers and some learning helpers are still prototype features; sample analytics are demonstration data.
 
 Before production:
-1. Connect authentication and account settings to the existing identity provider.
-2. Map all existing routes, API contracts and database entities before replacing an existing app.
-3. Connect subject/material uploads, AI extraction and generated content to backend APIs.
-4. Wire flashcard ratings to the existing SM-2 implementation without changing its calculations.
-5. Consider connecting summaries and explain-it-to-me to the configured AI provider; the AI Tutor is now connected when an API key is supplied.
-6. Verify exam question limits and pass threshold with the backend.
-7. Persist roadmap, planner, knowledge vault, quests, groups and reward economy through approved backend work.
-8. Add automated tests, accessibility audit and cross-device QA.
-
+1. Review and apply the Supabase migration for the target project.
+2. Move large chat/material collections out of the single JSONB state row if their size or query needs grow.
+3. Connect subject/material uploads and generated content to dedicated backend APIs.
+4. Verify exam question limits and pass threshold with the backend.
+5. Add production monitoring, rate limits, accessibility review and cross-device QA.
 ## Files
-- `index.html` — marketing site, auth screen and app mount point
-- `marketing.css`, `auth.css` — marketing and auth styles
-- `marketing/` — navbar, motion primitives, scroll story, feature demos
-- `auth/` — signup wizard, its components and option data
-- `app/` — signed-in application (see above)
-- `app.js` — marketing interactions, demo auth and app bridge
-- `assets/recalro-logo.png` — supplied logo artwork
+- `index.html` - marketing site, auth screen and app mount point
+- `marketing.css`, `auth.css` - marketing and auth styles
+- `marketing/` - navbar, motion primitives, scroll story, feature demos
+- `auth/` - signup wizard, its components and option data
+- `app/` - signed-in application (see above)
+- `app/supabase.js`, `app/cloud-sync.js` - Supabase client setup and state sync
+- `supabase/migrations/` - profile/state tables and per-user RLS policies
+- `app.js` - marketing interactions, authentication and app bridge
+- `assets/recalro-logo.png` - supplied logo artwork
 
-
-## AI Tutor setup (Phase 1–3 update)
+## Supabase and AI setup
 
 The AI Tutor connects through the included Node.js server. The OpenAI key is read only by the server and must never be placed in browser JavaScript.
 
 1. Install Node.js 20.12 or newer.
 2. Copy `.env.example` to `.env` in the project root (the same folder as `package.json`).
-3. Open `.env` and set `OPENAI_API_KEY=your_api_key_here`. Keep this file local; it is ignored by Git. Never put the key in browser JavaScript or share it in chat.
-4. Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-mini-transcribe`) and `OPENAI_TTS_MODEL` (default `gpt-4o-mini-tts`).
-5. Run `npm run dev` and open `http://localhost:8000`.
+3. Set `OPENAI_API_KEY` in `.env`. Keep it server-side; never put it in browser JavaScript or share it in chat.
+4. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. `SUPABASE_ANON_KEY` is also accepted for older projects. Do not use a Supabase secret/service-role key in this app config.
+5. In Supabase, enable email/password sign-up with email confirmations. Add `http://localhost:8000/**` to the Auth redirect URL allowlist for local development; set the production Site URL and add its exact redirect URL before deploying.
+6. Apply `supabase/migrations/0001_profiles_and_learning_state.sql`, then `supabase/migrations/0002_usernames.sql` in the Supabase SQL Editor. They create private profile/app-state tables and reserve unique usernames at sign-up, including before email confirmation.
+7. Run `npm run dev` and open `http://localhost:8000`.
 
-The Tutor supports conversational follow-ups, subject-aware learning modes, image and PDF analysis, TXT/Markdown uploads, DOCX text extraction, voice transcription and generated spoken responses. Microphone access requires HTTPS or localhost and browser permission. Uploads are limited to 12 MB. DOCX extraction reads the main document body; complex layout, headers, footers and embedded images may not be preserved.
+New sign-ups create a Supabase account at the review step. Supabase sends its configured confirmation link to the learner's email; the link returns to Recalro and opens the learning space. Signed-in learner state is synced to `public.user_app_state`; profile and onboarding data are stored in `public.profiles`. Existing local state is uploaded for a new account when no remote state exists. When switching between accounts, the app loads that account's cloud state and clears the previous account's local state from the active view.
 
-### Important product boundaries
+The app loads `supabase-js` v2 from jsDelivr only when Supabase is configured. Keep the OpenAI key server-side. The AI routes validate the Supabase access token before calling OpenAI. Tutor, voice and file analysis also require outbound network access from the Node server.
 
-This remains a standalone prototype: login/onboarding and most learning progress are still local browser demos, not production authentication or cloud sync. Existing local quiz, summary, review, flashcard and explain-it-to-me features have been retained. The AI Tutor, voice endpoints and file analysis require a valid OpenAI API key and a server with outbound network access.
+Optional model overrides: `OPENAI_TUTOR_MODEL` (default `gpt-4.1-mini`), `OPENAI_TRANSCRIBE_MODEL` (default `gpt-4o-mini-transcribe`) and `OPENAI_TTS_MODEL` (default `gpt-4o-mini-tts`). Uploads are limited to 12 MB. DOCX extraction reads the main document body; complex layout, headers, footers and embedded images may not be preserved.

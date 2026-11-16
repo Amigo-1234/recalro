@@ -10,6 +10,23 @@
   const peerAv = (n) => `<span class="avatar peer" style="--hue:${R.hash(n) % 360}" aria-hidden="true">${esc(initials(n))}</span>`;
   const checkRewards = () => R.record([]); // settles achievements without logging an activity
 
+  async function prepareProfilePhoto(file) {
+    if (!file || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("Choose a JPG, PNG or WebP image.");
+    if (file.size > 5 * 1024 * 1024) throw new Error("Choose an image smaller than 5 MB.");
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      ctx.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+      return canvas.toDataURL("image/jpeg", .8);
+    } finally { URL.revokeObjectURL(url); }
+  }
+
   /* ======================= STUDY GROUPS ======================= */
   const groupProgress = (g) => {
     const mine = R.state.joinedGroups.includes(g.id) ? R.activitySince(R.startOfWeek()).filter((a) => a.t === "review" && (!g.subject || a.subject === g.subject)).length : 0;
@@ -202,6 +219,38 @@
     });
   } });
 
+  const profilePage = R.pages.profile;
+  R.page("profile", { ...profilePage, render(view, ctx) {
+    const cleanup = profilePage.render(view, ctx);
+    const username = R.state.profile.onboarding?.username;
+    if (username) {
+      const handle = document.createElement("span");
+      handle.className = "profile-handle";
+      handle.textContent = `@${username}`;
+      view.querySelector(".profile-hero h1")?.after(handle);
+    }
+    const avatar = view.querySelector(".profile-hero .avatar");
+    const control = document.createElement("div");
+    control.className = "profile-photo-control";
+    avatar.replaceWith(control);
+    control.append(avatar);
+    control.insertAdjacentHTML("beforeend", `<label class="profile-photo-label" for="profilePhotoInput">${icon("image")}<span>Change photo</span></label><input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Upload profile photo" hidden>${R.state.profile.photo ? '<button type="button" class="profile-photo-remove" data-removephoto>Remove photo</button>' : ""}`);
+    control.addEventListener("click", (event) => {
+      if (!event.target.closest("[data-removephoto]")) return;
+      R.update((state) => { state.profile.photo = ""; });
+      R.updateChips(); R.refresh(); R.toast("Profile photo removed.");
+    });
+    control.addEventListener("change", async (event) => {
+      if (event.target.id !== "profilePhotoInput" || !event.target.files?.[0]) return;
+      try {
+        const photo = await prepareProfilePhoto(event.target.files[0]);
+        R.update((state) => { state.profile.photo = photo; });
+        R.updateChips(); R.refresh(); R.toast("Profile photo updated.");
+      } catch (error) { R.toast(error.message || "Could not use that image.", { icon: "info" }); }
+    });
+    return cleanup;
+  } });
+
   /* ======================= SETTINGS ======================= */
   R.page("settings", { title: "Settings", render(view) {
     const s = R.state.settings, theme = R.getTheme(), user = window.RecalroAuth?.currentUser() || {};
@@ -210,7 +259,8 @@
     view.innerHTML = `${ui.header({ eyebrow: "Account", title: "Settings", desc: "Manage your appearance, learning preferences and data." })}
       <div class="settings">
         ${ui.card(`<div class="set-theme"><div><b>Theme</b><small>Light, dark, or follow your device. Your choice applies everywhere in Recalro.</small></div>${ui.themeSelector(theme)}</div>` + row("Reduce motion", "Turn off celebrations, confetti and transitions.", toggle("reduceMotion", s.reduceMotion, "Reduce motion")), { title: "Appearance", icon: "sun" })}
-        ${ui.card(row("Daily study goal", `${s.dailyGoal} minutes per day (estimated from activity)`, ui.btn("Edit", { tone: "soft", size: "sm", attrs: "data-goal" })) + row("Weekly report reminder", "A reminder to review your weekly report every Sunday.", toggle("weeklyReport", s.weeklyReport, "Weekly report reminder")), { title: "Learning", icon: "target" })}
+        ${ui.card(row("Daily study goal", `${s.dailyGoal} minutes per day (estimated from activity)`, ui.btn("Edit", { tone: "soft", size: "sm", attrs: "data-goal" })), { title: "Learning", icon: "target" })}
+        ${ui.card(row("In-app notifications", "Show updates and reminders in the notification bell.", toggle("notificationsEnabled", s.notificationsEnabled !== false, "In-app notifications")) + row("Review reminders", "Remind me when flashcards are due for review.", toggle("reviewReminders", s.reviewReminders !== false, "Review reminders")) + row("Weekly report", "Remind me on Sunday to check my weekly report.", toggle("weeklyReport", s.weeklyReport, "Weekly report reminder")) + '<p class="muted small">Reminders appear when you open Recalro. Email and device push notifications are not connected yet.</p>', { title: "Notifications", icon: "bell" })}
         ${ui.card(row("Private on leaderboards", "Show “You” instead of your name in league rankings.", toggle("leaderboardPrivate", s.leaderboardPrivate, "Private on leaderboards")), { title: "Privacy", icon: "shield" })}
         ${ui.card(row("Export your data", "Download everything this workspace has recorded as JSON.", ui.btn("Export", { tone: "soft", size: "sm", icon: "download", attrs: "data-export" })) + row("Reset demo data", "Clear all progress, XP, gems and saved items on this device.", ui.btn("Reset", { tone: "danger", size: "sm", attrs: "data-reset" })), { title: "Data", icon: "archive" })}
         ${ui.card(`${row("Signed in as", esc(user.email || "Demo account"), ui.btn("Sign out", { tone: "ghost", size: "sm", icon: "logout", attrs: "data-signout" }))}<p class="muted small">${icon("info")} Authentication is a front-end demo. Connect your identity provider before production.</p>`, { title: "Account", icon: "user" })}
@@ -224,6 +274,6 @@
       if (e.target.closest("[data-reset]") && (await R.confirm({ title: "Reset all demo data?", body: "This permanently clears your progress, XP, gems, saved items and history on this device. Export first if you want a copy.", confirmLabel: "Reset everything", tone: "danger" }))) { R.resetDemo(); R.toast("Demo data reset."); R.refresh(); }
       if (e.target.closest("[data-signout]")) R.signOut();
     });
-    view.addEventListener("change", (e) => { const t = e.target.closest("[data-toggle]"); if (t) { R.update((st) => (st.settings[t.dataset.toggle] = t.checked)); R.toast("Preference saved on this device."); } });
+    view.addEventListener("change", (e) => { const t = e.target.closest("[data-toggle]"); if (t) { R.update((st) => (st.settings[t.dataset.toggle] = t.checked)); if (t.dataset.toggle === "notificationsEnabled" && t.checked) R.checkReminders(); R.toast("Preference saved."); } });
   } });
 })();

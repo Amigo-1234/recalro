@@ -25,9 +25,9 @@
 
   /* ---------------------------------------------------------------- AI Tutor */
   const TUTOR = [
-    { q: "Why do living cells need energy?", a: "Cells need energy to carry out essential processes such as growth, repair, transport and reproduction. They obtain and use energy in different ways depending on the organism.", src: "Biology_Notes.pdf · page 12" },
-    { q: "Explain Bernoulli like I'm 12", a: "Imagine a crowd squeezing through a narrow doorway. To keep everyone moving, people near the door walk faster. Fluids do the same in a narrow pipe, and because the energy goes into speed, there's less left pushing on the walls. Faster flow, lower pressure.", src: "Fluids_Lecture3.pdf · page 4" },
-    { q: "Quiz me on cell structures", a: "Here's one: Which cell structure controls what enters and leaves the cell? The answer is the cell membrane. Want another question about cell structures?", src: "Your flashcards · Biology" },
+    { q: "What were the Silk Roads?", a: "They were a network of trade and communication routes. People carried goods and ideas across parts of Asia, Europe and Africa over many centuries.", src: "World_History_Notes.pdf · page 12" },
+    { q: "Why did the Berlin Wall opening matter?", a: "The border opened on 9 November 1989, letting people cross between East and West Berlin. It became a powerful symbol of change in Europe.", src: "World_History_Notes.pdf · page 14" },
+    { q: "Quiz me on the Moon landing", a: "In what year did Apollo 11 first land people on the Moon? The answer is 1969. Neil Armstrong and Buzz Aldrin walked on the surface.", src: "Your flashcards · World history" },
   ];
   function TutorDemo(body) {
     body.innerHTML = `
@@ -66,10 +66,10 @@
 
   /* -------------------------------------------------------------- Flashcards */
   const CARDS = [
-    { q: "What is the function of the cell membrane?", a: "The cell membrane controls the movement of substances into and out of the cell." },
-    { q: "What does the mitochondrion do?", a: "Mitochondria release usable energy during cellular respiration." },
-    { q: "Bernoulli's principle in one line?", a: "Faster fluid, lower pressure: P + ½ρv² + ρgh stays constant." },
-    { q: "What is |3 + 4i|?", a: "5, because √(3² + 4²) = 5." },
+    { q: "When did the Berlin Wall open?", a: "On 9 November 1989." },
+    { q: "What were the Silk Roads?", a: "A network of routes connecting people and trade across regions." },
+    { q: "When did Apollo 11 land on the Moon?", a: "On 20 July 1969." },
+    { q: "Who built the pyramids at Giza?", a: "Ancient Egyptians built them for their kings." },
   ];
   const NEXT = { Again: "10 min", Hard: "1 day", Good: "3 days", Easy: "6 days" };
   function FlashcardDemo(body) {
@@ -127,9 +127,9 @@
 
   /* --------------------------------------------------------- Knowledge Vault */
   const VAULT = [
-    { t: "PV = nRT", c: 0 }, { t: "Second law: ΔS ≥ 0", c: 1 }, { t: "Entropy: energy dispersal", c: 2 },
-    { t: "η = 1 − Tc/Th", c: 0 }, { t: "Newton II: F = ma", c: 1 }, { t: "Viscosity: resistance to flow", c: 2 },
-    { t: "P + ½ρv² + ρgh = const", c: 0 }, { t: "Conservation of mass", c: 1 }, { t: "Enthalpy: H = U + PV", c: 2 },
+    { t: "20 July 1969", c: 0 }, { t: "Neil Armstrong", c: 1 }, { t: "Apollo 11 Moon landing", c: 2 },
+    { t: "9 November 1989", c: 0 }, { t: "King Khufu", c: 1 }, { t: "Berlin Wall opens", c: 2 },
+    { t: "c. 2600 BCE", c: 0 }, { t: "Silk Road merchants", c: 1 }, { t: "Trade across regions", c: 2 },
   ];
   const ROT = [-7, 5, -3, 8, -5, 3, -8, 6, -2];
   function VaultDemo(body) {
@@ -137,7 +137,7 @@
       <div class="dm-vault">
         <div class="dm-pile"></div>
         <div class="dm-cols">
-          ${["Formulas", "Laws", "Definitions"].map((h, n) => `<div class="dm-col dm-col-${n}"><h4>${icon(["sigma", "scale", "book"][n])}${h}<span>0</span></h4><div class="dm-col-list"></div></div>`).join("")}
+          ${["Dates", "People", "Events"].map((h, n) => `<div class="dm-col dm-col-${n}"><h4>${icon(["calendar", "users", "book"][n])}${h}<span>0</span></h4><div class="dm-col-list"></div></div>`).join("")}
         </div>
         <div class="dm-vault-foot"><span class="dm-vault-status" aria-live="polite">9 notes, unsorted</span><button type="button" class="dm-btn dm-btn-primary" data-vault>Organise my vault</button></div>
       </div>`;
@@ -216,9 +216,9 @@
 
   /* ----------------------------------------------------------- Exam Simulator */
   const EXAM = [
-    { q: "Which organelle is often called the powerhouse of the cell?", o: ["Nucleus", "Mitochondrion", "Ribosome", "Golgi apparatus"], a: 1, topic: "Biology", why: "Mitochondria release usable energy during cellular respiration." },
-    { q: "Water flows steadily into a narrower section of pipe. What happens to its speed?", o: ["It decreases", "It stays the same", "It increases", "It drops to zero"], a: 2, topic: "Fluid mechanics", why: "Continuity: A₁v₁ = A₂v₂, so smaller area means higher speed." },
-    { q: "What is the modulus of 3 + 4i?", o: ["5", "7", "12", "25"], a: 0, topic: "Mathematics", why: "|z| = √(3² + 4²) = 5" },
+    { q: "Which civilization built the pyramids at Giza?", o: ["Ancient Egyptians", "Ancient Romans", "Ancient Greeks", "Ancient Persians"], a: 0, topic: "World history", why: "The Giza pyramids were built in ancient Egypt for Egyptian kings." },
+    { q: "In which year did Apollo 11 land on the Moon?", o: ["1945", "1957", "1969", "1989"], a: 2, topic: "World history", why: "Apollo 11 landed on the Moon on 20 July 1969." },
+    { q: "In which year did the Berlin Wall open?", o: ["1961", "1975", "1989", "2001"], a: 2, topic: "World history", why: "The border opened on 9 November 1989." },
   ];
   const PER_Q = 40;
   function ExamDemo(body) {
@@ -400,20 +400,48 @@
     return { play() { r.fresh(); btn.disabled = false; setup(540); }, stop: r.stop };
   }
 
+  /* -------------------------------------------------------- Personal roadmap */
+  function RoadmapDemo(body) {
+    const stages = [
+      { title: "Foundations", detail: "Turn your notes into a clear first milestone.", icon: "book" },
+      { title: "Practice", detail: "Recall the ideas and work through questions.", icon: "cards" },
+      { title: "Ready for the exam", detail: "Check your coverage and focus on what remains.", icon: "target" },
+    ];
+    body.innerHTML = `<div class="dm-roadmap">
+      <div class="dm-roadmap-top"><span class="dm-roadmap-kicker">YOUR WORLD HISTORY PATH</span><strong><span data-roadmap-count>1</span> of 3 milestones</strong></div>
+      <div class="dm-roadmap-progress"><i></i></div>
+      <div class="dm-roadmap-steps">${stages.map((stage, i) => `<button type="button" class="dm-roadmap-step" data-roadmap="${i}" aria-pressed="${i === 0}"><span class="dm-roadmap-icon">${icon(stage.icon)}</span><span><b>${stage.title}</b><small>${stage.detail}</small></span>${icon("chevron-right")}</button>`).join("")}</div>
+      <p class="dm-roadmap-note" aria-live="polite">Your next step: build the foundations.</p>
+    </div>`;
+    const buttons = [...body.querySelectorAll("[data-roadmap]")], bar = body.querySelector(".dm-roadmap-progress i"), count = body.querySelector("[data-roadmap-count]"), note = body.querySelector(".dm-roadmap-note");
+    const r = runner();
+    function select(index) {
+      buttons.forEach((button, i) => { button.classList.toggle("is-current", i === index); button.classList.toggle("is-done", i < index); button.setAttribute("aria-pressed", String(i === index)); });
+      bar.style.width = `${((index + 1) / stages.length) * 100}%`;
+      count.textContent = String(index + 1);
+      note.textContent = index === 2 ? "One clear path from first notes to exam confidence." : `Your next step: ${stages[index].title.toLowerCase()}.`;
+    }
+    buttons.forEach((button, i) => button.addEventListener("click", () => { r.stop(); select(i); }));
+    select(0);
+    return { async play() { const tk = r.fresh(); select(0); for (let i = 1; i < stages.length; i++) { if (!await wait(850, tk)) return; select(i); } }, stop: r.stop };
+  }
+
   /* ------------------------------------------------------------ The theatre */
   const DEMOS = [
-    { id: "tutor", label: "AI Tutor", icon: "sparkles", blurb: "Explanations that build step by step.", title: "Ask about your own notes", desc: "Answers stream in gradually and point back to the page they came from.", make: TutorDemo },
-    { id: "flashcards", label: "Flashcards", icon: "cards", blurb: "Flip, recall, rate. Repeat less.", title: "Recall first, then check", desc: "Flip the card, rate how well you knew it and watch it get scheduled.", make: FlashcardDemo },
-    { id: "vault", label: "Knowledge Vault", icon: "archive", blurb: "Formulas and concepts, sorted.", title: "Everything worth keeping, in order", desc: "Formulas, laws and definitions from your notes, grouped so they're easy to revise.", make: VaultDemo },
+    { id: "tutor", label: "AI learning workspace", icon: "sparkles", blurb: "Ask better questions and get unstuck.", title: "Build understanding with subject-aware help", desc: "Ask about your notes and see explanations arrive step by step, with the source close by.", make: TutorDemo },
+    { id: "flashcards", label: "Spaced repetition", icon: "cards", blurb: "Recall at the right time.", title: "Recall first, then check", desc: "Flip, answer and rate what you knew. Recalro brings each card back at a useful interval.", make: FlashcardDemo },
+    { id: "vault", label: "Knowledge Vault", icon: "archive", blurb: "Keep the important ideas in order.", title: "Everything worth keeping, in order", desc: "Sort dates, people and events here; keep formulas and definitions for other subjects too.", make: VaultDemo },
     { id: "curve", label: "Forgetting Curve", icon: "brain", blurb: "Memory fades. Reviews lift it.", title: "Review just before you'd forget", desc: "Each review resets the curve and makes the next drop slower.", make: CurveDemo },
-    { id: "exam", label: "Exam Simulator", icon: "clipboard", blurb: "Timed practice with real feedback.", title: "Practise under exam conditions", desc: "Timed questions, instant explanations and a result you can act on.", make: ExamDemo },
+    { id: "exam", label: "Exam readiness", icon: "clipboard", blurb: "Practise under pressure.", title: "See what still needs attention", desc: "Check your coverage with timed questions, feedback and a result you can act on.", make: ExamDemo },
+    { id: "roadmap", label: "Personal roadmap", icon: "map", blurb: "A clear path through your topics.", title: "Make the next step obvious", desc: "Turn broad goals into topics, milestones and a study path you can follow.", make: RoadmapDemo },
     { id: "groups", label: "Study Groups", icon: "users", blurb: "Shared goals keep you going.", title: "Progress together", desc: "Members push a shared challenge forward, one session at a time.", make: GroupsDemo },
-    { id: "rewards", label: "Gamification", icon: "trophy", blurb: "XP, streaks and earned badges.", title: "Effort you can feel", desc: "XP, levels, streak milestones and achievements, all earned by studying.", make: RewardsDemo },
+    { id: "rewards", label: "Progress that motivates", icon: "trophy", blurb: "Celebrate meaningful effort.", title: "Effort you can feel", desc: "Build streaks, complete quests and earn achievements through real study sessions.", make: RewardsDemo },
   ];
 
   function FeatureTheatre(root) {
     if (!root) return null;
     root.innerHTML = `
+      <p class="mk-th-cue">Previews play automatically. Swipe the feature tabs to explore <span aria-hidden="true">→</span></p>
       <div class="mk-th-tabs" role="tablist" aria-label="Recalro features" aria-orientation="vertical">
         ${DEMOS.map((d, n) => `<button type="button" role="tab" class="mk-th-tab" id="tab-${d.id}" aria-controls="demo-${d.id}" aria-selected="${n === 0}" tabindex="${n === 0 ? 0 : -1}"><span class="mk-th-ic">${icon(d.icon)}</span><span><b>${d.label}</b><small>${d.blurb}</small></span></button>`).join("")}
       </div>
@@ -426,9 +454,19 @@
       </div>`;
     const tabs = [...root.querySelectorAll("[role=tab]")], panels = [...root.querySelectorAll("[role=tabpanel]")];
     const demos = DEMOS.map((d, n) => d.make(panels[n].querySelector(".mk-th-body")));
-    let current = 0, visible = false;
+    let current = 0, visible = false, autoTimer = 0, userInteracted = false;
     const played = new Set(), touched = new Set();
     panels.forEach((p, n) => ["pointerdown", "keydown", "click"].forEach((ev) => p.addEventListener(ev, () => touched.add(n))));
+    const stopAutoplay = () => { userInteracted = true; clearTimeout(autoTimer); };
+    root.addEventListener("pointerdown", stopAutoplay, true);
+    root.addEventListener("keydown", stopAutoplay, true);
+    function scheduleAdvance() {
+      clearTimeout(autoTimer);
+      if (!visible || userInteracted || reduced() || current >= tabs.length - 1) return;
+      autoTimer = setTimeout(() => {
+        if (visible && !userInteracted) select(current + 1);
+      }, 6500);
+    }
 
     function select(n, { focus = false, play = true } = {}) {
       if (n === current && played.has(n)) { if (focus) tabs[n].focus(); return; }
@@ -438,8 +476,12 @@
       current = n;
       if (focus) tabs[n].focus();
       animate(panels[n], [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }], { duration: 360 });
-      tabs[n].scrollIntoView?.({ block: "nearest", inline: "nearest", behavior: reduced() ? "auto" : "smooth" });
+      if (window.matchMedia("(max-width: 1000px)").matches) {
+        const rail = root.querySelector(".mk-th-tabs");
+        rail.scrollTo({ left: tabs[n].offsetLeft - tabs[0].offsetLeft - 16, behavior: reduced() ? "auto" : "smooth" });
+      }
       if (play && visible) { played.add(n); demos[n].play(); }
+      scheduleAdvance();
     }
     root.addEventListener("click", (e) => {
       const t = e.target.closest("[role=tab]"); if (t) { select(tabs.indexOf(t)); return; }
@@ -459,11 +501,12 @@
         if (visible) {
           // Untouched demos replay their intro; ones the visitor is using keep their state.
           if (!played.has(current) || !touched.has(current)) { played.add(current); d.play(); } else d.resume?.();
-        } else d.stop();
+          scheduleAdvance();
+        } else { clearTimeout(autoTimer); d.stop(); }
       // "Visible" = any part of the theatre crosses the middle of the viewport. Unlike a
       // ratio threshold, this doesn't flicker when switching tabs changes the panel height.
       }), { rootMargin: "-35% 0px -35% 0px" }).observe(root);
-    } else { visible = true; demos[0].play(); played.add(0); }
+    } else { visible = true; demos[0].play(); played.add(0); scheduleAdvance(); }
 
     return { show(id) { const n = DEMOS.findIndex((d) => d.id === id); if (n >= 0) { played.delete(n); touched.delete(n); select(n); } } };
   }

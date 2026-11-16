@@ -318,6 +318,7 @@ body.dark .nav-badge { color: #05201F; }
 
 /* Avatar */
 .avatar { --av: 36px; position: relative; display: inline-grid; place-items: center; width: var(--av); height: var(--av); flex: none; border-radius: 50%; background: linear-gradient(145deg, var(--teal), var(--teal-600)); color: var(--on-teal); font: 800 calc(var(--av) * .38) Manrope, sans-serif; letter-spacing: -.02em; }
+.avatar img { display: block; width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .avatar-emoji { font-size: calc(var(--av) * .55); line-height: 1; }
 .avatar.frame-teal { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--teal); }
 .avatar.frame-sunrise { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4.5px var(--orange), 0 0 14px 2px rgba(247,117,3,.45); }

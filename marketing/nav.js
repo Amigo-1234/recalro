@@ -30,13 +30,14 @@
       { label: "Learning Analytics", desc: "Streaks, accuracy and study time at a glance.", icon: "chart", href: "#platform" },
       { label: "Weakness Detector", desc: "Pinpoints the topics costing you marks.", icon: "target", href: "#story-5" },
       { label: "Exam Readiness", desc: "Timed practice and a readiness score.", icon: "gauge", demo: "exam" },
+      { label: "Personal Roadmap", desc: "Topics and milestones in a clear path.", icon: "map", demo: "roadmap" },
+      { label: "Progress & Rewards", desc: "Streaks, quests and earned achievements.", icon: "trophy", demo: "rewards" },
     ] },
   ];
   const LINKS = [
     { id: "platform", label: "Platform", href: "#platform" },
     { id: "how", label: "How it works", href: "#how" },
     { id: "features", label: "Features", href: "#features", mega: true },
-    { id: "stories", label: "Student stories", href: "#stories" },
   ];
   const itemHref = (it) => it.href || `#demo-${it.demo}`;
   const itemAttrs = (it) => `href="${itemHref(it)}" data-nav-target${it.demo ? ` data-demo="${it.demo}"` : ""}`;

@@ -1,8 +1,7 @@
 /* ==========================================================================
-   SignupWizard: an 8-step academic onboarding journey (frontend prototype).
-   - State lives in memory for this page session only. Passwords are never
-     stored anywhere, nothing is sent to a server, no email is delivered.
-   - Steps: AccountDetails · EmailVerification · AcademicPath ·
+   SignupWizard: an 8-step academic onboarding journey.
+   - Draft state lives in memory. Supabase receives the account at final review.
+   - Steps: AccountDetails · EmailConfirmation · AcademicPath ·
      AcademicInformation (conditional per path) · LearningInterests ·
      LearningGoals · ProfileReview · Welcome
    - Each step is { label, render(), mount(el), validate() -> [[fieldId, msg]], beforeNext() }.
@@ -14,12 +13,13 @@
   const esc = (s) => window.R.esc(s), icon = (n) => window.R.icon(n);
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-  const TOTAL = 8, REVIEW = 6, RESEND_SECONDS = 30;
+  const TOTAL = 8, REVIEW = 6;
 
   const blank = () => ({
     step: 0, furthest: 0, returnTo: null,
-    account: { name: "", email: "", password: "", confirm: "", terms: false },
-    verify: { code: "", email: "", verified: false, resendAt: 0, entered: "" },
+    account: { name: "", username: "", email: "", password: "", confirm: "", terms: false },
+    verify: { email: "", confirmationPending: false },
+    accountCreated: false,
     path: "",
     academic: { secondary: { exams: [] }, university: {}, postgraduate: {}, professional: {}, independent: { skills: [] } },
     interests: [], interestsOther: "", goals: [], minutes: null,
@@ -36,25 +36,30 @@
   const A = () => S.academic[S.path] || {};
   const pathMeta = () => D.PATHS.find((p) => p.id === S.path);
   const allInstitutions = () => [...new Set(Object.values(D.INSTITUTIONS).flat())].sort();
-  const institutionsFor = (country) => (country && D.INSTITUTIONS[country]) || allInstitutions();
-  const newCode = () => String(Math.floor(100000 + Math.random() * 900000));
+  const institutionsFor = (country) => country === "Other" ? [] : (country && D.INSTITUTIONS[country]) || allInstitutions();
+  const countryName = (a) => a.country === "Other" ? (a.countryOther || "").trim() : a.country || "";
   const firstName = () => (S.account.name.trim().split(/\s+/)[0] || "there");
 
   /* ---------- Shared bits of markup ---------- */
   const head = (kicker, title, desc) => `<header class="sw-head"><span class="sw-kicker">${kicker}</span><h1 id="sw-title-${S.step}" tabindex="-1">${title}</h1>${desc ? `<p>${desc}</p>` : ""}</header>`;
   const pathPill = () => pathMeta() ? `<div class="sw-pathpill"><img src="${pathMeta().img}" alt="" width="200" height="200"><span><small>Academic path</small><b>${esc(pathMeta().title)}</b></span><button type="button" class="sw-link" data-go="2">Change</button></div>` : "";
+  const countryField = (key, optional = false) => {
+    const a = S.academic[key];
+    return `${UI.SelectField({ id: "sw-country", label: "Country", bind: `academic.${key}.country`, value: a.country || "", options: D.COUNTRIES, placeholder: "Select your country", optional, hint: optional ? "Narrows the institution search." : "" })}<div class="sw-reveal" data-reveal="country" ${a.country === "Other" ? "" : "hidden"}>${UI.FormField({ id: "sw-country-other", label: "Country name", bind: `academic.${key}.countryOther`, value: a.countryOther || "", placeholder: "Type your country" })}</div>`;
+  };
   function institutionField(key, label = "Institution") {
     const a = S.academic[key];
     return `<div class="sw-field sw-combo" data-field="sw-inst">
         <label for="sw-inst">${label}</label>
         <span class="sw-combo-wrap">${icon("search")}<input id="sw-inst" type="text" value="${esc(a.institution || "")}" placeholder="Start typing to search" autocomplete="off" spellcheck="false" aria-describedby="sw-inst-hint sw-inst-err"><ul class="sw-combo-list" id="sw-inst-list"></ul></span>
-        <p class="sw-hint" id="sw-inst-hint">Sample list for this prototype. Not there? Choose “My institution isn't listed”.</p>
+        <p class="sw-hint" id="sw-inst-hint">Search universities and colleges. If yours is missing, add its full name.</p>
         <p class="sw-err" id="sw-inst-err"></p>
       </div>
       <div class="sw-reveal" data-reveal="inst" ${a.notListed ? "" : "hidden"}>${UI.FormField({ id: "sw-inst-custom", label: "Institution name", bind: `academic.${key}.institutionCustom`, value: a.institutionCustom || "", placeholder: "Type the full name of your institution", autocomplete: "organization" })}</div>`;
   }
   function validInstitution(a) {
     if (a.notListed) return (a.institutionCustom || "").trim().length >= 2 ? null : ["sw-inst-custom", "Enter the name of your institution."];
+    if (a.institutionRor && a.institution) return null;
     const list = institutionsFor(a.country);
     const match = list.find((o) => o.toLowerCase() === (a.institution || "").trim().toLowerCase());
     if (match) { a.institution = match; return null; }
@@ -77,7 +82,8 @@
       <div class="sw-divider"><span>or sign up with email</span></div>
       <div class="sw-form">
         ${UI.FormField({ id: "sw-name", label: "Full name", bind: "account.name", value: S.account.name, placeholder: "Ada Okafor", autocomplete: "name" })}
-        ${UI.FormField({ id: "sw-email", label: "Email address", bind: "account.email", value: S.account.email, type: "email", placeholder: "you@example.com", autocomplete: "email", inputmode: "email", hint: "We'll send a 6-digit code to confirm it's yours." })}
+        ${UI.FormField({ id: "sw-username", label: "Username", bind: "account.username", value: S.account.username, placeholder: "ada_okafor", autocomplete: "username", hint: "3–24 characters. Use lowercase letters, numbers and underscores." })}
+        ${UI.FormField({ id: "sw-email", label: "Email address", bind: "account.email", value: S.account.email, type: "email", placeholder: "you@example.com", autocomplete: "email", inputmode: "email", hint: "We'll send a confirmation link after you finish setting up your learning space." })}
         <div class="sw-row">
           ${UI.PasswordField({ id: "sw-password", label: "Password", bind: "account.password", value: S.account.password, placeholder: "Create a password", strength: true })}
           <div class="sw-field" data-field="sw-confirm">
@@ -100,6 +106,7 @@
     validate() {
       const a = S.account, e = [];
       if (a.name.trim().length < 2) e.push(["sw-name", "Enter your full name."]);
+      if (!/^[a-z][a-z0-9_]{2,23}$/.test(a.username.trim().toLowerCase())) e.push(["sw-username", "Use 3–24 characters: start with a letter, then use letters, numbers or underscores."]);
       if (!a.email.trim()) e.push(["sw-email", "Enter your email address."]);
       else if (!EMAIL.test(a.email.trim())) e.push(["sw-email", "Enter a valid email address, like you@example.com."]);
       if (!UI.passwordValid(a.password)) e.push(["sw-password", "Use at least 8 characters, including a letter and a number."]);
@@ -111,85 +118,27 @@
     async beforeNext() {
       const email = S.account.email.trim().toLowerCase();
       S.account.email = email;
-      if (S.verify.email === email && S.verify.code) return {};
-      // New (or changed) email: "send" a fresh code. Stand-in for the email service.
-      await busy("Sending code…", 700);
-      S.verify = { code: newCode(), email, verified: false, resendAt: Date.now() + RESEND_SECONDS * 1000, entered: "" };
-      return { to: 1 };
+      S.account.username = S.account.username.trim().toLowerCase();
+      S.verify.email = email;
+      return {};
     },
   };
 
-  let otp = null;
   const EmailVerificationStep = {
-    label: "Verify email",
+    label: "Email confirmation",
     render: () => `
-      ${head("Email verification", "Let's verify it's really you.", `Enter the 6-digit code we sent to <b class="sw-break">${esc(S.verify.email)}</b>. <button type="button" class="sw-link" data-go="0">Change email</button>`)}
+      ${head("Email confirmation", "Your email will be verified securely.", `After you finish setting up your learning space, Supabase will send a confirmation link to <b class="sw-break">${esc(S.verify.email)}</b>. <button type="button" class="sw-link" data-go="0">Change email</button>`)}
       <div class="sw-inbox" role="note">
         <span class="sw-inbox-ic">${icon("bell")}</span>
-        <div><b>Prototype inbox</b><span>No email is sent in this prototype. Your code is <code class="sw-code">${S.verify.code.slice(0, 3)} ${S.verify.code.slice(3)}</code></span></div>
-        <button type="button" class="sw-mini" data-autofill ${S.verify.verified ? "hidden" : ""}>Paste it for me</button>
+        <div><b>One more step at the end</b><span>We create your account after you review your details. Then open the link in your inbox to verify your email.</span></div>
       </div>
-      <div class="sw-field sw-otp-field" data-field="sw-otp">
-        <p class="sw-label" id="sw-otp-label">Verification code</p>
-        <div class="sw-otp" id="sw-otp" role="group" aria-labelledby="sw-otp-label" aria-describedby="sw-otp-err sw-otp-status"></div>
-        <p class="sw-err" id="sw-otp-err"></p>
-        <p class="sw-otp-status" id="sw-otp-status" aria-live="polite"></p>
-      </div>
-      <p class="sw-resend" aria-live="polite"><span data-countdown></span><button type="button" class="sw-link" data-resend hidden>Resend code</button></p>`,
-    mount(el) {
-      otp = UI.OTPInput(el.querySelector("#sw-otp"), {
-        value: S.verify.verified ? S.verify.code : S.verify.entered,
-        onChange: (v) => { S.verify.entered = v; if (v.length < 6) clearError("sw-otp"); },
-        onComplete: (v) => checkCode(v),
-      });
-      if (S.verify.verified) markVerified(el, false);
-      const tick = () => {
-        const left = Math.max(0, Math.ceil((S.verify.resendAt - Date.now()) / 1000));
-        const cd = el.querySelector("[data-countdown]"), btn = el.querySelector("[data-resend]");
-        if (!cd) return;
-        if (S.verify.verified) { cd.textContent = ""; btn.hidden = true; return; }
-        cd.textContent = left ? `Didn't get it? You can resend in 0:${String(left).padStart(2, "0")}` : "Didn't get it?";
-        btn.hidden = left > 0;
-      };
-      tick();
-      const timer = setInterval(tick, 1000);
-      onLeave(() => clearInterval(timer));
-      if (!S.verify.verified) setTimeout(() => otp?.focus(), reduced() ? 0 : 460);
-    },
-    validate() {
-      if (S.verify.verified) return [];
-      return [["sw-otp", S.verify.entered.length < 6 ? "Enter all 6 digits of the code." : "That code doesn't match. Check it and try again."]];
-    },
-    async beforeNext() {
-      if (S.verify.verified) return {};
-      return checkCode(S.verify.entered) ? {} : { stop: true };
-    },
+      <p class="sw-hint">No email is sent yet. The confirmation link is sent when you create your account on the review step.</p>`,
+    validate: () => [],
   };
-  function checkCode(v) {
-    const el = stepEl();
-    if (v === S.verify.code) {
-      S.verify.verified = true;
-      markVerified(el, true);
-      return true;
-    }
-    otp?.setState("error");
-    showErrors([["sw-otp", "That code doesn't match. Check it and try again."]], false);
-    return false;
-  }
-  function markVerified(el, fresh) {
-    otp?.setState("success");
-    clearError("sw-otp");
-    el.querySelector("#sw-otp-status").innerHTML = `${icon("check-circle")} Email verified`;
-    el.querySelector("#sw-otp-status").classList.add("is-ok");
-    el.querySelector("[data-autofill]")?.setAttribute("hidden", "");
-    updateChrome();
-    if (fresh) setTimeout(() => { if (S.step === 1 && S.verify.verified) next(); }, reduced() ? 300 : 950);
-  }
-
   const AcademicPathStep = {
     label: "Academic path",
     render: () => `
-      ${head("Your academic path", "What are you currently studying?", "Help us personalize your Recalro experience.")}
+      ${head("Your academic path", "What are you currently studying?", "Use your real school, level and course details. They will help us match the right past questions when verified papers become available.")}
       ${UI.ChoiceGroup({ id: "sw-path", legend: "Academic path", cls: "sw-group-tiles sw-legend-hidden", content: D.PATHS.map((p) => UI.SelectionCard({ name: "sw-path", value: p.id, checked: S.path === p.id, title: p.title, desc: p.desc, img: p.img, bind: "path" })).join("") })}`,
     validate: () => (S.path ? [] : [["sw-path", "Choose the option that fits you best."]]),
   };
@@ -210,7 +159,7 @@
       if (k === "university") {
         const levels = D.levelsFor(a.country);
         body = `
-          ${UI.SelectField({ id: "sw-country", label: "Country", bind: b("country"), value: a.country || "", options: D.COUNTRIES, placeholder: "Select your country" })}
+          ${countryField(k)}
           ${institutionField(k)}
           <div class="sw-row">
             ${UI.FormField({ id: "sw-faculty", label: "Faculty or school", bind: b("faculty"), value: a.faculty || "", placeholder: "e.g. Faculty of Engineering" })}
@@ -220,20 +169,20 @@
           <div class="sw-reveal" data-reveal="level" ${a.level === "Other" ? "" : "hidden"}>${UI.FormField({ id: "sw-level-other", label: "Your level", bind: b("levelOther"), value: a.levelOther || "", placeholder: "e.g. Direct entry, Foundation year" })}</div>`;
       } else if (k === "secondary") {
         body = `
-          ${UI.SelectField({ id: "sw-country", label: "Country", bind: b("country"), value: a.country || "", options: D.COUNTRIES, placeholder: "Select your country" })}
-          ${UI.FormField({ id: "sw-school", label: "School name", bind: b("school"), value: a.school || "", placeholder: "e.g. Queen's College, Lagos", optional: true, autocomplete: "organization" })}
+          ${countryField(k)}
+          ${UI.FormField({ id: "sw-school", label: "School name", bind: b("school"), value: a.school || "", placeholder: "Type your school's full name", autocomplete: "organization", hint: "Use the name on your school records so future papers can be matched correctly." })}
           ${UI.ChoiceGroup({ id: "sw-grade", legend: "Current class or grade", content: chips("radio", "sw-grade", b("grade"), D.classesFor(a.country), a.grade) })}
           ${UI.ChoiceGroup({ id: "sw-exams", legend: "Examinations you're preparing for", optional: true, hint: "Choose all that apply.", content: chips("checkbox", "sw-exams", b("exams"), D.examsFor(a.country), a.exams) })}`;
       } else if (k === "postgraduate") {
         body = `
-          ${UI.SelectField({ id: "sw-country", label: "Country", bind: b("country"), value: a.country || "", options: D.COUNTRIES, placeholder: "Select your country", optional: true, hint: "Narrows the institution search." })}
+          ${countryField(k, true)}
           ${institutionField(k)}
           ${UI.FormField({ id: "sw-field", label: "Field of study", bind: b("field"), value: a.field || "", placeholder: "e.g. Structural Engineering" })}
           ${UI.SelectField({ id: "sw-programme", label: "Programme", bind: b("programme"), value: a.programme || "", options: D.PROGRAMMES, placeholder: "Select your programme" })}
           ${UI.ChoiceGroup({ id: "sw-stage", legend: "Current study stage", content: chips("radio", "sw-stage", b("stage"), D.PG_STAGES, a.stage) })}`;
       } else if (k === "professional") {
         body = `
-          ${UI.SelectField({ id: "sw-country", label: "Country", bind: b("country"), value: a.country || "", options: D.COUNTRIES, placeholder: "Select your country" })}
+          ${countryField(k)}
           ${UI.ChoiceGroup({ id: "sw-cert", legend: "Certification or examination", content: chips("radio", "sw-cert", b("cert"), D.CERTS, a.cert) })}
           <div class="sw-reveal" data-reveal="cert" ${a.cert === "Other" ? "" : "hidden"}>${UI.FormField({ id: "sw-cert-other", label: "Which certification?", bind: b("certOther"), value: a.certOther || "", placeholder: "e.g. CIMA, CompTIA Security+" })}</div>
           <div class="sw-row">
@@ -252,21 +201,40 @@
       const input = el.querySelector("#sw-inst");
       if (!input) return;
       const a = A();
-      UI.InstitutionSearch(input, el.querySelector("#sw-inst-list"), {
-        getOptions: () => institutionsFor(A().country),
+      let remote = [], queryId = 0, timer = 0;
+      const search = UI.InstitutionSearch(input, el.querySelector("#sw-inst-list"), {
+        getOptions: () => [...new Set([...institutionsFor(A().country), ...remote.map((item) => item.name)])],
+        getSuggested: () => remote.map((item) => item.name),
         onSelect: ({ notListed, value, typing }) => {
           clearError("sw-inst");
-          if (typing) { a.institution = value; return; }
+          if (typing) { a.institution = value; a.institutionRor = ""; return; }
           a.notListed = !!notListed;
           const reveal = el.querySelector('[data-reveal="inst"]');
           reveal.hidden = !notListed;
           if (notListed) {
             a.institution = "";
+            a.institutionRor = "";
             input.value = "";
             if (!a.institutionCustom && value) { a.institutionCustom = value; el.querySelector("#sw-inst-custom").value = value; }
             el.querySelector("#sw-inst-custom").focus();
-          } else a.institution = value;
+          } else { a.institution = value; a.institutionRor = remote.find((item) => item.name === value)?.id || ""; }
         },
+      });
+      input.addEventListener("input", () => {
+        const q = input.value.trim(), id = ++queryId;
+        clearTimeout(timer);
+        if (q.length < 3) { remote = []; search.refresh(); return; }
+        timer = setTimeout(async () => {
+          try {
+            const params = new URLSearchParams({ q, country:countryName(A()) });
+            const response = await fetch(`/api/institutions?${params}`);
+            if (!response.ok) return;
+            const data = await response.json();
+            if (id !== queryId || !input.isConnected) return;
+            remote = Array.isArray(data.items) ? data.items : [];
+            search.refresh();
+          } catch { /* Keep the local list and the manual institution path available. */ }
+        }, 280);
       });
     },
     validate() {
@@ -281,6 +249,7 @@
         if (a.level === "Other") need(a.levelOther, "sw-level-other", "Tell us your level.");
       } else if (k === "secondary") {
         need(a.country, "sw-country", "Select your country.");
+        need(a.school, "sw-school", "Enter your school's full name.");
         need(a.grade, "sw-grade", "Choose your class or grade.");
       } else if (k === "postgraduate") {
         const inst = validInstitution(a); if (inst) e.push(inst);
@@ -295,6 +264,7 @@
       } else if (k === "independent") {
         need(a.topics, "sw-topics", "Tell us what you'd like to learn.");
       } else e.push(["sw-title-3", "Choose an academic path first."]);
+      if (a.country === "Other") need(a.countryOther, "sw-country-other", "Enter your country name.");
       return e;
     },
   };
@@ -337,13 +307,25 @@
     const a = A(), rows = [];
     const add = (k, v) => { if (v && (!Array.isArray(v) || v.length)) rows.push([k, Array.isArray(v) ? v.join(", ") : v]); };
     const inst = a.notListed ? a.institutionCustom : a.institution;
-    if (S.path === "university") { add("Country", a.country); add("Institution", inst); add("Faculty or school", a.faculty); add("Department / course", a.department); add("Level", a.level === "Other" ? a.levelOther : a.level); }
-    if (S.path === "secondary") { add("Country", a.country); add("School", a.school); add("Class or grade", a.grade); add("Exams", a.exams); }
-    if (S.path === "postgraduate") { add("Institution", inst); add("Field of study", a.field); add("Programme", a.programme); add("Stage", a.stage); }
-    if (S.path === "professional") { add("Country", a.country); add("Certification", a.cert === "Other" ? a.certOther : a.cert); add("Professional field", a.proField); add("Exam date", a.examDate && new Date(a.examDate + "T00:00").toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })); }
+    if (S.path === "university") { add("Country", countryName(a)); add("Institution", inst); add("Faculty or school", a.faculty); add("Department / course", a.department); add("Level", a.level === "Other" ? a.levelOther : a.level); }
+    if (S.path === "secondary") { add("Country", countryName(a)); add("School", a.school); add("Class or grade", a.grade); add("Exams", a.exams); }
+    if (S.path === "postgraduate") { add("Country", countryName(a)); add("Institution", inst); add("Field of study", a.field); add("Programme", a.programme); add("Stage", a.stage); }
+    if (S.path === "professional") { add("Country", countryName(a)); add("Certification", a.cert === "Other" ? a.certOther : a.cert); add("Professional field", a.proField); add("Exam date", a.examDate && new Date(a.examDate + "T00:00").toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })); }
     if (S.path === "independent") { add("Interests", a.topics); add("Skills", [...(a.skills || []), ...(a.skillsOther ? [a.skillsOther] : [])]); }
     return rows;
   };
+  function makeProfile() {
+    const a = A(), inst = a.notListed ? a.institutionCustom : a.institution;
+    return {
+      name: S.account.name.trim().replace(/\s+/g, " "), username: S.account.username, email: S.account.email,
+      onboarding: {
+        path: S.path, country: countryName(a), institution: inst || a.school || "", institutionRorId: a.institutionRor || "", username: S.account.username, details: Object.fromEntries(pathDetails()),
+        interests: S.interests.map((id) => (id === "other" ? S.interestsOther : D.INTERESTS.find((i) => i.id === id)?.label)),
+        goals: S.goals.map((id) => D.GOALS.find((g) => g.id === id)?.label),
+        minutes: S.minutes, completedAt: new Date().toISOString(),
+      },
+    };
+  }
   const ProfileReviewStep = {
     label: "Review",
     render() {
@@ -356,7 +338,7 @@
       return `
         ${head("Review", "Your learning space is almost ready.", "Check your details. You can edit any section before you finish.")}
         <div class="sw-review">
-          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim())}</b><small>${esc(S.account.email)} <span class="sw-verified">${icon("check-circle")}Verified</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
+          <div class="sw-rv-hero"><span class="sw-avatar">${esc(firstName()[0]?.toUpperCase() || "R")}</span><span><b>${esc(S.account.name.trim())}</b><small>${esc(S.account.email)} <span class="sw-verified">${icon("mail")}Verify by email link</span></small></span><button type="button" class="sw-edit" data-edit="0" aria-label="Edit account details">${icon("edit")}Edit</button></div>
           ${section("Academic path", 2, `<p class="sw-rv-path"><img src="${pathMeta()?.img}" alt="" width="200" height="200">${esc(pathMeta()?.title || "")}</p>`)}
           ${section("Academic details", 3, dl(pathDetails()))}
           ${section("Learning interests", 4, tagList(interests))}
@@ -364,6 +346,18 @@
         </div>`;
     },
     validate: () => [],
+    async beforeNext() {
+      if (S.accountCreated || !opts.onCreateAccount) return {};
+      try {
+        const result = await busy("Creating account...", () => opts.onCreateAccount({ profile: makeProfile(), password: S.account.password }));
+        S.accountCreated = !!result?.configured;
+        S.verify.confirmationPending = !!result?.confirmationPending;
+        return {};
+      } catch (error) {
+        window.R.toast(error.message || "We couldn't create your account. Please try again.", { icon: "info" });
+        return { stop: true };
+      }
+    },
   };
 
   const WelcomeStep = {
@@ -378,6 +372,14 @@
         independent: a.topics,
       }[S.path];
       const mins = D.MINUTES.find((m) => m.v === S.minutes);
+      if (S.verify.confirmationPending) return `
+        <div class="sw-welcome">
+          <div class="sw-welcome-mark" aria-hidden="true"><span class="sw-orbit"></span><span class="sw-orbit sw-orbit-2"></span><img src="assets/recalro-logo.png" alt="" width="1254" height="1254"></div>
+          <span class="sw-kicker">One last step</span>
+          <h1 id="sw-title-7" tabindex="-1">Check your email to finish.</h1>
+          <p class="sw-greet">We sent a confirmation link to <b>${esc(S.account.email)}</b>. Open it to verify your address, then sign in to continue.</p>
+          <p class="sw-proto">If you don't see the message, check your spam folder. You can request another link from the sign-in screen.</p>
+        </div>`;
       return `
         <div class="sw-welcome">
           <div class="sw-welcome-mark" aria-hidden="true"><span class="sw-orbit"></span><span class="sw-orbit sw-orbit-2"></span><img src="assets/recalro-logo.png" alt="" width="1254" height="1254"></div>
@@ -389,7 +391,7 @@
             <li style="--i:1"><span>${icon("cards")}</span><b>Try a 5-minute review</b><small>Starter cards are waiting.</small></li>
             <li style="--i:2"><span>${icon("sparkles")}</span><b>Meet your AI tutor</b><small>Ask about any topic.</small></li>
           </ul>
-          <p class="sw-proto">${icon("info")}Prototype: no account was created. Your name and email stay in this browser only.</p>
+          <p class="sw-proto">${icon("info")}${S.accountCreated ? "Your profile and learning progress will sync to your account." : "Prototype: no account was created. Your name and email stay in this browser only."}</p>
         </div>`;
     },
     mount(el) {
@@ -431,7 +433,7 @@
     root.addEventListener("change", onInput);
     // Enter in a text field moves forward, like submitting a form.
     root.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && e.target.matches("input:not([type=checkbox]):not([type=radio]):not(.sw-otp-cell):not([role=combobox])") && !e.isComposing) { e.preventDefault(); next(); }
+      if (e.key === "Enter" && e.target.matches("input:not([type=checkbox]):not([type=radio]):not([role=combobox])") && !e.isComposing) { e.preventDefault(); next(); }
     });
     root.querySelector(".sw-dialog").addEventListener("click", (e) => { if (e.target.matches("dialog, [data-close-dialog], [data-close-dialog] *")) e.currentTarget.close(); });
   }
@@ -452,14 +454,8 @@
     if (legal) {
       const dlg = root.querySelector(".sw-dialog"), terms = legal.dataset.legal === "terms";
       dlg.querySelector("h2").textContent = terms ? "Terms of Service" : "Privacy Policy";
-      dlg.querySelector("p").textContent = `Recalro's ${terms ? "Terms of Service" : "Privacy Policy"} will be published before launch. In this prototype nothing you enter leaves your browser, passwords are never saved and no account is created.`;
+      dlg.querySelector("p").textContent = "Recalro will store your account profile and learning activity in its configured Supabase project. Read the published Terms of Service and Privacy Policy before launch."
       dlg.showModal(); return;
-    }
-    if (t.closest("[data-autofill]")) { otpFill(); return; }
-    if (t.closest("[data-resend]")) {
-      S.verify.code = newCode(); S.verify.resendAt = Date.now() + RESEND_SECONDS * 1000; S.verify.entered = "";
-      render(0); announce("A new code was sent. Check the prototype inbox.");
-      return;
     }
     const goBtn = t.closest("[data-go]");
     if (goBtn) { go(Number(goBtn.dataset.go), -1); return; }
@@ -468,15 +464,6 @@
     const seg = t.closest("[data-seg]");
     if (seg && !seg.disabled) { const n = Number(seg.dataset.seg); if (n < S.step) go(n, -1); }
   }
-  function otpFill() {
-    const cells = root.querySelectorAll(".sw-otp-cell");
-    if (!cells.length) return;
-    // Simulates a paste so the same code path as a real paste is exercised.
-    const dt = new DataTransfer(); dt.setData("text", S.verify.code);
-    cells[0].dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
-    if (S.verify.entered !== S.verify.code) { [...cells].forEach((c, i) => (c.value = S.verify.code[i])); S.verify.entered = S.verify.code; checkCode(S.verify.code); }
-  }
-
   function onInput(e) {
     const el = e.target, bind = el.dataset?.bind;
     if (!bind) return;
@@ -500,7 +487,8 @@
       if (a.level && !D.levelsFor(a.country).includes(a.level)) a.level = "";
       if (a.grade && !D.classesFor(a.country).includes(a.grade)) a.grade = "";
       if (a.exams) a.exams = a.exams.filter((x) => D.examsFor(a.country).includes(x));
-      if (a.institution && !institutionsFor(a.country).includes(a.institution)) a.institution = "";
+      a.institution = "";
+      a.institutionRor = "";
       render(0); root.querySelector("#sw-country")?.focus();
     }
     updateChrome();
@@ -537,10 +525,10 @@
   async function next() {
     if (btnNext.getAttribute("aria-busy") === "true") return;
     const step = STEPS[S.step];
-    if (S.step === STEPS.length - 1) { complete(); return; }
+    if (S.step === STEPS.length - 1) { try { await complete(); } catch (error) { window.R.toast(error.message || "Something went wrong. Please try again.", { icon: "info" }); } return; }
     const errors = step.validate();
-    // On the code step, a full 6-digit entry is checked by beforeNext instead.
-    if (errors.length && !(S.step === 1 && S.verify.entered.length === 6)) { if (S.step === 1) otp?.setState("error"); showErrors(errors); return; }
+
+    if (errors.length) { showErrors(errors); return; }
     const res = (await step.beforeNext?.()) || {};
     if (res.stop) return;
     let to = res.to ?? S.step + 1;
@@ -559,10 +547,11 @@
     focusStep(false);
     announce(`Step ${n + 1} of ${TOTAL}: ${STEPS[n].label}`);
   }
-  function busy(label, ms) {
+  async function busy(label, task) {
     btnNext.setAttribute("aria-busy", "true"); btnNext.disabled = true;
     root.querySelector(".sw-next-label").textContent = label;
-    return new Promise((r) => setTimeout(() => { btnNext.removeAttribute("aria-busy"); btnNext.disabled = false; r(); }, ms));
+    try { return await task(); }
+    finally { btnNext.removeAttribute("aria-busy"); btnNext.disabled = false; updateChrome(); }
   }
   function announce(msg) { live.textContent = ""; setTimeout(() => (live.textContent = msg), 60); }
 
@@ -612,23 +601,19 @@
     btnBack.tabIndex = n === 0 || last ? -1 : 0;
     let label = "Continue";
     if (n === 0) label = "Create account";
-    if (n === 1) label = S.verify.verified ? "Continue" : "Verify email";
+
     if (n === 5 && !S.goals.length && !S.minutes) label = "Skip for now";
     if (S.returnTo != null && n < REVIEW && n !== 1) label = "Save and review";
     if (n === REVIEW) label = "Create my learning space";
-    if (last) label = "Continue to dashboard";
+    if (last) label = S.verify.confirmationPending ? "Go to sign in" : "Continue to dashboard";
     if (btnNext.getAttribute("aria-busy") !== "true") root.querySelector(".sw-next-label").textContent = label;
     btnNext.classList.toggle("is-final", n >= REVIEW);
     if (journey) journey.innerHTML = STEPS.slice(0, REVIEW + 1).map((s, i) => `<li class="${i < n ? "is-done" : i === n ? "is-current" : ""}"><span>${i < n ? icon("check") : i + 1}</span>${s.label}</li>`).join("");
   }
 
-  function complete() {
-    const a = A(), inst = a.notListed ? a.institutionCustom : a.institution;
-    const profile = {
-      name: S.account.name.trim().replace(/\s+/g, " "), email: S.account.email,
-      onboarding: { path: S.path, institution: inst || "", details: Object.fromEntries(pathDetails()), interests: S.interests.map((id) => (id === "other" ? S.interestsOther : D.INTERESTS.find((i) => i.id === id)?.label)), goals: S.goals.map((id) => D.GOALS.find((g) => g.id === id)?.label), minutes: S.minutes, completedAt: new Date().toISOString() },
-    };
-    opts.onComplete?.(profile);
+  async function complete() {
+    const profile = { ...makeProfile(), confirmationPending: S.verify.confirmationPending };
+    await opts.onComplete?.(profile);
     reset();
   }
   function reset() { leaveFns.forEach((fn) => fn()); leaveFns = []; S = blank(); if (viewport) viewport.innerHTML = ""; }

@@ -73,13 +73,14 @@
   });
 
   function PastQuestionsDashboard(view) {
-    const p = performance(), eksu = inst("eksu");
+    const p = performance(), study = R.state.profile.onboarding || {};
+    const studyLabel = [study.institution, study.details?.Level || study.details?.["Class or grade"]].filter(Boolean).join(" · ");
     const last = [...store().attempts].reverse()[0];
     const cont = last ? coll(last.collection) : D.collections[0];
     view.innerHTML = `
       <section class="pq-hero">
         <div class="pq-hero-copy">
-          <span class="pq-inst" title="${esc(eksu.name)}"><b>${esc(eksu.short)}</b>${esc(eksu.name)}</span>
+          <span class="pq-inst"><b>${studyLabel ? "YOUR STUDY PROFILE" : "PRACTICE DEMO"}</b>${esc(studyLabel || "Sample question bank")}</span>
           <h1>Past Questions</h1>
           <p>Practise smarter. Understand your mistakes. Walk into your examinations prepared.</p>
           <div class="pq-hero-actions">
@@ -90,7 +91,7 @@
         <div class="pq-hero-ring">${ui.ring(p.readiness ?? 0, { size: 128, stroke: 11, tone: "orange", label: p.readiness == null ? "—" : `${p.readiness}%`, sub: "readiness", aria: p.readiness == null ? "Readiness appears after 20 answers" : `Readiness ${p.readiness}%` })}
           <small>${p.readiness == null ? `Answer ${Math.max(0, 20 - p.attempted)} more questions to see your readiness` : "70% recent accuracy · 30% bank coverage"}</small></div>
       </section>
-      <p class="pq-notice">${icon("info")}<span><b>Demonstration question bank.</b> These are original practice questions written for this prototype and organised like EKSU 100-level courses. They are not official EKSU past questions, and Recalro is not affiliated with or endorsed by Ekiti State University. Verified past papers will appear here once the question bank is connected.</span></p>
+      <p class="pq-notice">${icon("info")}<span><b>No verified papers have been imported for your profile yet.</b> The practice below is original demo material arranged like EKSU 100-level courses. It is not an official EKSU past paper; Recalro is not affiliated with Ekiti State University. Downloading real papers will become available only after a reviewed source and payment access are in place.</span></p>
 
       <section class="pq-perf" aria-label="Your performance">
         ${tile("Attempted", p.attempted, "clipboard", "questions answered")}

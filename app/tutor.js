@@ -14,7 +14,8 @@
   const phone = () => window.matchMedia("(max-width: 767px)").matches;
   const wait = (ms) => new Promise((r) => setTimeout(r, R.reducedMotion() ? 0 : ms));
   const blobToBase64 = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
-  async function speakText(text) { if (!text) return; try { const response = await fetch("/api/speech", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ text:text.slice(0,4000) }) }); if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Speech generation failed."); } const audio = new Audio(URL.createObjectURL(await response.blob())); audio.onended = () => URL.revokeObjectURL(audio.src); await audio.play(); } catch (err) { if (window.speechSynthesis) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text.slice(0,12000)); window.speechSynthesis.speak(utterance); } else R.toast(err.message || "Read aloud is unavailable.", { icon:"info" }); } }
+  async function apiAuthHeaders() { await window.RecalroAuth?.ready; const token = window.RecalroAuth?.accessToken?.(); if (!token) throw new Error("Sign in to use Recalro AI."); return { Authorization:`Bearer ${token}` }; }
+  async function speakText(text) { if (!text) return; try { const response = await fetch("/api/speech", { method:"POST", headers:{"Content-Type":"application/json",...(await apiAuthHeaders())}, body:JSON.stringify({ text:text.slice(0,4000) }) }); if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Speech generation failed."); } const audio = new Audio(URL.createObjectURL(await response.blob())); audio.onended = () => URL.revokeObjectURL(audio.src); await audio.play(); } catch (err) { if (window.speechSynthesis) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text.slice(0,12000)); window.speechSynthesis.speak(utterance); } else R.toast(err.message || "Read aloud is unavailable.", { icon:"info" }); } }
 
   /* ======================= Markdown + maths (AIResponse) ======================= */
   const SYM = { Delta: "Δ", delta: "δ", eta: "η", rho: "ρ", theta: "θ", pi: "π", alpha: "α", beta: "β", gamma: "γ", omega: "ω", Omega: "Ω", sigma: "σ", Sigma: "Σ", mu: "μ", lambda: "λ", epsilon: "ε", phi: "φ", tau: "τ", geq: "≥", ge: "≥", leq: "≤", le: "≤", neq: "≠", approx: "≈", times: "×", cdot: "·", pm: "±", to: "→", rightarrow: "→", infty: "∞", sum: "∑", int: "∫", partial: "∂", nabla: "∇", degree: "°" };
@@ -318,7 +319,7 @@
       try {
         const history = (chat?.messages || []).slice(0, -1).filter((x) => x.role === "user" || x.role === "assistant").slice(-12).map((x) => ({ role: x.role, content: x.role === "assistant" ? (x.md || x.text || "") : (x.text || "") }));
         const payload = { message: prompt, subject: R.subject(subject).name, mode: learningMode, history, attachment: attachment?.payload || null };
-        const response = await fetch("/api/tutor", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        const response = await fetch("/api/tutor", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify(payload) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "The tutor could not respond. Please try again.");
         m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${R.subject(subject).name}`, `Explain that more simply`], at: new Date().toISOString() };
@@ -359,7 +360,7 @@
       onAttach: (a) => { attachment = a; }, onUnattach: () => { attachment = null; },
       onMode: (m) => { learningMode = m; },
       onVoice: async (blob) => {
-        try { const b64 = await blobToBase64(blob); const r = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ audio: b64, mimeType: blob.type || "audio/webm" }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); composer.setValue(d.text || ""); }
+        try { const b64 = await blobToBase64(blob); const r = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify({ audio: b64, mimeType: blob.type || "audio/webm" }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); composer.setValue(d.text || ""); }
         catch (err) { R.toast(err.message || "Voice transcription failed.", { icon: "info" }); }
       },
     });

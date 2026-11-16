@@ -152,7 +152,7 @@
   }
 
   /* ---------- InstitutionSearch: ARIA 1.2 combobox with "not listed" escape hatch ---------- */
-  function InstitutionSearch(input, list, { getOptions, onSelect, notListed = "My institution isn't listed" }) {
+  function InstitutionSearch(input, list, { getOptions, getSuggested = () => [], onSelect, notListed = "My institution isn't listed" }) {
     let active = -1, items = [];
     const NOT = "__not_listed__";
     const mark = (text, q) => {
@@ -164,7 +164,7 @@
       const q = input.value.trim();
       const all = getOptions();
       const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-      items = all.filter((o) => words.every((w) => o.toLowerCase().includes(w))).slice(0, 8);
+      items = [...new Set([...all.filter((o) => words.every((w) => o.toLowerCase().includes(w))), ...getSuggested()])].slice(0, 8);
       list.innerHTML = items.map((o, i) => `<li role="option" id="${list.id}-${i}" data-i="${i}" aria-selected="false">${mark(o, q)}</li>`).join("")
         + (q && !items.length ? `<li class="sw-combo-empty" aria-hidden="true">No match in our sample list</li>` : "")
         + `<li role="option" id="${list.id}-not" data-i="${items.length}" class="sw-combo-not" aria-selected="false">${icon("plus")}${esc(notListed)}</li>`;
@@ -203,7 +203,7 @@
       else if (e.key === "Escape" && !list.hidden) { e.preventDefault(); e.stopPropagation(); close(); }
     });
     list.addEventListener("pointerdown", (e) => { const li = e.target.closest("[role=option]"); if (li) { e.preventDefault(); choose(Number(li.dataset.i)); } });
-    return { close };
+    return { close, refresh() { if (!list.hidden) render(); } };
   }
 
   window.RecalroSignupUI = { FormField, SelectField, PasswordField, PasswordStrengthIndicator, updateStrength, passwordScore, passwordValid, SelectionCard, Chip, ChoiceGroup, OTPInput, InstitutionSearch };

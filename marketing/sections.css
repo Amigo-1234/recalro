@@ -215,6 +215,13 @@
    Feature theatre
    ========================================================================== */
 .mk-th { display: grid; grid-template-columns: 292px minmax(0, 1fr); gap: 20px; align-items: start; }
+.mk-th-cue { display: none; }
+.mk-desktop-gallery { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: -32px; }
+.mk-desktop-gallery figure { position: relative; height: 230px; margin: 0; overflow: hidden; border-radius: 19px; background: var(--mk-surface-2); }
+.mk-desktop-gallery img { width: 100%; height: 100%; object-fit: cover; transition: transform .65s var(--mk-ease); }
+.mk-desktop-gallery figure:hover img { transform: scale(1.07); }
+.mk-desktop-gallery figcaption { position: absolute; inset: auto 0 0; padding: 38px 12px 14px; background: linear-gradient(transparent, rgba(13, 19, 22, .8)); color: #fff; font: 700 12px/1.3 Manrope, sans-serif; }
+@media (max-width: 1000px) { .mk-desktop-gallery { display: none; } }
 .mk-th-tabs { position: sticky; top: 96px; display: grid; gap: 4px; }
 .mk-th-tab {
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; border: 1px solid transparent; border-radius: 16px;
@@ -433,9 +440,30 @@
 .dm-rw-foot { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .dm-rw-msg { margin: 0; font-size: 14px; font-weight: 700; color: var(--mk-orange-ink); min-height: 20px; }
 
+/* Personal roadmap preview inside the feature theatre. */
+.dm-roadmap { display: grid; gap: 17px; }
+.dm-roadmap-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.dm-roadmap-kicker { color: var(--mk-teal-deep); font: 800 11px Manrope, sans-serif; letter-spacing: .12em; }
+.dm-roadmap-top strong { color: var(--mk-ink); font: 700 13px "DM Sans", sans-serif; }
+.dm-roadmap-progress { height: 10px; overflow: hidden; border-radius: 99px; background: var(--mk-surface-2); }
+.dm-roadmap-progress i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--mk-teal-600), var(--mk-teal-bright)); transition: width .55s cubic-bezier(.2,.85,.25,1); }
+.dm-roadmap-steps { display: grid; gap: 9px; }
+.dm-roadmap-step { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 10px 14px; text-align: left; border: 1px solid var(--mk-line); border-radius: 16px; background: var(--mk-surface); color: var(--mk-ink); cursor: pointer; transition: transform .28s, border-color .28s, box-shadow .28s, background .28s; }
+.dm-roadmap-step:hover { transform: translateX(3px); border-color: var(--mk-teal); }
+.dm-roadmap-step.is-current { border-color: var(--mk-teal); background: var(--mk-teal-soft); box-shadow: var(--mk-shadow-sm); }
+.dm-roadmap-step.is-done .dm-roadmap-icon { background: var(--mk-teal-600); color: #fff; }
+.dm-roadmap-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--mk-teal-soft); color: var(--mk-teal-deep); }
+.dm-roadmap-icon .ic { width: 20px; height: 20px; }
+.dm-roadmap-step > span:nth-child(2) { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.dm-roadmap-step b { font: 800 14px Manrope, sans-serif; }
+.dm-roadmap-step small { color: var(--mk-muted); font: 500 12px/1.35 "DM Sans", sans-serif; }
+.dm-roadmap-step > .ic { width: 17px; color: var(--mk-muted); }
+.dm-roadmap-note { margin: 0; color: var(--mk-text); font-size: 13px; }
+
 /* ---------- Theatre responsive ---------- */
 @media (max-width: 1000px) {
   .mk-th { grid-template-columns: 1fr; }
+  .mk-th-cue { display: block; margin: 0 0 4px; color: var(--mk-muted); font-size: 13px; text-align: center; }
   .mk-th-tabs { position: static; display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin: 0 -16px; padding-inline: 16px; scrollbar-width: none; }
   .mk-th-tabs::-webkit-scrollbar { display: none; }
   .mk-th-tab { flex: none; width: auto; padding: 8px 14px 8px 8px; scroll-snap-align: start; border-color: var(--mk-line); background: var(--mk-surface); border-radius: 999px; }

@@ -120,9 +120,8 @@
   /* ---------- Theme (light / dark / system) ---------- */
   const THEME_KEY = "recalro-theme", darkMq = window.matchMedia("(prefers-color-scheme: dark)");
   /* ThemeProvider: "system" follows the device; an explicit Light/Dark choice wins.
-     The body class is the single source of truth for every screen (marketing, auth,
-     app), and an inline script in index.html applies it before the first paint. */
-  R.getTheme = () => { try { return localStorage.getItem(THEME_KEY) || "system"; } catch { return "system"; } };
+     The marketing page keeps its light theme; auth and workspace follow this choice. */
+  R.getTheme = () => { try { return localStorage.getItem(THEME_KEY) || "light"; } catch { return "light"; } };
   R.resolvedTheme = () => { const t = R.getTheme(); return t === "dark" || (t === "system" && darkMq.matches) ? "dark" : "light"; };
   R.applyTheme = () => {
     const dark = R.resolvedTheme() === "dark";
@@ -170,7 +169,7 @@
       </aside>
       <div class="main">
         <header class="topbar">
-          <a class="tb-brand" href="#/app/dashboard" aria-label="Recalro dashboard"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""></a>
+          <a class="tb-brand" href="#/app/dashboard" aria-label="Recalro dashboard"><img src="assets/recalro-logo.png" width="1254" height="1254" alt=""><span class="tb-brand-word">Recalro</span></a>
           <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
           <p class="tb-title" id="tbTitle" aria-hidden="true"></p>
           <div class="tb-right">
@@ -239,7 +238,7 @@
     R.$("[data-xp-sr]").textContent = `, ${Math.round(lv.pct)}% to next level`;
     R.$("[data-xpbar]").style.setProperty("--p", `${lv.pct}%`);
     R.$$("[data-badge='due']").forEach((b) => { b.hidden = !due; b.textContent = due > 99 ? "99+" : due; });
-    const unread = R.state.notifications.filter((n) => !n.read).length;
+    const unread = R.state.settings.notificationsEnabled === false ? 0 : R.state.notifications.filter((n) => !n.read).length;
     R.$(".bell-dot").hidden = !unread;
     R.$("#bellBtn").setAttribute("aria-label", unread ? `Notifications, ${unread} unread` : "Notifications");
     R.$("#avatarBtn").innerHTML = R.ui.avatar(34);
@@ -250,6 +249,7 @@
   };
   const pulse = (sel) => R.animate(R.$(sel), [{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }], { duration: 450, easing: "cubic-bezier(.3,1.5,.5,1)" });
   R.on("change", () => { R.updateChips(); document.body.classList.toggle("reduce-motion", !!R.state.settings.reduceMotion); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && !document.getElementById("app")?.classList.contains("hidden")) R.checkReminders(); });
   R.on("earned", (res) => R.reward(res, res.anchor));
   R.refreshWith = (ctx) => { if (!current || !ctx) return; current.ctx = ctx; lastHash = ctx.hash; R.refresh(); };
   R.on("save-error", () => R.toast("Your browser couldn't save this change. Check its storage settings.", { icon: "info", tone: "toast-warn" }));
@@ -355,6 +355,7 @@
     }, onClose: () => opener?.focus() });
   }
   function notesMarkup() {
+    if (R.state.settings.notificationsEnabled === false) return `<div class="pop-empty">${icon("bell")}<p>Notifications are off.</p><a class="btn btn-soft" href="#/app/settings">Turn them on in Settings</a></div>`;
     const due = R.dueCards().length, quests = R.todaysQuests().filter((q) => !q.done).length;
     const live = [];
     if (due) live.push(`<a class="note-item live" href="#/app/review">${icon("refresh")}<span><b>${R.plural(due, "card")} due for review</b><small>From your review schedule</small></span></a>`);
@@ -508,6 +509,7 @@
     R.updateChips(true);
     document.body.classList.toggle("reduce-motion", !!R.state.settings.reduceMotion);
     document.getElementById("app").classList.remove("hidden");
+    R.checkReminders();
     // Setting the hash updates location synchronously; render now, and the
     // resulting hashchange is skipped because the hash already matches.
     if (location.hash !== `#/app/${route}`) location.hash = `#/app/${route}`;
