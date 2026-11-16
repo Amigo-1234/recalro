@@ -41,16 +41,10 @@
       let list = R.subjects();
       if (filter === "progress") list = list.filter((s) => R.subjectMastery(s.id) > 0 && R.subjectMastery(s.id) < 100);
       if (filter === "new") list = list.filter((s) => !R.lastStudied(s.id));
+      if (filter === "mine") list = list.filter((s) => !s.sample);
       if (q) list = list.filter((s) => `${s.name} ${s.field} ${(s.modules || []).map((m) => m.name).join(" ")}`.toLowerCase().includes(q));
-      const header = ui.header({ eyebrow: "My learning", title: "My subjects", desc: "Your courses, modules and study materials in one place.", actions: ui.btn("Add subject", { icon: "plus", attrs: "data-add" }) });
-      if (!R.subjects().length) {
-        view.innerHTML = `${header}${ui.empty({ icon: "book", title: "Start with your first subject", body: "Create a course or topic to organise study materials and build flashcards.", action: ui.btn("Create a subject", { icon: "plus", attrs: "data-add" }) })}`;
-        view.addEventListener("click", (e) => { if (e.target.closest("[data-add]")) addSubjectDialog(); });
-        if (ctx.query.new) setTimeout(addSubjectDialog, 50);
-        return;
-      }
-      view.innerHTML = `${header}
-        <div class="toolbar"><label class="search">${icon("search")}<input type="search" id="subjSearch" placeholder="Search subjects and modules" value="${esc(ctx.query.q || "")}" aria-label="Search subjects"></label>${ui.segmented("sfilter", [["all", "All"], ["progress", "In progress"], ["new", "Not started"]], filter)}</div>
+      view.innerHTML = `${ui.header({ eyebrow: "My learning", title: "My subjects", desc: "Your courses, modules and study materials in one place.", actions: ui.btn("Add subject", { icon: "plus", attrs: "data-add" }) })}
+        <div class="toolbar"><label class="search">${icon("search")}<input type="search" id="subjSearch" placeholder="Search subjects and modules" value="${esc(ctx.query.q || "")}" aria-label="Search subjects"></label>${ui.segmented("sfilter", [["all", "All"], ["progress", "In progress"], ["new", "Not started"], ["mine", "My subjects"]], filter)}</div>
         ${list.length ? `<div class="subject-grid">${list.map((s) => {
           const m = R.subjectMastery(s.id), due = R.dueCards(s.id).length, n = R.cards(s.id).length, last = R.lastStudied(s.id), mats = R.state.materials.filter((x) => x.subject === s.id).length;
           return `<a class="subject-card" href="#/app/subjects/${s.id}" style="--sc:${sc(s.id)}">
@@ -58,7 +52,7 @@
             <div class="sc-top"><span class="sc-icon">${icon("book")}</span>${ui.ring(m, { size: 54, stroke: 6, tone: "subject", label: R.pct(m), aria: `${Math.round(m)}% mastery` })}</div>
             <h3>${esc(s.name)}</h3><p>${esc(s.field || "")}</p>
             <div class="sc-meta"><span>${icon("map")}${R.plural((s.modules || []).length, "module")}</span><span>${icon("cards")}${R.plural(n, "card")}</span>${mats ? `<span>${icon("file")}${mats}</span>` : ""}</div>
-            <div class="sc-foot">${due ? ui.pill(`${due} due`, "teal", "refresh") : ""}<small>${last ? `Studied ${R.relTime(last)}` : "Not started"}</small></div>
+            <div class="sc-foot">${due ? ui.pill(`${due} due`, "teal", "refresh") : ""}${s.sample ? ui.sample() : ui.pill("Yours", "neutral")}<small>${last ? `Studied ${R.relTime(last)}` : "Not started"}</small></div>
           </a>`; }).join("")}
           <button type="button" class="subject-card add-card" data-add>${icon("plus")}<b>Add a subject</b><small>Organise your next learning goal</small></button></div>`
         : ui.empty({ icon: "search", title: "No subjects match", body: "Try a different search or filter.", action: ui.btn("Clear filters", { tone: "soft", attrs: "data-clear" }) })}`;
@@ -88,19 +82,22 @@
     const tabs = [{ id: "overview", label: "Overview", route: `subjects/${s.id}`, icon: "map" }, { id: "materials", label: "Materials", route: `subjects/${s.id}/materials`, icon: "file", count: mats.length || null }, { id: "cards", label: "Cards", route: `subjects/${s.id}/cards`, icon: "cards", count: cards.length }];
     let body = "";
     if (tab === "overview") body = `<div class="grid-12">
-        ${ui.card(`<ol class="module-list">${mods.map((md, i) => `<li class="module ${md.status}"><span class="module-node">${md.status === "done" ? icon("check") : i + 1}</span><div><b>${esc(md.name)}</b><small>${R.plural(md.count, "card")} · ${R.pct(md.mastery)} mastery</small>${ui.progress(md.mastery, { size: "thin", label: md.name })}</div>${md.count ? ui.link(md.status === "done" ? "Review" : "Study", `flashcards?module=${md.id}`, { tone: md.status === "active" ? "primary" : "soft", size: "sm" }) : ui.btn("Add cards", { tone: "soft", size: "sm", attrs: `data-addcard` })}</li>`).join("")}</ol>${ui.btn("Add module", { tone: "ghost", size: "sm", icon: "plus", attrs: "data-addmod" })}`, { title: "Modules", icon: "map", cls: "span-8" })}
+        ${ui.card(`<ol class="module-list">${mods.map((md, i) => `<li class="module ${md.status}"><span class="module-node">${md.status === "done" ? icon("check") : i + 1}</span><div><b>${esc(md.name)}</b><small>${R.plural(md.count, "card")} · ${R.pct(md.mastery)} mastery</small>${ui.progress(md.mastery, { size: "thin", label: md.name })}</div>${md.count ? ui.link(md.status === "done" ? "Review" : "Study", `flashcards?module=${md.id}`, { tone: md.status === "active" ? "primary" : "soft", size: "sm" }) : ui.btn("Add cards", { tone: "soft", size: "sm", attrs: `data-addcard` })}</li>`).join("")}</ol>${s.sample ? "" : ui.btn("Add module", { tone: "ghost", size: "sm", icon: "plus", attrs: "data-addmod" })}`, { title: "Modules", icon: "map", cls: "span-8" })}
         ${ui.card(`<div class="subject-actions">
             <a href="#/app/flashcards?subject=${s.id}" class="action-tile">${icon("cards")}<b>Study flashcards</b><small>${due ? `${due} due · ` : ""}${R.newCards(s.id).length} new</small></a>
+            <a href="#/app/practice?subject=${s.id}" class="action-tile">${icon("zap")}<b>Quick practice</b><small>${R.content.questions.filter((q) => q.subject === s.id).length} questions</small></a>
+            <a href="#/app/exam?subject=${s.id}" class="action-tile">${icon("clipboard")}<b>Exam simulator</b><small>Timed conditions</small></a>
             <a href="#/app/tutor?subject=${s.id}" class="action-tile">${icon("sparkles")}<b>Ask the tutor</b><small>Subject context</small></a>
+            <a href="#/app/readiness?subject=${s.id}" class="action-tile">${icon("gauge")}<b>Readiness</b><small>${R.pct(R.readiness(s.id).score)} estimated</small></a>
             <a href="#/app/roadmap?subject=${s.id}" class="action-tile">${icon("map")}<b>Roadmap</b><small>See your path</small></a></div>`, { title: "Study this subject", icon: "zap", cls: "span-4" })}</div>`;
-    if (tab === "materials") body = `${ui.card(`<label class="dropzone" id="drop"><input type="file" id="fileIn" multiple accept=".txt,.md,text/plain,text/markdown" class="sr-only">${icon("upload")}<b>Drop files here or <u>browse</u></b><small>Plain-text or Markdown files</small></label>
-        <p class="note-info">${icon("info")}<span>Text and Markdown files are read in your browser so you can summarise them with the AI tutor.</span></p>
+    if (tab === "materials") body = `${ui.card(`<label class="dropzone" id="drop"><input type="file" id="fileIn" multiple accept=".pdf,.doc,.docx,.txt,.md,.ppt,.pptx,image/*" class="sr-only">${icon("upload")}<b>Drop files here or <u>browse</u></b><small>PDF, Word, PowerPoint, images, or plain-text notes</small></label>
+        <p class="note-info">${icon("info")}<span>Plain-text and Markdown files are read here in your browser so you can summarise them right away. PDFs, Word documents and images need the document-processing service, which isn't connected in this prototype.</span></p>
         ${mats.length ? `<ul class="materials">${mats.map((f) => `<li><span class="file-ic">${icon(f.text ? "note" : "file")}</span><div><b>${esc(f.name)}</b><small>${(f.size / 1024).toFixed(0)} KB · added ${R.relTime(f.addedAt)}</small></div>
-          ${f.text ? ui.pill("Ready to summarise", "teal", "check") : ui.pill("Unsupported file", "neutral", "info")}
+          ${f.text ? ui.pill("Text extracted", "teal", "check") : ui.pill("Awaiting processing service", "neutral", "clock")}
           <div class="row-actions">${f.text ? ui.btn("Summarise", { tone: "soft", size: "sm", attrs: `data-summarize="${f.id}"` }) : ""}${ui.btn("", { tone: "ghost", size: "sm", icon: "trash", attrs: `data-delfile="${f.id}" aria-label="Remove ${esc(f.name)}"` })}</div></li>`).join("")}</ul>` : ""}`, { title: "Study materials", icon: "file" })}`;
     if (tab === "cards") body = ui.card(`<ul class="card-table">${cards.map((c) => { const st = R.state.cards[c.id]; return `<li><div><b>${esc(c.front)}</b><small>${esc(c.back)}</small></div><span class="ct-meta">${R.module(c.module)?.name ? `<small>${esc(R.module(c.module).name)}</small>` : ""}${st ? ui.pill(R.isDue(c.id) ? "Due" : `Next ${R.inDays(st.due)}`, R.isDue(c.id) ? "teal" : "neutral") : ui.pill("New", "orange")}</span></li>`; }).join("")}</ul>`, { title: `${R.plural(cards.length, "card")}`, icon: "cards", action: ui.btn("Add card", { size: "sm", icon: "plus", attrs: "data-addcard" }) });
 
-    view.innerHTML = `<div class="subject-hero" style="--sc:${sc(s.id)}"><div><a class="back-link" href="#/app/subjects">${icon("arrow-left")}All subjects</a><div class="eyebrow">${esc(s.field || "Subject")}</div><h1>${esc(s.name)}</h1>
+    view.innerHTML = `<div class="subject-hero" style="--sc:${sc(s.id)}"><div><a class="back-link" href="#/app/subjects">${icon("arrow-left")}All subjects</a><div class="eyebrow">${esc(s.field || "Subject")} ${s.sample ? ui.sample("Sample course") : ""}</div><h1>${esc(s.name)}</h1>
         <div class="hero-stats"><span><b>${R.pct(m)}</b> mastery</span><span><b>${cards.length}</b> cards</span><span><b>${due}</b> due</span><span><b>${(s.modules || []).length}</b> modules</span></div></div>
         ${ui.ring(m, { size: 104, stroke: 10, tone: "subject", label: R.pct(m), sub: "mastery" })}</div>
       ${ui.tabs(tabs, tab, "Subject sections")}${body}`;
@@ -114,15 +111,14 @@
     const fileIn = R.$("#fileIn", view), drop = R.$("#drop", view);
     if (fileIn) {
       const handle = async (files) => {
-        const supported = files.filter((file) => /\.(txt|md)$/i.test(file.name) || ["text/plain", "text/markdown"].includes(file.type));
-        if (supported.length !== files.length) R.toast("Only plain-text and Markdown files are supported here.", { icon: "info" });
-        for (const file of supported) {
+        for (const file of files) {
           const rec = { id: R.uid(), subject: s.id, name: file.name, size: file.size, type: file.type, addedAt: new Date().toISOString(), text: null };
-          if (file.size > 300 * 1024) R.toast(`${file.name} is over 300 KB; only the first part was kept.`, { icon: "info" });
-          rec.text = (await file.text()).slice(0, 300 * 1024);
+          if (/\.(txt|md)$/i.test(file.name) || file.type.startsWith("text/")) {
+            if (file.size > 300 * 1024) R.toast(`${file.name} is over 300 KB; only the first part was kept.`, { icon: "info" });
+            rec.text = (await file.text()).slice(0, 300 * 1024);
+          }
           R.state.materials.push(rec);
         }
-        if (!supported.length) return;
         R.save(); R.emit("change"); R.toast(`${R.plural(files.length, "file")} added to ${s.name}.`, { icon: "upload" }); R.refresh();
       };
       fileIn.addEventListener("change", () => handle([...fileIn.files]));
@@ -134,10 +130,6 @@
 
   /* ======================= ROADMAP ======================= */
   R.page("roadmap", { title: "Learning Roadmap", render(view, ctx) {
-    if (!R.subjects().length) {
-      view.innerHTML = `${ui.header({ eyebrow: "My learning", title: "Learning roadmap", desc: "Add a subject to create your learning path." })}${ui.empty({ icon: "map", title: "No subjects yet", body: "Your roadmap will appear here after you add a subject.", action: ui.link("Add a subject", "subjects?new=1") })}`;
-      return;
-    }
     const sid = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0].id;
     const s = R.subject(sid), mods = R.moduleStatus(s), active = mods.find((m) => m.status === "active");
     const done = mods.filter((m) => m.status === "done").length, overall = R.subjectMastery(sid);
@@ -150,7 +142,7 @@
             <div class="pn-card"><div class="pn-top"><span class="eyebrow">Module ${i + 1}</span>${ui.pill(m.status === "done" ? "Completed" : m.status === "active" ? "In progress" : "Upcoming", m.status === "active" ? "orange" : m.status === "done" ? "teal" : "neutral")}</div>
               <h3>${esc(m.name)}</h3><p>${R.plural(m.count, "card")} · ${R.pct(m.mastery)} mastered</p>${ui.progress(m.mastery, { size: "thin", label: m.name })}
               ${m.count ? `<div class="pn-actions">${ui.link(m.status === "done" ? "Review module" : m.status === "active" ? "Continue" : "Preview", `flashcards?module=${m.id}`, { tone: m.status === "active" ? "primary" : "soft", size: "sm" })}</div>` : `<p class="muted small">No cards yet. ${ui.link("Add cards", `subjects/${sid}/cards`, { tone: "link" })}</p>`}</div></li>`).join("")}
-            <li class="path-node goal ${done === mods.length && mods.length ? "done" : ""}"><div class="pn-marker">${icon("trophy")}</div><div class="pn-card"><h3>Subject mastered</h3><p>Reach 80% mastery in every module.</p></div></li></ol>`, { title: s.name, icon: "map", cls: "span-8", sub: "Your course" })}
+            <li class="path-node goal ${done === mods.length && mods.length ? "done" : ""}"><div class="pn-marker">${icon("trophy")}</div><div class="pn-card"><h3>Subject mastered</h3><p>Reach 80% mastery in every module.</p></div></li></ol>`, { title: s.name, icon: "map", cls: "span-8", sub: s.sample ? "Sample course structure" : "Your course" })}
         <div class="span-4 stack">
           ${ui.card(active ? `<div class="next-step"><span class="rec-icon">${icon("arrow-right")}</span><h3>${esc(active.name)}</h3><p>${active.mastery ? `You're ${R.pct(active.mastery)} through this module.` : "Your next module. Start with its flashcards."} Modules complete at 80% mastery.</p>${ui.link("Continue learning", `flashcards?module=${active.id}`, { size: "block", icon: "play" })}</div>` : `<p class="muted small">Every module here is complete. Review periodically to keep it fresh.</p>`, { title: "Recommended next step", icon: "bulb" })}
           ${ui.card(`${milestones.length ? `<ul class="milestones">${milestones.map((m) => `<li class="${m.done ? "is-done" : ""}"><button type="button" class="check-btn" data-ms="${m.id}" aria-pressed="${m.done}" aria-label="${m.done ? "Mark not done" : "Mark done"}: ${esc(m.title)}">${m.done ? icon("check") : ""}</button><span>${esc(m.title)}</span>${m.target ? `<small>${R.fmtDate(m.target)}</small>` : ""}</li>`).join("")}</ul>` : `<p class="muted small">Set personal milestones like “Finish power cycles by 30 Nov”.</p>`}${ui.btn("Add milestone", { tone: "soft", size: "sm", icon: "plus", attrs: "data-addms" })}`, { title: "Your milestones", icon: "flag" })}
@@ -212,7 +204,7 @@
           <div class="vc-top"><span class="vc-cat">${icon(c.icon)}${c.label.replace(/s$/, "").replace("Laws & principle", "Law / principle")}</span><button type="button" class="icon-btn sm fav ${fav ? "is-on" : ""}" data-fav="${v.id}" aria-pressed="${fav}" aria-label="${fav ? "Remove from" : "Add to"} favourites: ${esc(v.title)}">${icon(fav ? "bookmark-fill" : "bookmark")}</button></div>
           <h3>${esc(v.title)}</h3>
           <div class="vc-detail ${v.category === "formula" ? "is-formula" : ""}" id="vd-${v.id}">${esc(v.detail)}</div>
-          <div class="vc-foot">${v.subject ? `<span>${ui.subjectDot(v.subject)}${esc(R.subject(v.subject)?.name || "")}</span>` : "<span></span>"}<div><button type="button" class="icon-btn sm" data-delv="${v.id}" aria-label="Delete ${esc(v.title)}">${icon("trash")}</button><button type="button" class="btn btn-soft btn-sm" data-recall="${v.id}" aria-controls="vd-${v.id}" aria-expanded="${!recall}">${recall ? "Reveal" : "Quick recall"}</button></div></div>
+          <div class="vc-foot">${v.subject ? `<span>${ui.subjectDot(v.subject)}${esc(R.subject(v.subject)?.name || "")}</span>` : "<span></span>"}<div>${v.sample ? "" : `<button type="button" class="icon-btn sm" data-delv="${v.id}" aria-label="Delete ${esc(v.title)}">${icon("trash")}</button>`}<button type="button" class="btn btn-soft btn-sm" data-recall="${v.id}" aria-controls="vd-${v.id}" aria-expanded="${!recall}">${recall ? "Reveal" : "Quick recall"}</button></div></div>
         </article>`; }).join("") : ui.empty({ icon: "archive", title: q ? `Nothing matches “${esc(q)}”` : "Nothing here yet", body: "Save formulas, laws, definitions and dates you want to keep within reach.", action: ui.btn("Save knowledge", { icon: "plus", attrs: "data-addv" }) });
     };
     const counts = { all: R.vaultItems().length, fav: R.state.favorites.length };

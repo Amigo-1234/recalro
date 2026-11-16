@@ -5,7 +5,8 @@
    MessageComposer + AttachmentPreview · SubjectSelector · SuggestedPrompts ·
    ExplainItWorkspace.
 
-   AI Tutor: uses the secure same-origin /api/tutor endpoint.
+   AI Tutor: uses the secure same-origin /api/tutor endpoint when configured.
+   Local quiz, summary and review helpers remain available as fallbacks.
    ========================================================================== */
 (function () {
   "use strict";
@@ -153,10 +154,9 @@
   function TutorWorkspace(view, ctx) {
     const st = R.state, mode = ctx.sub[0] === "explain" ? "explain" : "chat";
     let chat = mode === "chat" && !ctx.query.new ? st.chats.find((c) => c.id === ctx.query.chat) || null : null;
-    let subject = ctx.query.subject || chat?.subject || R.subjects()[0]?.id || "general";
-    if (!R.subject(subject) && subject !== "general") subject = R.subjects()[0]?.id || "general";
+    let subject = ctx.query.subject || chat?.subject || R.subjects()[0].id;
+    if (!R.subject(subject)) subject = R.subjects()[0].id;
     let streaming = null, attachment = null, learningMode = "ask";
-    const subjectName = () => R.subject(subject)?.name || "General study";
 
     view.innerHTML = `
       <div class="tw ${historyOpen() ? "" : "is-history-closed"}" data-mode="${mode}">
@@ -166,6 +166,7 @@
             <button type="button" class="icon-btn tw-hist-btn" data-history aria-label="Conversation history" data-tip="History">${icon("sidebar")}</button>
             <div class="tw-modes" role="tablist" aria-label="Tutor mode">
               <a role="tab" href="#/app/tutor${chat ? `?chat=${chat.id}` : ""}" aria-selected="${mode === "chat"}" class="${mode === "chat" ? "is-on" : ""}">${icon("sparkles")}<span>Chat</span></a>
+              <a role="tab" href="#/app/tutor/explain" aria-selected="${mode === "explain"}" class="${mode === "explain" ? "is-on" : ""}">${icon("quote")}<span>Explain it</span></a>
             </div>
             <button type="button" class="tw-subject" data-subject aria-haspopup="dialog"></button>
             <span class="tw-status" data-tip="AI Tutor connection status"><span>AI Tutor</span></span>
@@ -175,16 +176,13 @@
         </section>
       </div>`;
     const root = R.$(".tw", view), body = R.$(".tw-body", view);
-    const drawSubject = () => { const s = R.subject(subject); R.$("[data-subject]", view).innerHTML = `${s ? ui.subjectDot(subject) : icon("book")}<span>${esc(subjectName())}</span>${icon("chevron-down")}`; R.$("[data-subject]", view).setAttribute("aria-label", s ? `Subject: ${s.name}. Change subject` : "Add a subject"); };
+    const drawSubject = () => { const s = R.subject(subject); R.$("[data-subject]", view).innerHTML = `${ui.subjectDot(subject)}<span>${esc(s.name)}</span>${icon("chevron-down")}`; R.$("[data-subject]", view).setAttribute("aria-label", `Subject: ${s.name}. Change subject`); };
     drawSubject();
 
     /* ---------- SubjectSelector ---------- */
-    const chooseSubject = () => {
-      if (!R.subjects().length) { R.go("subjects?new=1"); return; }
-      R.picker({ title: "Which subject are we studying?", value: subject,
-        options: R.subjects().map((s) => ({ value: s.id, label: s.name, dot: s.id, sub: `${(s.modules || []).length} modules · ${R.cards(s.id).length} cards · ${R.pct(R.subjectMastery(s.id))} mastered` })),
-        onSelect(v) { subject = v; if (chat) { chat.subject = v; R.save(); } drawSubject(); if (mode === "chat") { if (!chat?.messages.length) drawThread(); composer?.setPlaceholder(); } else explainWs?.reset(); R.$("[data-subject]", view).focus(); } });
-    };
+    const chooseSubject = () => R.picker({ title: "Which subject are we studying?", value: subject,
+      options: R.subjects().map((s) => ({ value: s.id, label: s.name, dot: s.id, sub: `${(s.modules || []).length} modules · ${R.cards(s.id).length} cards · ${R.pct(R.subjectMastery(s.id))} mastered` })),
+      onSelect(v) { subject = v; if (chat) { chat.subject = v; R.save(); } drawSubject(); if (mode === "chat") { if (!chat?.messages.length) drawThread(); composer?.setPlaceholder(); } else explainWs?.reset(); R.$("[data-subject]", view).focus(); } });
 
     /* ---------- ConversationHistory ---------- */
     const bucket = (iso) => { const d = (R.startOfDay() - R.startOfDay(new Date(iso))) / 86400000; return d <= 0 ? "Today" : d <= 7 ? "Previous 7 days" : "Older"; };
@@ -241,17 +239,19 @@
 
     /* SuggestedPrompts (empty state) */
     function emptyState() {
-      const s = R.subject(subject), mod = s ? activeModule(subject) : null, topic = mod?.name || s?.name || "a topic you choose";
+      const s = R.subject(subject), mod = activeModule(subject), topic = mod?.name || s.name;
+      const weak = R.weakTopics().find((w) => w.module.subject.id === subject);
       const starters = [
-        { ic: "bulb", t: "Explain a difficult concept", p: s ? `Explain ${topic}` : "Explain a difficult concept in simple terms", sub: s ? topic : "Clear, step-by-step explanation" },
+        { ic: "bulb", t: "Explain a difficult concept", p: `Explain ${weak ? weak.module.name : topic}`, sub: weak ? `You've missed ${weak.module.name} ${R.plural(weak.errors, "time")}` : topic },
         { ic: "sigma", t: "Give me a worked example", p: `Give me a worked example on ${topic}`, sub: topic },
         { ic: "zap", t: "Quiz me on this subject", p: `Quiz me on ${topic}`, sub: `${R.cards().filter((c) => c.module === mod?.id).length} cards available` },
         { ic: "file", t: "Summarize a topic", p: `Summarize ${topic}`, sub: topic },
+        { ic: "target", t: "Help me understand my mistakes", p: `What do I keep getting wrong in ${s.name}?`, sub: "From your review history" },
       ];
       return `<div class="tw-empty">
         <div class="tw-orb" aria-hidden="true">${icon("sparkles")}</div>
         <h1>Hi ${esc(R.firstName())}! What are we learning today?</h1>
-        <p>${s ? `Studying <b>${esc(s.name)}</b>${mod ? ` · currently on <b>${esc(mod.name)}</b>` : ""}` : "Ask about any subject. Add a learning subject later to organise your materials."}</p>
+        <p>Studying <b>${esc(s.name)}</b>${mod ? ` · currently on <b>${esc(mod.name)}</b>` : ""}</p>
         <div class="tw-starters">${starters.map((x, i) => `<button type="button" class="tw-starter" data-send="${esc(x.p)}" style="--i:${i}"><span class="tw-st-ic">${icon(x.ic)}</span><span><b>${x.t}</b><small>${esc(x.sub)}</small></span></button>`).join("")}</div>
         <p class="tw-local">${icon("sparkles")}Ask questions, share study materials, or choose a learning mode to get started.</p>
       </div>`;
@@ -318,11 +318,11 @@
       let m;
       try {
         const history = (chat?.messages || []).slice(0, -1).filter((x) => x.role === "user" || x.role === "assistant").slice(-12).map((x) => ({ role: x.role, content: x.role === "assistant" ? (x.md || x.text || "") : (x.text || "") }));
-        const payload = { message: prompt, subject: subjectName(), mode: learningMode, history, attachment: attachment?.payload || null };
+        const payload = { message: prompt, subject: R.subject(subject).name, mode: learningMode, history, attachment: attachment?.payload || null };
         const response = await fetch("/api/tutor", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify(payload) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "The tutor could not respond. Please try again.");
-        m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${subjectName()}`, `Explain that more simply`], at: new Date().toISOString() };
+        m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${R.subject(subject).name}`, `Explain that more simply`], at: new Date().toISOString() };
       } catch (err) { console.error("Recalro tutor request failed", err); m = { role: "assistant", error: true, prompt, errorMessage: err.message }; }
       if (replaceIdx != null) chat.messages[replaceIdx] = m; else chat.messages.push(m);
       chat.updatedAt = new Date().toISOString(); R.save();
@@ -355,7 +355,7 @@
 
     /* MessageComposer + AttachmentPreview */
     const composer = MessageComposer(R.$("#twComposer", view), {
-      placeholder: () => `Ask about ${subjectName()}…`,
+      placeholder: () => `Ask about ${R.subject(subject).name}…`,
       onSend: (t) => send(t), onStop: stopStream,
       onAttach: (a) => { attachment = a; }, onUnattach: () => { attachment = null; },
       onMode: (m) => { learningMode = m; },

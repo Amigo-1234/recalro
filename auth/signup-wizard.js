@@ -96,6 +96,11 @@
     label: "Account",
     render: () => `
       ${head("Create your account", "Let's get you started.", "Create your Recalro account and start building a smarter learning routine.")}
+      <button type="button" class="sw-google" data-google>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6.1s2.7-6.1 6-6.1c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.2 14.6 2.2 12 2.2 6.6 2.2 2.2 6.6 2.2 12s4.4 9.8 9.8 9.8c5.7 0 9.4-4 9.4-9.6 0-.6-.1-1.1-.2-1.6H12z"/></svg>
+        Continue with Google
+      </button>
+      <div class="sw-divider"><span>or sign up with email</span></div>
       <div class="sw-form">
         ${UI.FormField({ id: "sw-name", label: "Full name", bind: "account.name", value: S.account.name, placeholder: "Ada Okafor", autocomplete: "name" })}
         ${UI.FormField({ id: "sw-username", label: "Username", bind: "account.username", value: S.account.username, placeholder: "ada_okafor", autocomplete: "username", hint: "3–24 characters. Use lowercase letters, numbers and underscores." })}
@@ -465,6 +470,7 @@
       eye.setAttribute("aria-pressed", String(showIt)); eye.setAttribute("aria-label", showIt ? "Hide password" : "Show password");
       return;
     }
+    if (t.closest("[data-google]")) { window.R.toast("Google sign-in isn't connected. Use email instead.", { icon: "info" }); return; }
     const legal = t.closest("[data-legal]");
     if (legal) {
       const dlg = root.querySelector(".sw-dialog"), terms = legal.dataset.legal === "terms";

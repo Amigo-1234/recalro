@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Study tools: Flashcards (deck + session), Review Center, AI Tutor,
-   Summaries and Read aloud.
+   Study tools: Flashcards (deck + session), Review Center, Quick Practice,
+   Exam Simulator, AI Tutor (+ Explain it to me), Summaries (+ Read aloud).
    ========================================================================== */
 (function () {
   "use strict";
@@ -31,14 +31,10 @@
       // Deck overview
       const subjects = R.subjects();
       const dueAll = R.dueCards().length, newAll = R.newCards().length;
-      if (!subjects.length) {
-        view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Flashcards", desc: "Create a subject first, then build flashcards from your own study materials." })}${ui.empty({ icon: "cards", title: "No subjects yet", body: "Your flashcard decks will appear here after you add a subject.", action: ui.link("Add a subject", "subjects?new=1") })}`;
-        return;
-      }
       view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Flashcards", desc: "Bring ideas back right before you'd forget them. Rate each card honestly and Recalro schedules the next review.", actions: ui.btn("Create card", { tone: "soft", icon: "plus", attrs: "data-newcard" }) })}
         <section class="session-hero">
-          <div><h2>${dueAll ? `${R.plural(dueAll, "card")} due now` : newAll ? "You're caught up on reviews" : "No flashcards yet"}</h2><p>${dueAll ? "Clear your due cards first. It's the most efficient way to protect what you've learned." : newAll ? `${newAll} new cards are ready when you are.` : "Create cards from your notes or add them yourself to begin reviewing."}</p></div>
-          ${dueAll || newAll ? ui.link(dueAll ? "Start review" : "Learn new cards", dueAll ? "flashcards?mode=due" : "flashcards?mode=all", { size: "lg", icon: "play" }) : ui.link("Create a card", "subjects", { size: "lg", icon: "plus" })}
+          <div><h2>${dueAll ? `${R.plural(dueAll, "card")} due now` : newAll ? "You're caught up on reviews" : "Every card is learned"}</h2><p>${dueAll ? "Clear your due cards first. It's the most efficient way to protect what you've learned." : newAll ? `${newAll} new cards are ready when you are.` : "Nothing is due. Cram any deck for extra practice."}</p></div>
+          ${dueAll || newAll ? ui.link(dueAll ? "Start review" : "Learn new cards", dueAll ? "flashcards?mode=due" : "flashcards?mode=all", { size: "lg", icon: "play" }) : ui.link("Cram all cards", "flashcards?cram=1&mode=all", { size: "lg", icon: "refresh" })}
         </section>
         <div class="deck-grid">${subjects.map((s) => {
           const cards = R.cards(s.id), due = R.dueCards(s.id).length, fresh = R.newCards(s.id).length, m = R.subjectMastery(s.id);
@@ -47,7 +43,7 @@
             <div class="deck-counts"><span><b>${due}</b>due</span><span><b>${fresh}</b>new</span><span><b>${cards.length}</b>total</span></div>
             <div class="deck-modules">${(s.modules || []).map((md) => { const n = R.cards().filter((c) => c.module === md.id).length; return n ? `<a href="#/app/flashcards?module=${md.id}" class="mod-chip">${esc(md.name)}<small>${R.pct(R.moduleMastery(md.id))}</small></a>` : ""; }).join("")}</div>
             <div class="deck-actions">${cards.length ? (due + fresh ? ui.link("Study deck", `flashcards?subject=${s.id}`, { size: "sm", icon: "play" }) : ui.link("Cram deck", `flashcards?subject=${s.id}&cram=1`, { tone: "soft", size: "sm", icon: "refresh" })) : ui.btn("Add cards", { tone: "soft", size: "sm", icon: "plus", attrs: `data-newcard="${s.id}"` })}</div></article>`; }).join("")}</div>
-        <p class="muted small center">${icon("info")} Review intervals are calculated with a spaced-repetition schedule.</p>`;
+        <p class="muted small center">${icon("info")} Scheduling uses a local SM-2 model in this prototype. Connect the backend SM-2 service to sync across devices.</p>`;
       view.addEventListener("click", (e) => { const n = e.target.closest("[data-newcard]"); if (n) R.addCardDialog(n.dataset.newcard || undefined); });
     },
   });
@@ -64,8 +60,7 @@
     let index = 0, flipped = false, xp = 0, busy = false;
     const startedAt = Date.now(), results = [];
     if (!queue.length) {
-      const hasCards = built.pool?.length > 0;
-      view.innerHTML = `<div class="session-done">${ui.empty({ icon: hasCards ? "check-circle" : "cards", title: hasCards ? "Nothing due here" : "No cards in this deck yet", body: hasCards ? `No due or new cards in ${esc(built.label)}. You can review the deck whenever you want.` : `Create flashcards for ${esc(built.label)} to start a review session.`, action: hasCards ? `${ui.link("Review this deck", `flashcards?${new URLSearchParams({ ...q, cram: 1 })}`, { icon: "refresh" })} ${ui.link("Back to decks", "flashcards", { tone: "ghost" })}` : ui.link("Back to decks", "flashcards", { tone: "ghost" }) })}</div>`;
+      view.innerHTML = `<div class="session-done">${ui.empty({ icon: "check-circle", title: "Nothing due here", body: `No due or new cards in ${esc(built.label)}. You can cram the deck for extra practice. Cramming doesn't change your schedule much, but it helps before exams.`, action: `${ui.link("Cram this deck", `flashcards?${new URLSearchParams({ ...q, cram: 1 })}`, { icon: "refresh" })} ${ui.link("Back to decks", "flashcards", { tone: "ghost" })}` })}</div>`;
       return;
     }
     // Distraction-free: navigation hides while reviewing (the X ends the session).
@@ -516,7 +511,7 @@
   function listen(view, top) {
     const supported = "speechSynthesis" in window;
     view.innerHTML = `${top}<div class="grid-12">${ui.card(`<div class="player">
-        <div class="field"><label for="laText">Text to read</label><textarea id="laText" rows="9" placeholder="Paste text to read aloud…"></textarea></div>
+        <div class="field"><label for="laText">Text to read</label><textarea id="laText" rows="9">The second law of thermodynamics states that the total entropy of an isolated system can never decrease over time. In natural processes, energy tends to spread out and become less available to perform useful work.</textarea></div>
         <div class="reader" id="laReader" aria-live="off" hidden></div>
         <div class="player-controls">
           <button type="button" class="play-btn" id="laPlay" aria-label="Play" ${supported ? "" : "disabled"}>${icon("play")}</button>

@@ -13,14 +13,14 @@ The project has no frontend build step. Opening `index.html` directly does not p
 ## Features
 
 - Supabase email/password sign-up, sign-in, password reset, profile storage and learner-state sync.
-- Learner-created subjects, study materials, flashcards and summaries.
-- Spaced-repetition flashcard reviews, activity insights and account settings.
+- Subjects, study materials, flashcards, summaries, quick practice and exam simulation.
+- Spaced-repetition reviews, readiness insights, community pages, challenges and rewards.
 - AI Tutor, voice and file-analysis APIs served by the included Node.js server.
-- Responsive layout, light/dark/system themes and a first-run experience without prefilled learner content.
+- Responsive layout, light/dark/system themes and a first-run experience with example course content.
 
 The marketing landing page includes its interactive flashcard preview, product tour, scroll story and feature demos. Activity in those previews is not saved to a learner account.
 
-Practice, exam simulation, community and readiness pages are currently unavailable and are not shown in the workspace navigation.
+The workspace includes sample courses, community members, and reward examples. Some analytics and rewards are illustrative and use local learner activity; community membership and leaderboards are not backed by shared server data.
 
 ## Supabase and AI setup
 

@@ -329,6 +329,7 @@ $("#authTogglePassword").addEventListener("click", (event) => {
   event.currentTarget.setAttribute("aria-pressed", String(show));
   event.currentTarget.setAttribute("aria-label", show ? "Hide password" : "Show password");
 });
+$("#authGoogle").addEventListener("click", () => toast("Google sign-in isn't connected. Use email instead.", { icon: "info" }));
 $("#authBack").addEventListener("click", goLanding);
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape" || event.defaultPrevented || authScreen.classList.contains("hidden")) return;
