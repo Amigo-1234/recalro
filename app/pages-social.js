@@ -38,11 +38,8 @@
     render(view, ctx) {
       if (ctx.sub[0]) return groupDetail(view, ctx.sub[0]);
       const groups = R.groups(), joined = groups.filter((g) => R.state.joinedGroups.includes(g.id));
-      view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Study groups", desc: "Learn alongside people working toward similar goals. Share missions, celebrate progress.", actions: ui.btn("Create group", { icon: "plus", attrs: "data-newgroup" }), meta: ui.sample("Sample community") })}
-        ${joined.length ? `<h2 class="section-h">Your groups</h2><div class="group-grid">${joined.map(groupCard).join("")}</div>` : ""}
-        <h2 class="section-h">${joined.length ? "Discover" : "Find your people"}</h2>
-        <div class="group-grid">${groups.filter((g) => !R.state.joinedGroups.includes(g.id)).map(groupCard).join("") || `<p class="muted small">You've joined every group.</p>`}</div>
-        <p class="muted small">${icon("info")} Groups, members and activity are sample data. Real groups need the backend for membership, messaging and shared progress. Your own contribution is counted from your reviews.</p>`;
+      view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Study groups", desc: "Create a private study space for your own learning goals.", actions: ui.btn("Create group", { icon: "plus", attrs: "data-newgroup" }) })}
+        ${groups.length ? `<h2 class="section-h">Your study groups</h2><div class="group-grid">${groups.map(groupCard).join("")}</div>` : ui.empty({ icon: "users", title: "No study groups yet", body: "Create a private group to set a study target and track your own contributions.", action: ui.btn("Create a group", { icon: "plus", attrs: "data-newgroup" }) })}`;
       view.addEventListener("click", (e) => {
         const j = e.target.closest("[data-join]"); if (j) { e.preventDefault(); toggleJoin(j.dataset.join, j); }
         if (e.target.closest("[data-newgroup]")) R.formDialog({ title: "Create a study group", description: "This creates a local group on this device. Inviting others needs the backend.", submitLabel: "Create group", fields: [{ name: "name", label: "Group name", required: true, maxLength: 60 }, { name: "topic", label: "Focus", maxLength: 60, placeholder: "e.g. Finals revision" }, { name: "goal", label: "Weekly review goal", type: "number", value: 50, min: 10, max: 1000, step: 10, required: true }],
@@ -73,13 +70,13 @@
     const me = R.displayName();
     const members = [...(joined ? [{ name: me, me: true, xp: R.sum(R.activitySince(R.startOfWeek()), (a) => a.xp) }] : []), ...(g.members || []).map((n) => ({ name: n, xp: (R.hash(n + g.id) % 300) + 40 }))].sort((a, b) => b.xp - a.xp);
     const feed = [...(joined ? R.state.activity.filter((a) => a.t === "review" || a.t === "exam").slice(-3).reverse().map((a) => [me, a.t === "review" ? "reviewed a flashcard" : `finished a practice exam (${a.score}/${a.total})`, Math.max(0, Math.round((Date.now() - new Date(a.at)) / 3600000)), true]) : []), ...(g.custom ? [] : R.content.groupFeed)];
-    view.innerHTML = `<div class="subject-hero group-hero"><div><a class="back-link" href="#/app/groups">${icon("arrow-left")}All groups</a><div class="eyebrow">${esc(g.topic)} ${g.custom ? "" : ui.sample()}</div><h1>${esc(g.name)}</h1><div class="hero-stats"><span><b>${R.fmt(g.memberCount + (joined && !g.custom ? 1 : 0))}</b> members</span><span><b>${R.fmt(p.total)}</b> reviews this week</span></div></div>
+    view.innerHTML = `<div class="subject-hero group-hero"><div><a class="back-link" href="#/app/groups">${icon("arrow-left")}All groups</a><div class="eyebrow">${esc(g.topic)}</div><h1>${esc(g.name)}</h1><div class="hero-stats"><span><b>${R.fmt(g.memberCount)}</b> members</span><span><b>${R.fmt(p.total)}</b> reviews this week</span></div></div>
         <div class="hero-side">${ui.btn(joined ? "Leave group" : "Join group", { tone: joined ? "ghost" : "primary", icon: joined ? "logout" : "plus", attrs: `data-join="${g.id}"` })}</div></div>
       <div class="grid-12">
         ${ui.card(`<div class="mission">${ui.ring((p.total / g.goal) * 100, { size: 120, stroke: 11, label: R.pct((p.total / g.goal) * 100), sub: "complete" })}<div><h3>Complete ${R.fmt(g.goal)} reviews together</h3><p>${R.fmt(p.total)} of ${R.fmt(g.goal)} done. ${joined ? `Your contribution: <b>${R.plural(p.mine, "review")}</b>.` : "Join to contribute your reviews."}</p>${joined ? ui.link("Contribute now", g.subject ? `flashcards?subject=${g.subject}` : "flashcards", { size: "sm", icon: "cards" }) : ""}</div></div>`, { title: "Weekly group mission", icon: "flag", cls: "span-8" })}
         ${ui.card(`<ul class="members">${members.map((m, i) => `<li class="${m.me ? "is-me" : ""}"><span class="rank">${i + 1}</span>${m.me ? ui.avatar(30) : peerAv(m.name)}<span>${esc(m.me ? `${m.name} (you)` : m.name)}</span><b>${R.fmt(m.xp)} XP</b></li>`).join("")}</ul>`, { title: "Members this week", icon: "users", cls: "span-4" })}
         ${ui.card(feed.length ? `<ul class="feed">${feed.map(([n, what, h, mine]) => `<li>${mine ? ui.avatar(30) : peerAv(n)}<p><b>${esc(mine ? "You" : n)}</b> ${esc(what)}<small>${h <= 0 ? "just now" : `${h} h ago`}</small></p></li>`).join("")}</ul>` : `<p class="muted small">No activity yet.</p>`, { title: "Recent activity", icon: "clock", cls: "span-6" })}
-        ${ui.card(`<div class="group-ach">${[["flame", "Mission streak", "Complete the weekly mission 3 weeks running", 1, 3], ["users", "Full house", "Reach 25 members", Math.min(25, g.memberCount), 25], ["trophy", "Top group", "Finish a week in the top 10 groups", 0, 1]].map(([ic, n, d, v, t]) => `<div class="ga ${v >= t ? "is-done" : ""}"><span class="ach-mini">${icon(ic)}</span><div><b>${n}</b><small>${d}</small>${ui.progress((v / t) * 100, { size: "thin", tone: "orange", label: n })}</div></div>`).join("")}</div>`, { title: "Group achievements", icon: "award", cls: "span-6", sub: "Sample: needs backend" })}
+        ${ui.card(`<p class="muted small">Group achievements will appear as you and your members study together.</p>`, { title: "Group achievements", icon: "award", cls: "span-6" })}
       </div>`;
     view.addEventListener("click", (e) => { const j = e.target.closest("[data-join]"); if (j) toggleJoin(j.dataset.join, j); });
   }
@@ -88,7 +85,7 @@
   R.page("challenges", { title: "Challenges", render(view) {
     const list = R.weeklyChallenges();
     const end = R.addDays(R.startOfWeek(), 7), daysLeft = Math.ceil((end - Date.now()) / 86400000);
-    view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Weekly challenges", desc: "Bigger goals that reset every Monday. Finish them for bonus XP and gems.", meta: `${ui.pill(`${R.plural(daysLeft, "day")} left this week`, "neutral", "clock")} ${ui.demo("Demo rewards")}` })}
+    view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Weekly challenges", desc: "Bigger goals that reset every Monday. Finish them for bonus XP and gems.", meta: ui.pill(`${R.plural(daysLeft, "day")} left this week`, "neutral", "clock") })}
       <div class="challenge-list">${list.map((c) => `<article class="challenge ${c.done ? "is-done" : ""} ${c.claimed ? "is-claimed" : ""}">
           <span class="ch-icon">${icon(c.icon)}</span>
           <div class="ch-body"><h3>${esc(c.title)}</h3>${ui.progress((c.progress / c.target) * 100, { tone: c.done ? "teal" : "orange", label: c.title })}<small>${R.fmt(c.progress)} / ${R.fmt(c.target)}</small></div>
@@ -105,23 +102,23 @@
   /* ======================= LEADERBOARDS ======================= */
   R.page("leaderboards", { title: "Leaderboards", render(view, ctx) {
     const tab = ctx.query.tab || "league";
-    const { lg, weekly, board, rank } = R.league();
+    const { lg, weekly, board } = R.league(), hasPeers = R.content.peers.length > 0;
     const leagues = R.content.leagues, li = leagues.findIndex((l) => l.id === lg.id), next = leagues[li + 1], total = R.totalXP();
     const name = (b) => (b.me ? (R.state.settings.leaderboardPrivate ? "You" : `${R.displayName()} (you)`) : b.name);
     let body;
     if (tab === "league") body = `<div class="grid-12">
-      ${ui.card(`<ol class="board">${board.map((b, i) => `<li class="${b.me ? "is-me" : ""} ${i < 3 ? "promo" : ""}"><span class="rank r${i + 1}">${i < 3 ? icon("trophy") : i + 1}</span>${b.me ? ui.avatar(32) : peerAv(b.name)}<span class="b-name">${esc(name(b))}</span><b>${R.fmt(b.xp)} XP</b></li>`).join("")}</ol><p class="muted small">${icon("info")} Other learners are sample peers. Real weekly leagues need the backend. Your XP is real.</p>`, { title: `Week of ${R.fmtDate(R.startOfWeek())}`, icon: "trophy", cls: "span-8", sub: "Top 3 are in the promotion zone" })}
+      ${ui.card(hasPeers ? `<ol class="board">${board.map((b, i) => `<li class="${b.me ? "is-me" : ""} ${i < 3 ? "promo" : ""}"><span class="rank r${i + 1}">${i < 3 ? icon("trophy") : i + 1}</span>${b.me ? ui.avatar(32) : peerAv(b.name)}<span class="b-name">${esc(name(b))}</span><b>${R.fmt(b.xp)} XP</b></li>`).join("")}</ol>` : ui.empty({ icon: "trophy", title: "Shared rankings aren't available yet", body: "Your study XP is tracked here. Weekly rankings will appear when community results can be shared." }), { title: `Week of ${R.fmtDate(R.startOfWeek())}`, icon: "trophy", cls: "span-8", sub: hasPeers ? "Top 3 are in the promotion zone" : "Your weekly study activity" })}
       <div class="span-4 stack">
         ${ui.card(`<div class="league-badge league-${lg.id}">${icon("shield")}<b>${lg.name}</b></div><p class="center">${next ? `${R.fmt(next.min - total)} XP to <b>${next.name}</b>` : "Top league reached!"}</p>${next ? ui.progress(((total - lg.min) / (next.min - lg.min)) * 100, { tone: "orange", label: "League progress" }) : ""}
           <ol class="tiers">${leagues.map((l, i) => `<li class="${i < li ? "past" : i === li ? "now" : ""}"><span>${icon(i <= li ? "shield" : "lock")}</span>${l.name}<small>${R.fmt(l.min)}+ XP</small></li>`).join("")}</ol>`, { title: "Your league", icon: "shield" })}
         ${ui.card(`<ul class="mini-list"><li>${icon("arrow-up-right")}<span>Top 3 each week move up a league</span></li><li>${icon("gem")}<span>League rewards are paid in gems</span></li><li>${icon("shield")}<span>Only verified study activity counts</span></li></ul><p class="muted small">Weekly payouts need backend verification.</p>`, { title: "Rewards", icon: "gem" })}
       </div></div>`;
-    else body = `<div class="grid-12">${R.subjects().map((s) => {
+    else body = hasPeers ? `<div class="grid-12">${R.subjects().map((s) => {
       const mine = R.sum(R.activitySince(R.startOfWeek()).filter((a) => a.subject === s.id), (a) => a.xp);
       const rows = [...R.content.peers.slice(0, 5).map(([n]) => ({ name: n, xp: R.hash(n + s.id) % 220 })), { name: R.displayName(), xp: mine, me: true }].sort((a, b) => b.xp - a.xp);
       return ui.card(`<ol class="board compact">${rows.map((b, i) => `<li class="${b.me ? "is-me" : ""}"><span class="rank">${i + 1}</span><span class="b-name">${esc(name(b))}</span><b>${R.fmt(b.xp)}</b></li>`).join("")}</ol>`, { title: s.name, icon: "book", cls: "span-4", sub: "XP this week" });
-    }).join("")}</div>`;
-    view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Leaderboards", desc: "Friendly competition that rewards consistent, meaningful study.", meta: `${ui.pill(`You're #${rank} this week`, "orange", "trophy")} ${ui.pill(`${R.fmt(weekly)} XP this week`, "neutral", "bolt")}` })}
+    }).join("")}</div>` : ui.empty({ icon: "book", title: "Subject rankings aren't available yet", body: "Your subject progress is available in analytics. Shared rankings will appear here when community results can be shared." });
+    view.innerHTML = `${ui.header({ eyebrow: "Community", title: "Leaderboards", desc: "Track your study activity and progress through learning tiers.", meta: `${ui.pill(`${lg.name} tier`, "orange", "shield")} ${ui.pill(`${R.fmt(weekly)} XP this week`, "neutral", "bolt")}` })}
       ${ui.tabs([{ id: "league", label: "Weekly league", route: "leaderboards", icon: "trophy" }, { id: "subjects", label: "By subject", route: "leaderboards?tab=subjects", icon: "book" }], tab, "Leaderboard views")}${body}`;
   } });
 
@@ -130,7 +127,7 @@
     const quests = R.todaysQuests(), st = R.streak(), done = quests.filter((q) => q.done).length;
     const midnight = R.addDays(R.startOfDay(), 1);
     const left = () => { const s = Math.max(0, Math.floor((midnight - Date.now()) / 1000)); return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`; };
-    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Daily quests", desc: "Three small objectives a day. They track your activity automatically and pay out the moment you finish.", meta: `${ui.pill(`Resets in <span id="qReset">${left()}</span>`, "neutral", "clock")} ${ui.demo("Demo rewards")}` })}
+    view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Daily quests", desc: "Three small objectives a day. They track your activity automatically and pay out the moment you finish.", meta: ui.pill(`Resets in <span id="qReset">${left()}</span>`, "neutral", "clock") })}
       <div class="grid-12">
         <div class="span-8 stack">
           <div class="quest-list">${quests.map((q) => `<article class="quest ${q.done ? "is-done" : ""}">
@@ -179,20 +176,20 @@
     const items = R.content.store.filter((i) => kind === "all" || i.kind === kind);
     const preview = (i) => i.kind === "frame" ? `<span class="avatar frame-${i.value}" style="--av:64px">${R.state.equipped.avatar ? `<span class="avatar-emoji">${R.state.equipped.avatar}</span>` : esc(R.initials())}</span>` : i.kind === "avatar" ? `<span class="avatar ${R.state.equipped.frame ? "frame-" + R.state.equipped.frame : ""}" style="--av:64px"><span class="avatar-emoji">${i.value}</span></span>` : `<span class="banner-prev banner-${i.value}"></span>`;
     view.innerHTML = `${ui.header({ eyebrow: "Rewards", title: "Avatar & reward store", desc: "Personalise your space with cosmetic rewards earned through learning." })}
-      <section class="store-hero"><div class="sh-balance">${icon("gem")}<div><b id="gemBal">${R.fmt(R.state.gems)}</b><span>demo gems</span></div></div><div class="sh-earn"><span>${icon("check-circle")}+5 per daily quest</span><span>${icon("award")}Achievements</span><span>${icon("arrow-up-right")}+15 per level up</span><span>${icon("swords")}Weekly challenges</span></div></section>
+      <section class="store-hero"><div class="sh-balance">${icon("gem")}<div><b id="gemBal">${R.fmt(R.state.gems)}</b><span>gems</span></div></div><div class="sh-earn"><span>${icon("check-circle")}+5 per daily quest</span><span>${icon("award")}Achievements</span><span>${icon("arrow-up-right")}+15 per level up</span><span>${icon("swords")}Weekly challenges</span></div></section>
       ${ui.tabs([["all", "All"], ["frame", "Frames"], ["avatar", "Avatars"], ["banner", "Banners"]].map(([id, label]) => ({ id, label, route: `store${id === "all" ? "" : `?kind=${id}`}` })), kind, "Item type")}
       <div class="store-grid">${items.map((i) => {
         const owned = R.state.purchases.includes(i.id), equipped = R.state.equipped[i.kind] === i.value, afford = R.state.gems >= i.cost;
         return `<article class="store-item ${equipped ? "is-equipped" : ""}"><div class="si-prev">${preview(i)}</div><h3>${esc(i.name)}</h3><p>${esc(i.desc)}</p>
           ${owned ? ui.btn(equipped ? "Equipped" : "Equip", { tone: equipped ? "soft" : "primary", size: "sm", icon: equipped ? "check" : "", attrs: `data-equip="${i.id}"` }) : `<button type="button" class="btn ${afford ? "btn-gem" : "btn-ghost"} btn-sm" data-buy="${i.id}" ${afford ? "" : `aria-disabled="true" data-tip="You need ${R.fmt(i.cost - R.state.gems)} more gems"`}>${icon("gem")}<span>${R.fmt(i.cost)}</span></button>`}
         </article>`; }).join("")}</div>
-      <p class="muted small">${icon("info")} Purchases use demo gems stored only in this browser. No real currency is involved.</p>`;
+      <p class="muted small">${icon("info")} Gems are in-app study rewards and have no cash value.</p>`;
     view.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-buy]");
       if (b) {
         const i = R.content.store.find((x) => x.id === b.dataset.buy);
         if (R.state.gems < i.cost) { R.toast(`You need ${R.fmt(i.cost - R.state.gems)} more gems for ${i.name}.`, { icon: "gem" }); return; }
-        const ok = await R.confirm({ title: `Get ${esc(i.name)}?`, body: `This costs <b>${R.fmt(i.cost)} demo gems</b>. You'll have ${R.fmt(R.state.gems - i.cost)} left.`, confirmLabel: "Buy & equip" });
+        const ok = await R.confirm({ title: `Get ${esc(i.name)}?`, body: `This costs <b>${R.fmt(i.cost)} gems</b>. You'll have ${R.fmt(R.state.gems - i.cost)} left.`, confirmLabel: "Buy & equip" });
         if (!ok) return;
         R.update((st) => { st.gems -= i.cost; st.purchases.push(i.id); st.equipped[i.kind] = i.value; });
         R.celebrate({ eyebrow: "New reward", title: i.name, subtitle: "Unlocked and equipped. Check out your new look.", emoji: i.kind === "avatar" ? i.value : null, icon: "bag", tone: "orange", onCta: () => R.refresh() });
@@ -206,7 +203,7 @@
   R.page("profile", { title: "Profile", render(view) {
     const lv = R.levelInfo(), st = R.streak(), stats = R.stats(), ach = R.achievementList().filter((a) => a.unlockedAt).sort((a, b) => b.unlockedAt.localeCompare(a.unlockedAt));
     const user = window.RecalroAuth?.currentUser() || {};
-    view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "Demo account")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} league`, "neutral", "shield")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
+    view.innerHTML = `<section class="profile-hero banner-${R.state.equipped.banner || "default"}"><div class="ph-inner">${R.ui.avatar(96)}<div><h1>${esc(R.displayName())}</h1><p>${esc(user.email || "Your learning profile")} · Learning since ${R.fmtDate(R.state.createdAt, { month: "long", year: "numeric" })}</p><div class="ph-pills">${ui.pill(`Level ${lv.level}`, "orange", "award")}${ui.pill(`${R.league().lg.name} tier`, "neutral", "shield")}${ui.pill(`${R.plural(st.current, "day")} streak`, "neutral", "flame")}</div></div>
         <div class="ph-actions">${ui.btn("Edit profile", { tone: "glass", icon: "edit", attrs: "data-editprofile" })}${ui.link("Customise", "store", { tone: "glass", icon: "bag" })}</div></div></section>
       <div class="stat-row">${[["Total XP", R.fmt(lv.xp), "bolt"], ["Best streak", R.plural(st.best, "day"), "flame"], ["Cards reviewed", R.fmt(stats.reviews), "cards"], ["Exams taken", R.fmt(stats.exams), "clipboard"]].map(([l, v, ic]) => `<div class="stat"><div class="stat-top"><span>${l}</span><span class="stat-ic">${icon(ic)}</span></div><strong>${v}</strong></div>`).join("")}</div>
       <div class="grid-12">
@@ -305,7 +302,7 @@
       const seg = e.target.closest("[data-seg='theme']"); if (seg) { R.setTheme(seg.dataset.value); R.refresh(); }
       if (e.target.closest("[data-goal]")) R.formDialog({ title: "Daily study goal", description: "Choose a daily target between 5 minutes and 24 hours.", fields: [{ name: "minutes", label: "Minutes per day", type: "number", value: s.dailyGoal, min: 5, max: 1440, step: 5, required: true }], submitLabel: "Save goal", onSubmit: (v) => { R.update((st) => (st.settings.dailyGoal = Math.round(Number(v.minutes)))); R.toast("Daily goal saved."); R.refresh(); } });
       if (e.target.closest("[data-export]")) R.exportData();
-      if (e.target.closest("[data-reset]") && (await R.confirm({ title: "Reset all demo data?", body: "This permanently clears your progress, XP, gems, saved items and history on this device. Export first if you want a copy.", confirmLabel: "Reset everything", tone: "danger" }))) { R.resetDemo(); R.toast("Demo data reset."); R.refresh(); }
+      if (e.target.closest("[data-reset]") && (await R.confirm({ title: "Reset all learning data?", body: "This permanently clears your progress, XP, gems, saved items and history on this device. Export first if you want a copy.", confirmLabel: "Reset everything", tone: "danger" }))) { R.resetDemo(); R.toast("Learning data reset."); R.refresh(); }
       if (e.target.closest("[data-signout]")) R.signOut();
     });
     view.addEventListener("change", (e) => { const t = e.target.closest("[data-toggle]"); if (t) { R.update((st) => (st.settings[t.dataset.toggle] = t.checked)); if (t.dataset.toggle === "notificationsEnabled" && t.checked) R.checkReminders(); R.toast("Preference saved."); } });

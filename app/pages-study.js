@@ -30,11 +30,12 @@
       if (q.module || q.subject || q.mode || q.cram) return session(view, q);
       // Deck overview
       const subjects = R.subjects();
+      if (!subjects.length) { view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Flashcards", desc: "Build a review deck from the subjects and notes you add." })}${ui.empty({ icon: "cards", title: "Your decks are ready when you are", body: "Add a subject to start creating your own cards and review schedule.", action: ui.link("Add your first subject", "subjects?new=1", { icon: "plus" }) })}`; return; }
       const dueAll = R.dueCards().length, newAll = R.newCards().length;
       view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Flashcards", desc: "Bring ideas back right before you'd forget them. Rate each card honestly and Recalro schedules the next review.", actions: ui.btn("Create card", { tone: "soft", icon: "plus", attrs: "data-newcard" }) })}
         <section class="session-hero">
           <div><h2>${dueAll ? `${R.plural(dueAll, "card")} due now` : newAll ? "You're caught up on reviews" : "Every card is learned"}</h2><p>${dueAll ? "Clear your due cards first. It's the most efficient way to protect what you've learned." : newAll ? `${newAll} new cards are ready when you are.` : "Nothing is due. Cram any deck for extra practice."}</p></div>
-          ${dueAll || newAll ? ui.link(dueAll ? "Start review" : "Learn new cards", dueAll ? "flashcards?mode=due" : "flashcards?mode=all", { size: "lg", icon: "play" }) : ui.link("Cram all cards", "flashcards?cram=1&mode=all", { size: "lg", icon: "refresh" })}
+          ${dueAll || newAll ? ui.link(dueAll ? "Start review" : "Learn new cards", dueAll ? "flashcards?mode=due" : "flashcards?mode=all", { size: "lg", icon: "play" }) : R.cards().length ? ui.link("Cram all cards", "flashcards?cram=1&mode=all", { size: "lg", icon: "refresh" }) : ui.link("Add flashcards", "subjects", { size: "lg", icon: "plus" })}
         </section>
         <div class="deck-grid">${subjects.map((s) => {
           const cards = R.cards(s.id), due = R.dueCards(s.id).length, fresh = R.newCards(s.id).length, m = R.subjectMastery(s.id);
@@ -60,7 +61,8 @@
     let index = 0, flipped = false, xp = 0, busy = false;
     const startedAt = Date.now(), results = [];
     if (!queue.length) {
-      view.innerHTML = `<div class="session-done">${ui.empty({ icon: "check-circle", title: "Nothing due here", body: `No due or new cards in ${esc(built.label)}. You can cram the deck for extra practice. Cramming doesn't change your schedule much, but it helps before exams.`, action: `${ui.link("Cram this deck", `flashcards?${new URLSearchParams({ ...q, cram: 1 })}`, { icon: "refresh" })} ${ui.link("Back to decks", "flashcards", { tone: "ghost" })}` })}</div>`;
+      const hasCards = R.cards(q.subject).length > 0;
+      view.innerHTML = `<div class="session-done">${ui.empty({ icon: hasCards ? "check-circle" : "cards", title: hasCards ? "Nothing due here" : "No cards in this deck yet", body: hasCards ? `No due or new cards in ${esc(built.label)}. You can cram the deck for extra practice.` : "Create your own flashcards from a subject you are studying.", action: `${hasCards ? ui.link("Cram this deck", `flashcards?${new URLSearchParams({ ...q, cram: 1 })}`, { icon: "refresh" }) : ui.link("Add a subject", "subjects?new=1", { icon: "plus" })} ${ui.link("Back to decks", "flashcards", { tone: "ghost" })}` })}</div>`;
       return;
     }
     // Distraction-free: navigation hides while reviewing (the X ends the session).
@@ -212,6 +214,7 @@
   R.page("practice", { title: "Quick Practice", render(view, ctx) {
     const subject = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : "";
     const questions = pickQuestions({ subject, count: 5 });
+    if (!questions.length) { view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Quick practice", desc: "Practice questions will appear here when a verified question set is available." })}${ui.empty({ icon: "clipboard", title: "No practice questions available", body: "Add your own flashcards to study, or check back when a reviewed question set has been imported.", action: ui.link("Open your flashcards", "flashcards", { icon: "cards" }) })}`; return; }
     let i = 0, score = 0, xp = 0;
     const answers = [];
     const draw = () => {
@@ -275,7 +278,9 @@
     render(view, ctx) {
       if (exam && !exam.done) return runExam(view);
       exam = null;
-      const pre = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0].id;
+      if (!R.content.questions.length) { view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Exam simulator", desc: "Verified exam questions will be available here once a reviewed set is imported." })}${ui.empty({ icon: "clipboard", title: "No exam questions available", body: "The simulator is ready for a reviewed question set.", action: ui.link("Ask the tutor", "tutor", { icon: "sparkles" }) })}`; return; }
+      const pre = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0]?.id;
+      if (!pre) { view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Exam simulator", desc: "Add a subject to organise your exam preparation." })}${ui.empty({ icon: "book", title: "Add a subject first", action: ui.link("Add a subject", "subjects?new=1", { icon: "plus" }) })}`; return; }
       const history = R.state.examHistory.filter((e) => e.mode !== "practice").slice(-8).reverse();
       view.innerHTML = `${ui.header({ eyebrow: "Study tools", title: "Exam simulator", desc: "Practise under exam conditions, then learn from every answer." })}
         <div class="grid-12">

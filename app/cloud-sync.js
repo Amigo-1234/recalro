@@ -63,7 +63,9 @@
 
     const previousOwner = local(() => localStorage.getItem(OWNER_KEY));
     if (activeUserId) await flush();
-    if (previousOwner && previousOwner !== userId) window.R.resetForCloudUser();
+    // Anonymous prototype data must never be attached to the first signed-in user.
+    // Existing accounts are restored from their cloud row immediately below.
+    if (!previousOwner || previousOwner !== userId) window.R.resetForCloudUser();
     activeUserId = null;
     pending = null;
 

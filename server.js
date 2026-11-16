@@ -52,7 +52,12 @@ function readBody(req) {
     req.on('error', reject);
   });
 }
-function requireKey(res) { if (!process.env.OPENAI_API_KEY) { json(res, 503, { error:'AI is not configured yet. Add OPENAI_API_KEY to your server environment and restart Recalro.' }); return false; } return true; }
+function requireKey(res) {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) { json(res, 503, { error:'AI is not configured yet. Add OPENAI_API_KEY to your server environment and restart Recalro.' }); return false; }
+  if (!/^sk-/.test(key)) { json(res, 503, { error:'OPENAI_API_KEY is not an OpenAI secret API key. Replace it with a secret key from the OpenAI API dashboard.' }); return false; }
+  return true;
+}
 async function requireSupabaseUser(req, res) {
   const config = supabaseConfig();
   if (!config.url || !config.key) { json(res, 503, { error:'Supabase is not configured yet. Add SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY to the server environment.' }); return null; }
@@ -95,7 +100,7 @@ async function handleRequest(req, res) {
     }
     if (req.method === 'GET' && url.pathname === '/api/health') {
       const config = supabaseConfig();
-      return json(res, 200, { ok:true, aiConfigured:Boolean(process.env.OPENAI_API_KEY), supabaseConfigured:Boolean(config.url && config.key) });
+      return json(res, 200, { ok:true, aiConfigured:/^sk-/.test(process.env.OPENAI_API_KEY?.trim() || ''), supabaseConfigured:Boolean(config.url && config.key) });
     }
     if (req.method === 'GET' && url.pathname === '/api/institutions') {
       const q = String(url.searchParams.get('q') || '').trim().replace(/[+\-=!(){}\[\]^"~*?:\\/|<>]/g, ' ').replace(/\s+/g, ' ').slice(0, 80);

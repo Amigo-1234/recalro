@@ -15,7 +15,63 @@
   const wait = (ms) => new Promise((r) => setTimeout(r, R.reducedMotion() ? 0 : ms));
   const blobToBase64 = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
   async function apiAuthHeaders() { await window.RecalroAuth?.ready; const token = window.RecalroAuth?.accessToken?.(); if (!token) throw new Error("Sign in to use Recalro AI."); return { Authorization:`Bearer ${token}` }; }
-  async function speakText(text) { if (!text) return; try { const response = await fetch("/api/speech", { method:"POST", headers:{"Content-Type":"application/json",...(await apiAuthHeaders())}, body:JSON.stringify({ text:text.slice(0,4000) }) }); if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Speech generation failed."); } const audio = new Audio(URL.createObjectURL(await response.blob())); audio.onended = () => URL.revokeObjectURL(audio.src); await audio.play(); } catch (err) { if (window.speechSynthesis) { window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(text.slice(0,12000)); window.speechSynthesis.speak(utterance); } else R.toast(err.message || "Read aloud is unavailable.", { icon:"info" }); } }
+  let speechCancel = () => {};
+  async function speakText(text, onState = () => {}, onCancel = () => {}) {
+    if (!text) return;
+    let url = "", audio = null, audioContext = null, analyser = null, frame = 0, cancelled = false, finishPlayback = () => {};
+    const controller = new AbortController();
+    const clear = () => { cancelAnimationFrame(frame); if (audioContext && audioContext.state !== "closed") audioContext.close().catch(() => {}); if (url) URL.revokeObjectURL(url); };
+    const cancel = () => {
+      cancelled = true; controller.abort();
+      if (audio) { audio.pause(); audio.currentTime = 0; }
+      finishPlayback(); clear(); onState("stopped", 0);
+    };
+    speechCancel = cancel; onCancel(cancel);
+    try {
+      const response = await fetch("/api/speech", { method:"POST", headers:{"Content-Type":"application/json",...(await apiAuthHeaders())}, body:JSON.stringify({ text:text.slice(0,4000) }), signal:controller.signal });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || "Speech generation failed."); }
+      if (cancelled) return;
+      url = URL.createObjectURL(await response.blob()); audio = new Audio(url); audio.preload = "auto";
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) try {
+        audioContext = new AudioContextClass(); analyser = audioContext.createAnalyser(); analyser.fftSize = 256;
+        const source = audioContext.createMediaElementSource(audio); source.connect(analyser); analyser.connect(audioContext.destination); await audioContext.resume();
+      } catch { analyser = null; }
+      if (cancelled) { clear(); return; }
+      const ended = new Promise((resolve, reject) => { finishPlayback = resolve; audio.addEventListener("ended", resolve, { once:true }); audio.addEventListener("error", () => reject(new Error("Speech playback failed.")), { once:true }); });
+      audio.addEventListener("play", () => onState("speaking", 0), { once:true });
+      if (analyser) {
+        const samples = new Uint8Array(analyser.fftSize);
+        const sample = () => {
+          analyser.getByteTimeDomainData(samples);
+          const rms = Math.sqrt(samples.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / samples.length);
+          onState("speaking", Math.min(1, rms * 3.5)); frame = requestAnimationFrame(sample);
+        };
+        frame = requestAnimationFrame(sample);
+      }
+      await audio.play(); await ended; clear();
+      if (cancelled) return;
+      if (speechCancel === cancel) speechCancel = () => {};
+      onState("finished", 0);
+    } catch (err) {
+      clear();
+      if (cancelled) return;
+      if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) { onState("error", 0); R.toast(err.message || "Read aloud is unavailable.", { icon:"info" }); return; }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.slice(0,12000));
+      utterance.onstart = () => onState("speaking", .45);
+      utterance.onboundary = () => onState("speaking", .8);
+      let finishUtterance = () => {};
+      const cancelFallback = () => { cancelled = true; window.speechSynthesis.cancel(); finishUtterance(); onState("stopped", 0); };
+      speechCancel = cancelFallback; onCancel(cancelFallback);
+      await new Promise((resolve) => {
+        finishUtterance = resolve;
+        utterance.onend = () => { if (speechCancel === cancelFallback) speechCancel = () => {}; if (!cancelled) onState("finished", 0); resolve(); };
+        utterance.onerror = () => { if (speechCancel === cancelFallback) speechCancel = () => {}; if (!cancelled) onState("finished", 0); resolve(); };
+        window.speechSynthesis.speak(utterance);
+      });
+    }
+  }
 
   /* ======================= Markdown + maths (AIResponse) ======================= */
   const SYM = { Delta: "Δ", delta: "δ", eta: "η", rho: "ρ", theta: "θ", pi: "π", alpha: "α", beta: "β", gamma: "γ", omega: "ω", Omega: "Ω", sigma: "σ", Sigma: "Σ", mu: "μ", lambda: "λ", epsilon: "ε", phi: "φ", tau: "τ", geq: "≥", ge: "≥", leq: "≤", le: "≤", neq: "≠", approx: "≈", times: "×", cdot: "·", pm: "±", to: "→", rightarrow: "→", infty: "∞", sum: "∑", int: "∫", partial: "∂", nabla: "∇", degree: "°" };
@@ -100,18 +156,18 @@
   const STOP = new Set("the a an and or of to in on for is are was were be by with as at it this that from what why how when which who does do can could would should about into your you me my i we our their there than then so if not no yes give explain quiz summarize summarise example worked help understand mistakes wrong keep getting simply topic".split(" "));
   const words = (t) => (t.toLowerCase().match(/[a-zα-ω₀-₉²³⁰-⁹]+/gi) || []).filter((w) => w.length > 2 && !STOP.has(w));
   const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
-  function activeModule(subjectId) { const s = R.subject(subjectId); return R.moduleStatus(s).find((m) => m.status === "active") || s.modules?.[0]; }
+  function activeModule(subjectId) { const s = R.subject(subjectId); return s ? R.moduleStatus(s).find((m) => m.status === "active") || s.modules?.[0] : null; }
   function resolveTopic(prompt, subjectId) {
     const p = prompt.toLowerCase();
     const mods = R.subjects().flatMap((s) => (s.modules || []).map((m) => ({ ...m, subject: s.id })));
     const hit = mods.filter((m) => m.subject === subjectId).concat(mods).find((m) => p.includes(m.name.toLowerCase()) || words(m.name).some((w) => w.length > 5 && p.includes(w)));
     const mod = hit || activeModule(subjectId);
-    return { mod, name: mod?.name || R.subject(subjectId).name };
+    return { mod, name: mod?.name || R.subject(subjectId)?.name || "your topic" };
   }
   const intentOf = (p) => /\b(quiz|test me|question me)\b/i.test(p) ? "quiz" : /summar|key points|recap|overview/i.test(p) ? "summary" : /mistake|wrong|weak|struggl/i.test(p) ? "mistakes" : /example/i.test(p) ? "example" : "explain";
   const NOTICE = "> **AI provider not connected.** I can't write new explanations yet, so this answer is built from your own flashcards and vault.";
   function composeAnswer(prompt, subjectId) {
-    const intent = intentOf(prompt), { mod, name } = resolveTopic(prompt, subjectId), subj = R.subject(subjectId);
+    const intent = intentOf(prompt), { mod, name } = resolveTopic(prompt, subjectId), subj = R.subject(subjectId) || { name: "your studies" };
     const modCards = R.cards().filter((c) => c.module === mod?.id);
     const found = R.searchKnowledge(prompt, subjectId);
     const follow = [`Quiz me on ${name}`, `Summarize ${name}`, `What do I keep getting wrong in ${subj.name}?`];
@@ -154,35 +210,38 @@
   function TutorWorkspace(view, ctx) {
     const st = R.state, mode = ctx.sub[0] === "explain" ? "explain" : "chat";
     let chat = mode === "chat" && !ctx.query.new ? st.chats.find((c) => c.id === ctx.query.chat) || null : null;
-    let subject = ctx.query.subject || chat?.subject || R.subjects()[0].id;
-    if (!R.subject(subject)) subject = R.subjects()[0].id;
-    let streaming = null, attachment = null, learningMode = "ask";
+    let subject = ctx.query.subject || chat?.subject || R.subjects()[0]?.id || "";
+    if (!R.subject(subject)) subject = R.subjects()[0]?.id || "";
+    let streaming = null, attachment = null, learningMode = "ask", voiceSession = false, voiceScreen = null;
+    const shell = R.$("#shell");
+    const syncTutorNavigation = () => shell?.classList.toggle("hide-tutor-nav", !!st.settings.hideTutorNavigation);
+    syncTutorNavigation();
 
     view.innerHTML = `
       <div class="tw ${historyOpen() ? "" : "is-history-closed"}" data-mode="${mode}">
         <aside class="tw-history" aria-label="Conversation history"></aside>
         <section class="tw-main">
           <header class="tw-head">
-            <button type="button" class="icon-btn tw-hist-btn" data-history aria-label="Conversation history" data-tip="History">${icon("sidebar")}</button>
-            <div class="tw-modes" role="tablist" aria-label="Tutor mode">
-              <a role="tab" href="#/app/tutor${chat ? `?chat=${chat.id}` : ""}" aria-selected="${mode === "chat"}" class="${mode === "chat" ? "is-on" : ""}">${icon("sparkles")}<span>Chat</span></a>
-              <a role="tab" href="#/app/tutor/explain" aria-selected="${mode === "explain"}" class="${mode === "explain" ? "is-on" : ""}">${icon("quote")}<span>Explain it</span></a>
-            </div>
+            <button type="button" class="icon-btn tw-hist-btn" data-history aria-label="Conversation history" data-tip="Chats">${icon("menu")}</button>
             <button type="button" class="tw-subject" data-subject aria-haspopup="dialog"></button>
             <span class="tw-status" data-tip="AI Tutor connection status"><span>AI Tutor</span></span>
             <button type="button" class="icon-btn" data-newchat aria-label="New chat" data-tip="New chat">${icon("edit")}</button>
+            <button type="button" class="icon-btn" data-more aria-label="Tutor options" data-tip="More">${icon("more")}</button>
           </header>
           <div class="tw-body"></div>
         </section>
       </div>`;
     const root = R.$(".tw", view), body = R.$(".tw-body", view);
-    const drawSubject = () => { const s = R.subject(subject); R.$("[data-subject]", view).innerHTML = `${ui.subjectDot(subject)}<span>${esc(s.name)}</span>${icon("chevron-down")}`; R.$("[data-subject]", view).setAttribute("aria-label", `Subject: ${s.name}. Change subject`); };
+    const drawSubject = () => { const s = R.subject(subject), button = R.$("[data-subject]", view); button.innerHTML = s ? `${ui.subjectDot(subject)}<span>${esc(s.name)}</span>${icon("chevron-down")}` : `<span>General learning</span>${icon("chevron-down")}`; button.setAttribute("aria-label", s ? `Subject: ${s.name}. Change subject` : "Choose a subject"); };
     drawSubject();
 
     /* ---------- SubjectSelector ---------- */
-    const chooseSubject = () => R.picker({ title: "Which subject are we studying?", value: subject,
+    const chooseSubject = () => {
+      if (!R.subjects().length) { R.go("subjects?new=1"); return; }
+      return R.picker({ title: "Which subject are we studying?", value: subject,
       options: R.subjects().map((s) => ({ value: s.id, label: s.name, dot: s.id, sub: `${(s.modules || []).length} modules · ${R.cards(s.id).length} cards · ${R.pct(R.subjectMastery(s.id))} mastered` })),
       onSelect(v) { subject = v; if (chat) { chat.subject = v; R.save(); } drawSubject(); if (mode === "chat") { if (!chat?.messages.length) drawThread(); composer?.setPlaceholder(); } else explainWs?.reset(); R.$("[data-subject]", view).focus(); } });
+    };
 
     /* ---------- ConversationHistory ---------- */
     const bucket = (iso) => { const d = (R.startOfDay() - R.startOfDay(new Date(iso))) / 86400000; return d <= 0 ? "Today" : d <= 7 ? "Previous 7 days" : "Older"; };
@@ -212,6 +271,24 @@
       });
     } });
 
+    const openMoreMenu = () => R.sheet({ title: "Tutor options", body: `<nav class="tw-more-menu" aria-label="Tutor options">
+      <a class="menu-item" href="#/app/tutor">${icon("sparkles")}<span>Chat</span></a>
+      <a class="menu-item" href="#/app/tutor/explain">${icon("quote")}<span>Explain it to me</span></a>
+      <button type="button" class="menu-item" data-change-subject>${icon("book")}<span>Change subject</span>${icon("chevron-right", "menu-go")}</button>
+      <label class="tw-setting-row"><span><b>Hide workspace navigation</b><small>Give the tutor more room while you study.</small></span><input type="checkbox" data-hide-navigation ${st.settings.hideTutorNavigation ? "checked" : ""}></label>
+      <label class="tw-learning-mode"><span>Learning mode</span><select aria-label="Learning mode" data-learning-mode><option value="ask">Ask anything</option><option value="simple">Explain simply</option><option value="notes">Study my notes</option><option value="summary">Summarize</option><option value="quiz">Quiz me</option><option value="steps">Step-by-step</option></select></label>
+    </nav>`, cls: "tw-options-sheet", onOpen(d, close) {
+      const select = d.querySelector("[data-learning-mode]"); if (select) select.value = learningMode;
+      d.addEventListener("click", (e) => {
+        if (e.target.closest("a")) close();
+        if (e.target.closest("[data-change-subject]")) { close(); chooseSubject(); }
+      });
+      d.querySelector("[data-hide-navigation]")?.addEventListener("change", (e) => {
+        st.settings.hideTutorNavigation = e.target.checked; R.save(); syncTutorNavigation();
+      });
+      select?.addEventListener("change", () => { learningMode = select.value; composer?.setMode(learningMode); });
+    } });
+
     /* ---------- Shared head actions ---------- */
     function newChat() {
       if (mode !== "chat") { R.go(`tutor?new=1&subject=${subject}`); return; }
@@ -220,6 +297,7 @@
     view.addEventListener("click", (e) => {
       if (e.target.closest("[data-subject]")) chooseSubject();
       if (e.target.closest("[data-newchat]")) newChat();
+      if (e.target.closest("[data-more]")) openMoreMenu();
       if (e.target.closest("[data-history]")) {
         if (phone()) openHistorySheet();
         else { const closed = root.classList.toggle("is-history-closed"); setHistoryOpen(!closed); }
@@ -229,7 +307,10 @@
     view.addEventListener("input", (e) => { if (e.target.matches(".tw-history [data-hsearch]")) drawHistory(); });
     drawHistory();
 
-    if (mode === "explain") { explainWs = ExplainItWorkspace(body, { getSubject: () => subject, topic: ctx.query.topic }); return () => {}; }
+    if (mode === "explain") {
+      if (!subject) { body.innerHTML = ui.empty({ icon: "book", title: "Add a subject to get started", body: "Your tutor is ready. Create a subject to organise explanations and study notes.", action: ui.btn("Add your first subject", { tone: "primary", icon: "plus", attrs: "data-add-subject" }) }); body.addEventListener("click", (e) => { if (e.target.closest("[data-add-subject]")) R.go("subjects?new=1"); }); return () => {}; }
+      explainWs = ExplainItWorkspace(body, { getSubject: () => subject, topic: ctx.query.topic }); return () => {};
+    }
 
     /* ---------- Conversation ---------- */
     body.innerHTML = `<div class="tw-scroll" id="twScroll"><div class="tw-thread" id="twThread" aria-live="polite"></div></div><div class="tw-dock"><div class="tw-follow" id="twFollow"></div><div class="tw-composer" id="twComposer"></div></div>`;
@@ -239,21 +320,24 @@
 
     /* SuggestedPrompts (empty state) */
     function emptyState() {
-      const s = R.subject(subject), mod = activeModule(subject), topic = mod?.name || s.name;
-      const weak = R.weakTopics().find((w) => w.module.subject.id === subject);
-      const starters = [
+      const hasSubject = !!R.subject(subject), s = R.subject(subject) || { name: "your studies" }, mod = activeModule(subject), topic = mod?.name || s.name;
+      const weak = hasSubject && R.weakTopics().find((w) => w.module.subject.id === subject);
+      const starters = hasSubject ? [
         { ic: "bulb", t: "Explain a difficult concept", p: `Explain ${weak ? weak.module.name : topic}`, sub: weak ? `You've missed ${weak.module.name} ${R.plural(weak.errors, "time")}` : topic },
         { ic: "sigma", t: "Give me a worked example", p: `Give me a worked example on ${topic}`, sub: topic },
         { ic: "zap", t: "Quiz me on this subject", p: `Quiz me on ${topic}`, sub: `${R.cards().filter((c) => c.module === mod?.id).length} cards available` },
         { ic: "file", t: "Summarize a topic", p: `Summarize ${topic}`, sub: topic },
-        { ic: "target", t: "Help me understand my mistakes", p: `What do I keep getting wrong in ${s.name}?`, sub: "From your review history" },
+      ] : [
+        { ic: "bulb", t: "Understand a concept", p: "Explain a topic in a simple way", sub: "Ask about anything you're learning" },
+        { ic: "sigma", t: "Work through a problem", p: "Help me solve a problem step by step", sub: "Share the question you're working on" },
+        { ic: "file", t: "Study with my notes", p: "Help me study the notes I attach", sub: "Attach a file with the + button" },
       ];
       return `<div class="tw-empty">
         <div class="tw-orb" aria-hidden="true">${icon("sparkles")}</div>
         <h1>Hi ${esc(R.firstName())}! What are we learning today?</h1>
-        <p>Studying <b>${esc(s.name)}</b>${mod ? ` · currently on <b>${esc(mod.name)}</b>` : ""}</p>
+        <p>${hasSubject ? `Studying <b>${esc(s.name)}</b>${mod ? ` · currently on <b>${esc(mod.name)}</b>` : ""}` : "Ask about any topic, or add a subject to organise your learning."}</p>
         <div class="tw-starters">${starters.map((x, i) => `<button type="button" class="tw-starter" data-send="${esc(x.p)}" style="--i:${i}"><span class="tw-st-ic">${icon(x.ic)}</span><span><b>${x.t}</b><small>${esc(x.sub)}</small></span></button>`).join("")}</div>
-        <p class="tw-local">${icon("sparkles")}Ask questions, share study materials, or choose a learning mode to get started.</p>
+        <p class="tw-local">${icon("sparkles")}Ask a question, attach your notes, or choose a learning mode to get started.</p>
       </div>`;
     }
 
@@ -318,11 +402,12 @@
       let m;
       try {
         const history = (chat?.messages || []).slice(0, -1).filter((x) => x.role === "user" || x.role === "assistant").slice(-12).map((x) => ({ role: x.role, content: x.role === "assistant" ? (x.md || x.text || "") : (x.text || "") }));
-        const payload = { message: prompt, subject: R.subject(subject).name, mode: learningMode, history, attachment: attachment?.payload || null };
+        const subjectName = R.subject(subject)?.name || "General learning";
+        const payload = { message: prompt, subject: subjectName, mode: learningMode, history, attachment: attachment?.payload || null };
         const response = await fetch("/api/tutor", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify(payload) });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "The tutor could not respond. Please try again.");
-        m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${R.subject(subject).name}`, `Explain that more simply`], at: new Date().toISOString() };
+        m = { role: "assistant", md: data.answer, follow: data.follow || [`Give me an example`, `Quiz me on ${subjectName}`, `Explain that more simply`], at: new Date().toISOString() };
       } catch (err) { console.error("Recalro tutor request failed", err); m = { role: "assistant", error: true, prompt, errorMessage: err.message }; }
       if (replaceIdx != null) chat.messages[replaceIdx] = m; else chat.messages.push(m);
       chat.updatedAt = new Date().toISOString(); R.save();
@@ -331,13 +416,14 @@
       thread.querySelectorAll(".tw-ai [data-regen]").forEach((b) => b.remove());
       const holder = document.createElement("div"); holder.innerHTML = messageHTML(m, idx, true);
       const el = holder.firstElementChild; typing.replaceWith(el);
-      if (m.error) { composer.setStreaming(false); return; }
+      if (m.error) { composer.setStreaming(false); return m; }
       // Answer content is rendered (unsanitised HTML never enters: R.md escapes everything).
       el.querySelector(".tw-actions").hidden = true;
       await revealAnswer(el, m);
       drawHistory();
+      return m;
     }
-    async function send(text) {
+    async function send(text, { voiceReply = false } = {}) {
       text = (text || "").trim();
       if ((!text && !attachment) || streaming) return;
       if (!chat) { chat = { id: R.uid(), title: (text || "Image question").slice(0, 60), subject, messages: [], updatedAt: new Date().toISOString() }; st.chats.push(chat); R.replaceRoute(`tutor?chat=${chat.id}`); }
@@ -350,19 +436,103 @@
       R.animate(thread.lastElementChild, [{ opacity: 0, transform: "translateY(10px) scale(.98)" }, { opacity: 1, transform: "none" }], { duration: 240 });
       R.record({ t: "chat", subject, xp: R.content.xp.chat });
       drawHistory();
-      attachment = pendingAttachment; await respond(text || `Please help me understand the attached ${pendingAttachment?.name || "file"}.`); attachment = null;
+      attachment = pendingAttachment;
+      const reply = await respond(text || `Please help me understand the attached ${pendingAttachment?.name || "file"}.`);
+      attachment = null;
+      if (voiceReply && voiceSession && reply && !reply.error) {
+        const parsed = document.createElement("div"); parsed.innerHTML = R.md(reply.md || reply.text || "");
+        const spoken = parsed.innerText || parsed.textContent || "";
+        voiceState("speaking", 0, spoken.slice(0, 260));
+        await speakText(spoken, (state, level) => voiceState(state, level, state === "speaking" ? spoken.slice(0, 260) : ""));
+      }
+      return reply;
     }
 
     /* MessageComposer + AttachmentPreview */
     const composer = MessageComposer(R.$("#twComposer", view), {
-      placeholder: () => `Ask about ${R.subject(subject).name}…`,
+      placeholder: () => R.subject(subject) ? `Ask about ${R.subject(subject).name}…` : "Ask your tutor anything…",
       onSend: (t) => send(t), onStop: stopStream,
       onAttach: (a) => { attachment = a; }, onUnattach: () => { attachment = null; },
-      onMode: (m) => { learningMode = m; },
+      onModeChange: (m) => { learningMode = m; },
+      onVoiceMode: startVoiceMode,
+      onVoiceTurn: handleVoiceTurn,
+      onVoiceLevel: (level) => { if (voiceSession) voiceScreen.querySelector("[data-voice-orb]")?.style.setProperty("--voice-scale", (1 + Math.min(1, level) * .14).toFixed(3)); },
       onVoice: async (blob) => {
-        try { const b64 = await blobToBase64(blob); const r = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify({ audio: b64, mimeType: blob.type || "audio/webm" }) }); const d = await r.json(); if (!r.ok) throw new Error(d.error); composer.setValue(d.text || ""); }
+        try { composer.setValue(await transcribeAudio(blob)); }
         catch (err) { R.toast(err.message || "Voice transcription failed.", { icon: "info" }); }
       },
+    });
+
+    voiceScreen = document.createElement("section");
+    voiceScreen.className = "tw-voice-screen"; voiceScreen.hidden = true; voiceScreen.setAttribute("aria-label", "Voice conversation");
+    voiceScreen.innerHTML = `<header class="tw-voice-head"><button type="button" class="icon-btn" data-voice-exit aria-label="Close voice chat">${icon("chevron-left")}</button><span>Voice chat</span><button type="button" class="icon-btn" data-voice-options aria-label="Tutor options">${icon("more")}</button></header>
+      <div class="tw-voice-stage"><div class="tw-voice-orb" data-voice-orb><span><img src="assets/recalro-logo.png" alt="Recalro"></span></div><h1 data-voice-status>Listening…</h1><p data-voice-caption aria-live="polite">Speak naturally. I’ll answer out loud.</p></div>
+      <footer class="tw-voice-controls"><button type="button" class="tw-voice-mic" data-voice-toggle aria-label="Finish speaking">${icon("mic")}</button><button type="button" class="tw-voice-end" data-voice-end aria-label="End voice chat">${icon("x")}</button></footer>`;
+    root.append(voiceScreen);
+
+    async function transcribeAudio(blob) {
+      const b64 = await blobToBase64(blob);
+      const response = await fetch("/api/transcribe", { method: "POST", headers: { "Content-Type": "application/json", ...(await apiAuthHeaders()) }, body: JSON.stringify({ audio: b64, mimeType: blob.type || "audio/webm" }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || "Voice transcription failed.");
+      return String(data.text || "").trim();
+    }
+    function voiceState(state, level = 0, caption) {
+      if (!voiceScreen) return;
+      const changed = voiceScreen.dataset.state !== state;
+      voiceScreen.dataset.state = state;
+      const status = voiceScreen.querySelector("[data-voice-status]"), mic = voiceScreen.querySelector("[data-voice-toggle]"), orb = voiceScreen.querySelector("[data-voice-orb]");
+      const labels = { listening: "Listening…", transcribing: "One moment…", thinking: "Thinking it through…", speaking: "Recalro is speaking", finished: "Listening…", error: "I couldn't play that reply" };
+      if (changed) status.textContent = labels[state] || "Voice chat";
+      if (caption !== undefined) { const cap = voiceScreen.querySelector("[data-voice-caption]"); if (cap.textContent !== caption) cap.textContent = caption; }
+      orb.style.setProperty("--voice-scale", (1 + Math.min(1, Math.max(0, level)) * .14).toFixed(3));
+      if (changed) {
+        mic.disabled = ["transcribing", "thinking", "finished"].includes(state);
+        mic.setAttribute("aria-label", state === "speaking" ? "Interrupt and speak" : state === "listening" ? "Finish speaking" : "Microphone unavailable");
+        mic.classList.toggle("is-live", state === "listening");
+      }
+    }
+    async function startVoiceMode() {
+      if (voiceSession) return;
+      voiceSession = true; voiceScreen.hidden = false; root.classList.add("is-voice");
+      R.setFocusMode(true); voiceState("listening", 0, "Speak naturally. I’ll answer out loud.");
+      const started = await composer.startVoiceCapture();
+      if (!started) closeVoiceMode();
+    }
+    function closeVoiceMode() {
+      if (!voiceSession) return;
+      voiceSession = false; speechCancel(); composer.stopVoiceCapture(true); voiceScreen.hidden = true;
+      root.classList.remove("is-voice"); R.setFocusMode(false);
+    }
+    async function toggleVoiceCapture() {
+      if (!voiceSession) return;
+      if (voiceScreen.dataset.state === "speaking") { speechCancel(); voiceState("listening", 0, "Go ahead. I’m listening."); await composer.startVoiceCapture(); return; }
+      if (["transcribing", "thinking"].includes(voiceScreen.dataset.state)) return;
+      composer.stopVoiceCapture();
+    }
+    async function handleVoiceTurn(blob) {
+      if (!voiceSession) return;
+      try {
+        voiceState("transcribing", 0, "Turning your words into a question…");
+        const transcript = await transcribeAudio(blob);
+        if (!voiceSession) return;
+        if (!transcript) { voiceState("listening", 0, "I didn’t catch that. Try again."); await composer.startVoiceCapture(); return; }
+        voiceState("thinking", 0, `You: ${transcript.slice(0, 220)}`);
+        const reply = await send(transcript, { voiceReply: true });
+        if (!voiceSession) return;
+        if (reply?.error) voiceState("listening", 0, reply.errorMessage || "I couldn't answer that. Try again.");
+        else voiceState("listening", 0, "Your turn. I’m listening.");
+        await composer.startVoiceCapture();
+      } catch (err) {
+        if (!voiceSession) return;
+        voiceState("listening", 0, err.message || "Voice chat couldn't continue. Try again.");
+        R.toast(err.message || "Voice chat couldn't continue.", { icon: "info" });
+        await composer.startVoiceCapture();
+      }
+    }
+    voiceScreen.addEventListener("click", (e) => {
+      if (e.target.closest("[data-voice-end]") || e.target.closest("[data-voice-exit]")) closeVoiceMode();
+      if (e.target.closest("[data-voice-toggle]")) toggleVoiceCapture();
+      if (e.target.closest("[data-voice-options]")) openMoreMenu();
     });
 
     thread.addEventListener("click", async (e) => {
@@ -402,29 +572,35 @@
     drawThread();
     if (ctx.query.topic) composer.setValue(`Help me understand ${ctx.query.topic}`);
     if (!phone()) composer.focus();
-    return () => { stopStream(); document.removeEventListener("keydown", onKey); };
+    return () => { closeVoiceMode(); stopStream(); document.removeEventListener("keydown", onKey); };
   }
   let explainWs = null;
 
   /* ======================= MessageComposer ======================= */
-  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach, onMode, onVoice }) {
+  function MessageComposer(el, { placeholder, onSend, onStop, onAttach, onUnattach, onModeChange, onVoice, onVoiceMode, onVoiceTurn, onVoiceLevel }) {
     el.innerHTML = `<form class="tw-form" novalidate>
         <div class="tw-attach" hidden></div>
-        <div class="tw-modebar"><label>Learning mode <select aria-label="Learning mode"><option value="ask">Ask anything</option><option value="simple">Explain simply</option><option value="notes">Study my notes</option><option value="summary">Summarize</option><option value="quiz">Quiz me</option><option value="steps">Step-by-step</option></select></label></div>
         <div class="tw-input">
-          <label class="tw-tool" data-tip="Attach an image or document"><input type="file" accept="image/*,.pdf,.txt,.md,.docx" class="sr-only" aria-label="Attach an image or document">${icon("paperclip")}</label>
+          <label class="tw-tool" data-tip="Attach an image or document"><input type="file" accept="image/*,.pdf,.txt,.md,.docx" class="sr-only" aria-label="Attach an image or document">${icon("plus")}</label>
           <textarea rows="1" aria-label="Message the tutor" enterkeyhint="send"></textarea>
-          <button type="button" class="tw-tool" data-mic aria-label="Record voice question" title="Record voice question">${icon("mic")}</button>
+          <button type="button" class="tw-tool" data-mic aria-label="Dictate a message" title="Dictate a message">${icon("mic")}</button>
           <button type="submit" class="tw-send" aria-label="Send message" disabled>${icon("arrow-up")}</button>
         </div>
         <p class="tw-hint"><span>${ui.kbd("Enter")} send · ${ui.kbd("Shift")}+${ui.kbd("Enter")} new line · ${ui.kbd("Esc")} stop</span><span>AI study assistant · check important answers</span></p>
       </form>`;
-    const form = el.querySelector("form"), ta = el.querySelector("textarea"), sendBtn = el.querySelector(".tw-send"), file = el.querySelector("input[type=file]"), prev = el.querySelector(".tw-attach"), modeSelect = el.querySelector("select"), micBtn = el.querySelector("[data-mic]");
+    const form = el.querySelector("form"), ta = el.querySelector("textarea"), sendBtn = el.querySelector(".tw-send"), file = el.querySelector("input[type=file]"), prev = el.querySelector(".tw-attach"), micBtn = el.querySelector("[data-mic]");
     let streaming = false, hasAttachment = false;
     const grow = () => { ta.style.height = "auto"; ta.style.height = `${Math.min(phone() ? 140 : 220, ta.scrollHeight)}px`; };
-    const sync = () => { if (!streaming) sendBtn.disabled = !ta.value.trim() && !hasAttachment; };
+    const sync = () => {
+      if (streaming) return;
+      const ready = !!ta.value.trim() || hasAttachment;
+      sendBtn.classList.toggle("is-voice", !ready); sendBtn.type = ready ? "submit" : "button";
+      sendBtn.disabled = false; sendBtn.setAttribute("aria-label", ready ? "Send message" : "Start voice chat");
+      sendBtn.title = ready ? "Send message" : "Start voice chat"; sendBtn.innerHTML = icon(ready ? "arrow-up" : "voice");
+    };
     const api = {
       setPlaceholder() { ta.placeholder = placeholder(); },
+      setMode(m) { onModeChange?.(m); },
       focus() { ta.focus(); },
       setValue(v) { ta.value = v; grow(); sync(); },
       clear() { ta.value = ""; grow(); prev.hidden = true; prev.innerHTML = ""; hasAttachment = false; sync(); },
@@ -438,12 +614,13 @@
       },
     };
     api.setPlaceholder();
+    sync();
     ta.addEventListener("input", () => { grow(); sync(); });
     ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !(phone() && !e.ctrlKey && !e.metaKey)) { e.preventDefault(); form.requestSubmit(); } });
     // On phones, keep the newest message in view when the keyboard opens.
     ta.addEventListener("focus", () => setTimeout(() => { const s = el.closest(".tw-main")?.querySelector(".tw-scroll"); if (s) s.scrollTop = s.scrollHeight; }, 300));
     form.addEventListener("submit", (e) => { e.preventDefault(); if (streaming) return; onSend(ta.value); });
-    sendBtn.addEventListener("click", (e) => { if (streaming) { e.preventDefault(); onStop(); } });
+    sendBtn.addEventListener("click", (e) => { if (streaming) { e.preventDefault(); onStop(); } else if (sendBtn.classList.contains("is-voice")) { e.preventDefault(); onVoiceMode?.(); } });
     file.addEventListener("change", () => {
       const f = file.files[0]; if (!f) return;
       const done = (data) => {
@@ -458,14 +635,56 @@
       const r = new FileReader(); r.onload = () => done(r.result); r.readAsDataURL(f);
       file.value = "";
     });
-    modeSelect.addEventListener("change", () => onMode?.(modeSelect.value));
-    let recorder = null, chunks = [];
+    let recorder = null, chunks = [], recordStream = null, recordContext = null, recordAnalyser = null, recordFrame = 0, stopTimer = 0, recordPurpose = "dictation", discardRecording = false;
+    const mimeType = () => ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"].find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+    const stopRecording = (discard = false) => {
+      if (discard) discardRecording = true;
+      clearTimeout(stopTimer); cancelAnimationFrame(recordFrame);
+      if (recorder?.state === "recording") recorder.stop();
+    };
+    const startRecording = async (purpose = "dictation") => {
+      if (recorder?.state === "recording") return true;
+      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { R.toast("Voice recording requires a supported browser on HTTPS or localhost.", { icon: "info" }); return false; }
+      try {
+        recordPurpose = purpose; discardRecording = false; chunks = []; recordStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const type = mimeType(); recorder = new MediaRecorder(recordStream, type ? { mimeType: type } : undefined);
+        recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: recorder.mimeType || recordStream?.getAudioTracks()[0]?.getSettings?.().mimeType || "audio/webm" });
+          recordStream?.getTracks().forEach((track) => track.stop()); recordStream = null;
+          if (recordContext && recordContext.state !== "closed") recordContext.close().catch(() => {}); recordContext = null; recordAnalyser = null;
+          if (discardRecording) { discardRecording = false; return; }
+          if (recordPurpose === "voice") onVoiceTurn?.(blob); else onVoice?.(blob);
+        };
+        recorder.start();
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        let startedTalking = false, lastLoud = Date.now();
+        if (AudioContextClass) try {
+          recordContext = new AudioContextClass(); recordAnalyser = recordContext.createAnalyser(); recordAnalyser.fftSize = 512;
+          recordContext.createMediaStreamSource(recordStream).connect(recordAnalyser); await recordContext.resume();
+          const samples = new Uint8Array(recordAnalyser.fftSize);
+          const sample = () => {
+            if (!recordAnalyser || recorder?.state !== "recording") return;
+            recordAnalyser.getByteTimeDomainData(samples);
+            const rms = Math.sqrt(samples.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / samples.length);
+            onVoiceLevel?.(Math.min(1, rms * 5));
+            if (rms > .035) { startedTalking = true; lastLoud = Date.now(); }
+            if (purpose === "voice" && startedTalking && Date.now() - lastLoud > 1150) { stopRecording(); return; }
+            recordFrame = requestAnimationFrame(sample);
+          };
+          recordFrame = requestAnimationFrame(sample);
+        } catch { recordAnalyser = null; }
+        stopTimer = setTimeout(() => stopRecording(), purpose === "voice" ? 60000 : 30000);
+        return true;
+      } catch (err) { recordStream?.getTracks().forEach((track) => track.stop()); R.toast("Microphone permission was not granted.", { icon: "info" }); return false; }
+    };
     micBtn.addEventListener("click", async () => {
-      if (recorder?.state === "recording") { recorder.stop(); micBtn.classList.remove("is-recording"); micBtn.setAttribute("aria-label", "Record voice question"); return; }
-      if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { R.toast("Voice recording requires a supported browser on HTTPS or localhost.", { icon: "info" }); return; }
-      try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); recorder = new MediaRecorder(stream); chunks = []; recorder.ondataavailable = (ev) => { if (ev.data.size) chunks.push(ev.data); }; recorder.onstop = () => { const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" }); stream.getTracks().forEach((t) => t.stop()); onVoice?.(blob); }; recorder.start(); micBtn.classList.add("is-recording"); micBtn.setAttribute("aria-label", "Stop recording"); }
-      catch (err) { R.toast("Microphone permission was not granted.", { icon: "info" }); }
+      if (recorder?.state === "recording") { stopRecording(); micBtn.classList.remove("is-recording"); micBtn.setAttribute("aria-label", "Dictate a message"); return; }
+      const started = await startRecording("dictation");
+      if (started) { micBtn.classList.add("is-recording"); micBtn.setAttribute("aria-label", "Stop dictation"); }
     });
+    api.startVoiceCapture = () => startRecording("voice");
+    api.stopVoiceCapture = (discard = false) => stopRecording(discard);
     prev.addEventListener("click", (e) => { if (e.target.closest("[data-unattach]")) { hasAttachment = false; prev.hidden = true; prev.innerHTML = ""; onUnattach(); sync(); ta.focus(); } });
     return api;
   }

@@ -273,3 +273,83 @@ body.dark .tw-send:not(.is-stop) { color: #05201F; }
 .tw-tool.is-recording { background:color-mix(in srgb,var(--danger) 13%,transparent); color:var(--danger); animation:tw-record-pulse 1.2s infinite; }
 @keyframes tw-record-pulse { 50% { box-shadow:0 0 0 6px color-mix(in srgb,var(--danger) 12%,transparent); } }
 @media(max-width:600px) { .tw-dock { padding:4px 10px calc(10px + env(safe-area-inset-bottom)); } .tw-hint span:last-child { display:none; } .tw-modebar select { max-width:170px; } }
+
+/* Chat surface shaped around the supplied iPhone tutor reference. */
+.tw-head { height: 66px; gap: 10px; padding: 0 18px; background: var(--bg); border-bottom: 0; }
+.tw-head .icon-btn { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); box-shadow: 0 8px 22px rgba(18, 32, 35, .06); }
+.tw-modes { display: none; }
+.tw-subject { border: 0; background: transparent; padding-left: 4px; }
+.tw-status { display: none; }
+.tw-head > [data-newchat] { margin-left: auto; }
+.tw-head > [data-more] { margin-left: 2px; }
+.tw-thread { gap: 24px; }
+.tw-empty { padding: clamp(20px, 8vh, 72px) 0 18px; }
+.tw-empty > p { max-width: 580px; }
+.tw-dock { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+.tw-input { align-items: center; border-radius: 999px; padding: 6px; }
+.tw-tool { width: 40px; height: 40px; }
+.tw-send { background: var(--teal-700); }
+.tw-send.is-voice { background: #f8bd17; color: #171717; }
+.tw-send.is-voice .ic { width: 20px; height: 20px; stroke-width: 2.1; }
+.tw-send.is-voice:hover { background: #efb20d; transform: none; }
+.tw-voice-screen[hidden] { display: none !important; }
+.tw-voice-screen { position: fixed; z-index: 120; inset: 0; display: flex; flex-direction: column; height: 100dvh; padding: max(10px, env(safe-area-inset-top)) 20px calc(18px + env(safe-area-inset-bottom)); overflow: hidden; background: var(--bg); color: var(--ink); }
+.tw-voice-head { display: flex; align-items: center; justify-content: space-between; height: 58px; flex: none; }
+.tw-voice-head > span { font: 700 15px "DM Sans", sans-serif; }
+.tw-voice-head .icon-btn { width: 46px; height: 46px; border-radius: 50%; background: var(--surface); box-shadow: 0 8px 24px rgba(18, 32, 35, .06); }
+.tw-voice-stage { display: flex; flex: 1; min-height: 0; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px 0 20px; }
+.tw-voice-orb { --voice-scale: 1; position: relative; display: grid; place-items: center; width: min(64vw, 292px); aspect-ratio: 1; margin-bottom: 38px; border-radius: 50%; transform: scale(var(--voice-scale)); transition: transform .12s ease-out; background: radial-gradient(ellipse at 38% 31%, rgba(255,255,255,.96) 0 10%, rgba(255,246,209,.78) 23%, transparent 43%), linear-gradient(145deg, #ffae14 3%, #ffd234 48%, #fff0b5 100%); box-shadow: inset 0 3px 14px rgba(255,255,255,.72), inset 0 -16px 32px rgba(231,153,0,.12), 0 28px 72px rgba(233,165,18,.18); }
+.tw-voice-orb::before, .tw-voice-orb::after { content: ""; position: absolute; inset: -16px; border: 1px solid rgba(247, 180, 26, .25); border-radius: inherit; opacity: 0; transform: scale(.94); }
+.tw-voice-orb > span { display: grid; place-items: center; width: 35%; aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.58); box-shadow: 0 6px 22px rgba(255,255,255,.35); }
+.tw-voice-orb img { width: 67%; height: 67%; object-fit: contain; }
+.tw-voice-screen[data-state="listening"] .tw-voice-orb::before { animation: tw-voice-ring 2.2s ease-out infinite; opacity: 1; }
+.tw-voice-screen[data-state="speaking"] .tw-voice-orb::before { animation: tw-voice-ring .9s ease-out infinite; opacity: 1; }
+.tw-voice-screen[data-state="speaking"] .tw-voice-orb::after { animation: tw-voice-ring .9s ease-out .35s infinite; opacity: 1; }
+.tw-voice-screen[data-state="speaking"] .tw-voice-orb img { animation: tw-voice-logo .72s ease-in-out infinite alternate; }
+.tw-voice-screen[data-state="thinking"] .tw-voice-orb { animation: tw-voice-think 1.5s ease-in-out infinite; }
+.tw-voice-stage h1 { margin: 0 !important; font: 700 clamp(20px, 5vw, 26px)/1.25 Manrope, sans-serif; letter-spacing: -.025em; }
+.tw-voice-stage p { max-width: 520px; max-height: 5.2em; margin: 9px 0 0 !important; overflow: auto; color: var(--text-2); font-size: 15px; line-height: 1.6; }
+.tw-voice-controls { display: flex; align-items: center; justify-content: center; gap: 16px; flex: none; padding-top: 12px; }
+.tw-voice-mic, .tw-voice-end { display: grid; place-items: center; width: 60px; height: 60px; border: 1px solid var(--line); border-radius: 50%; cursor: pointer; transition: transform .18s ease, background .18s ease; }
+.tw-voice-mic { background: var(--surface); color: var(--ink); }
+.tw-voice-mic.is-live { border-color: var(--teal); background: var(--teal-700); color: white; }
+.tw-voice-mic:disabled { opacity: .5; cursor: default; }
+.tw-voice-end { border-color: #111; background: #111; color: white; }
+.tw-voice-mic .ic, .tw-voice-end .ic { width: 23px; height: 23px; }
+.tw-voice-mic:not(:disabled):active, .tw-voice-end:active { transform: scale(.94); }
+.tw-more-menu { display: grid; gap: 4px; padding: 2px 2px 8px; }
+.tw-more-menu .menu-item { min-height: 48px; font: 600 15px "DM Sans", sans-serif; }
+.tw-more-menu .menu-item > .ic:first-child { width: 20px; height: 20px; }
+.tw-setting-row, .tw-learning-mode { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 64px; padding: 10px; border-top: 1px solid var(--line); }
+.tw-setting-row span { display: grid; gap: 3px; }
+.tw-setting-row b, .tw-learning-mode > span { font-size: 14px; }
+.tw-setting-row small { color: var(--text-3); font-size: 12px; }
+.tw-setting-row input { width: 42px; height: 24px; accent-color: var(--teal-600); }
+.tw-learning-mode select { max-width: 170px; min-height: 38px; padding: 4px 28px 4px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: 600 13px "DM Sans", sans-serif; }
+.shell.hide-tutor-nav[data-route="tutor"] .sidebar { transform: translateX(-110%); visibility: hidden; }
+.shell.hide-tutor-nav[data-route="tutor"] .main { margin-left: 0; }
+.shell.hide-tutor-nav[data-route="tutor"] .topbar { display: none; }
+.shell.hide-tutor-nav[data-route="tutor"] .view { max-width: none; padding: 0; }
+@media (max-width: 767px) {
+  .tw { --tw-h: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom)); }
+  .tw-head { height: 62px; padding: 0 12px; }
+  .tw-subject { max-width: min(46vw, 190px); }
+  .tw-head > [data-newchat], .tw-head > [data-more], .tw-hist-btn { width: 44px; height: 44px; }
+  .tw-thread { padding: 18px 18px 10px; }
+  .tw-dock { width: 100%; padding: 5px 12px calc(12px + env(safe-area-inset-bottom)); }
+  .tw-input { gap: 4px; padding: 5px; }
+  .tw-input textarea { min-width: 0; min-height: 42px !important; padding: 9px 2px !important; }
+  .tw-tool { width: 38px; height: 40px; }
+  .tw-send { width: 42px; height: 42px; }
+  .tw-voice-screen { padding-right: 20px; padding-left: 20px; }
+  .tw-voice-orb { width: min(64vw, 272px); margin-bottom: 32px; }
+  .shell.hide-tutor-nav[data-route="tutor"] .tabbar { display: none; }
+  .shell.hide-tutor-nav[data-route="tutor"] .view { padding-bottom: env(safe-area-inset-bottom); }
+  .shell.hide-tutor-nav[data-route="tutor"] .tw { --tw-h: var(--vvh, 100dvh); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw-voice-orb, .tw-voice-orb::before, .tw-voice-orb::after, .tw-voice-orb img { animation: none !important; transition-duration: .01ms !important; }
+}
+@keyframes tw-voice-ring { 0% { opacity: .55; transform: scale(.94); } 100% { opacity: 0; transform: scale(1.16); } }
+@keyframes tw-voice-logo { to { transform: scale(1.09) rotate(-4deg); } }
+@keyframes tw-voice-think { 50% { filter: saturate(.8); transform: scale(.98); } }

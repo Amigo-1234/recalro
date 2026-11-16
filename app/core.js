@@ -139,6 +139,14 @@
   ];
   // Sample peers for league previews. Real leagues need a backend.
   C.peers = [["StudyPilot", 420], ["Mira K.", 360], ["K. Ade", 290], ["Nia T.", 210], ["Jon B.", 150], ["Lena O.", 95], ["Sam R.", 60], ["Ola F.", 25]];
+  // Learner workspaces only show learner-created or reviewed content.
+  C.subjects = [];
+  C.cards = [];
+  C.vault = [];
+  C.questions = [];
+  C.groups = [];
+  C.groupFeed = [];
+  C.peers = [];
   C.leagues = [
     { id: "bronze", name: "Bronze", min: 0 }, { id: "silver", name: "Silver", min: 300 }, { id: "gold", name: "Gold", min: 900 },
     { id: "sapphire", name: "Sapphire", min: 2000 }, { id: "diamond", name: "Diamond", min: 4000 },
@@ -193,10 +201,10 @@
     activity: [], cards: {}, customCards: [], subjects: [], materials: [],
     favorites: [], savedVault: [], milestones: [], planner: [], deadlines: [], customQuests: [],
     questClaims: {}, challengeClaims: {}, joinedGroups: [], customGroups: [],
-    purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 340, achievements: {},
+    purchases: [], equipped: { frame: null, avatar: null, banner: null }, gems: 0, achievements: {},
     examHistory: [], chats: [], summaries: [], explanations: [], notifications: [],
     profile: { displayName: "", photo: "" },
-    settings: { dailyGoal: 45, notificationsEnabled: true, reviewReminders: true, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, navOpen: {} },
+    settings: { dailyGoal: 45, notificationsEnabled: true, reviewReminders: true, weeklyReport: true, leaderboardPrivate: true, reduceMotion: false, sidebarCollapsed: false, hideTutorNavigation: false, navOpen: {} },
   });
   function merge(base, saved) {
     const out = { ...base, ...saved };
@@ -205,6 +213,17 @@
     out.profile = { ...base.profile, ...(saved.profile || {}) };
     for (const k of Object.keys(base)) if (Array.isArray(base[k]) && !Array.isArray(out[k])) out[k] = [];
     return out;
+  }
+  function cleanState(saved) {
+    const state = merge(defaults(), saved || {});
+    state.subjects = state.subjects.filter((item) => !item.sample);
+    state.customCards = state.customCards.filter((item) => !item.sample);
+    state.savedVault = state.savedVault.filter((item) => !item.sample);
+    state.customGroups = state.customGroups.filter((item) => !item.sample);
+    const groups = new Set(state.customGroups.map((item) => item.id));
+    state.joinedGroups = state.joinedGroups.filter((id) => groups.has(id));
+    if (state.gems === 340 && !state.activity.length && !state.subjects.length && !state.customCards.length && !state.purchases.length) state.gems = 0;
+    return state;
   }
   // Carry over everything the previous prototype saved (recalro-demo-v1).
   function migrate(v1) {
@@ -228,9 +247,9 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const saved = JSON.parse(raw); if (saved && typeof saved === "object") return merge(defaults(), saved); }
+      if (raw) { const saved = JSON.parse(raw); if (saved && typeof saved === "object") return cleanState(saved); }
       const legacy = localStorage.getItem(LEGACY_KEY);
-      if (legacy) { const migrated = migrate(JSON.parse(legacy) || {}); R.migrated = true; return migrated; }
+      if (legacy) { const migrated = migrate(JSON.parse(legacy) || {}); R.migrated = true; return cleanState(migrated); }
     } catch (error) {
       console.error("Recalro: saved learning data could not be loaded. Starting fresh.", error);
       R.loadError = true;
@@ -244,7 +263,7 @@
     if (!options.localOnly) window.RecalroCloudSync?.schedule();
   };
   R.replaceState = (saved) => {
-    R.state = merge(defaults(), saved || {});
+    R.state = cleanState(saved || {});
     R.save({ localOnly: true });
     R.emit("change");
   };
@@ -258,14 +277,14 @@
   R.update = (fn) => { fn(R.state); R.save(); R.emit("change"); };
 
   /* ---------- Lookups ---------- */
-  R.subjects = () => [...C.subjects, ...R.state.subjects];
+  R.subjects = () => [...R.state.subjects];
   R.subject = (id) => R.subjects().find((s) => s.id === id);
   R.subjectIndex = (id) => Math.max(0, R.subjects().findIndex((s) => s.id === id));
   R.module = (id) => { for (const s of R.subjects()) { const m = (s.modules || []).find((x) => x.id === id); if (m) return { ...m, subject: s }; } return null; };
-  R.cards = (subjectId) => [...C.cards, ...R.state.customCards].filter((c) => !subjectId || c.subject === subjectId);
+  R.cards = (subjectId) => [...R.state.customCards].filter((c) => !subjectId || c.subject === subjectId);
   R.card = (id) => R.cards().find((c) => c.id === id);
-  R.vaultItems = () => [...C.vault, ...R.state.savedVault];
-  R.groups = () => [...C.groups, ...R.state.customGroups.map((g) => ({ ...g, members: [], memberCount: 1, baseProgress: 0, icon: "users", custom: true }))];
+  R.vaultItems = () => [...R.state.savedVault];
+  R.groups = () => R.state.customGroups.map((g) => ({ ...g, members: [], memberCount: 1, baseProgress: 0, icon: "users", custom: true }));
   R.displayName = () => R.state.profile.displayName || window.RecalroAuth?.currentUser()?.name || "Learner";
   R.firstName = () => R.displayName().split(/\s+/)[0];
   R.initials = (name = R.displayName()) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "R";
@@ -511,7 +530,7 @@
     if (!R.state.examHistory.length && R.state.activity.length) recs.push({ icon: "clipboard", tone: "teal", title: "Calibrate with a practice exam", body: "You haven't tried a practice exam yet. Five questions show where you stand.", action: { label: "Start practice", route: "practice" }, reason: "No exam attempts recorded" });
     const active = R.subjects().map((s) => ({ s, mod: R.moduleStatus(s).find((m) => m.status === "active") })).find((x) => x.mod && R.lastStudied(x.s.id));
     if (active) recs.push({ icon: "map", tone: "teal", title: `Continue ${active.mod.name}`, body: `You're ${Math.round(active.mod.mastery)}% through this module in ${active.s.name}.`, action: { label: "Continue", route: `flashcards?module=${active.mod.id}` }, reason: "From your roadmap progress" });
-    if (!R.state.activity.length) recs.push({ icon: "sparkles", tone: "teal", title: "Start with your first review", body: "Recalro learns from what you do. Review a few sample cards and your insights will start to appear here.", action: { label: "Review sample cards", route: "flashcards" }, reason: "No activity recorded yet" });
+    if (!R.state.activity.length) recs.push({ icon: "book", tone: "teal", title: "Set up your learning space", body: "Add a subject or ask the tutor a question. Your dashboard will build from your own study activity.", action: { label: "Add your first subject", route: "subjects?new=1" }, reason: "Your activity will appear here as you study" });
     return recs;
   };
 })();

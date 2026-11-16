@@ -233,7 +233,7 @@
     }
     R.$("#chipStreak").classList.toggle("is-cold", !st.todayDone);
     R.$("#chipStreak").setAttribute("data-tip", st.todayDone ? `${st.current}-day streak. You've studied today.` : st.current ? `${st.current}-day streak. Study today to keep it going.` : "Start a streak by studying today.");
-    R.$("#chipGem").setAttribute("data-tip", `${R.fmt(R.state.gems)} demo gems. Spend them in the reward store.`);
+    R.$("#chipGem").setAttribute("data-tip", `${R.fmt(R.state.gems)} gems earned through your study activity.`);
     R.$("#chipXp").setAttribute("data-tip", `Level ${lv.level} · ${R.fmt(lv.into)} / ${R.fmt(lv.needed)} XP to level ${lv.level + 1}`);
     R.$("[data-xp-sr]").textContent = `, ${Math.round(lv.pct)}% to next level`;
     R.$("[data-xpbar]").style.setProperty("--p", `${lv.pct}%`);
@@ -366,7 +366,7 @@
   }
   function menuMarkup() {
     const user = window.RecalroAuth?.currentUser() || {}, lv = R.levelInfo();
-    return `<div class="menu-user">${R.ui.avatar(48)}<span><b>${esc(R.displayName())}</b><small>${esc(user.email || "Demo account")}</small><small>Level ${lv.level} · ${R.fmt(lv.xp)} XP</small></span></div>
+    return `<div class="menu-user">${R.ui.avatar(48)}<span><b>${esc(R.displayName())}</b><small>${esc(user.email || "Your Recalro account")}</small><small>Level ${lv.level} · ${R.fmt(lv.xp)} XP</small></span></div>
       <a class="menu-item" href="#/app/profile">${icon("user")}Profile${icon("chevron-right", "menu-go")}</a>
       <a class="menu-item" href="#/app/settings">${icon("settings")}Settings${icon("chevron-right", "menu-go")}</a>
       <a class="menu-item" href="#/app/achievements">${icon("award")}Achievements${icon("chevron-right", "menu-go")}</a>

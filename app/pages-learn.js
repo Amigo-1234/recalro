@@ -19,6 +19,7 @@
   }
   function addCardDialog(subjectId) {
     const subject = R.subject(subjectId) || R.subjects()[0];
+    if (!subject) { R.toast("Add a subject before creating flashcards.", { icon: "info" }); R.go("subjects?new=1"); return; }
     R.formDialog({ title: "Create a flashcard", submitLabel: "Add card",
       fields: [{ name: "subject", label: "Subject", type: "select", options: R.subjects().map((s) => [s.id, s.name]), value: subject.id },
         { name: "module", label: "Module", type: "select", options: R.subjects().flatMap((s) => (s.modules || []).map((m) => [m.id, `${s.name} · ${m.name}`])), value: subject.modules?.[0]?.id },
@@ -55,7 +56,7 @@
             <div class="sc-foot">${due ? ui.pill(`${due} due`, "teal", "refresh") : ""}${s.sample ? ui.sample() : ui.pill("Yours", "neutral")}<small>${last ? `Studied ${R.relTime(last)}` : "Not started"}</small></div>
           </a>`; }).join("")}
           <button type="button" class="subject-card add-card" data-add>${icon("plus")}<b>Add a subject</b><small>Organise your next learning goal</small></button></div>`
-        : ui.empty({ icon: "search", title: "No subjects match", body: "Try a different search or filter.", action: ui.btn("Clear filters", { tone: "soft", attrs: "data-clear" }) })}`;
+        : !R.subjects().length && !q && filter === "all" ? ui.empty({ icon: "book", title: "Your subjects will live here", body: "Add a subject to organise your notes, flashcards and study progress.", action: ui.btn("Add your first subject", { tone: "primary", icon: "plus", attrs: "data-add" }) }) : ui.empty({ icon: "search", title: "No subjects match", body: "Try a different search or filter.", action: ui.btn("Clear filters", { tone: "soft", attrs: "data-clear" }) })}`;
       const search = R.$("#subjSearch", view);
       let t;
       search.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { history.replaceState(null, "", `#/app/subjects?filter=${filter}&q=${encodeURIComponent(search.value)}`); R.renderRouteQuiet(); }, 250); });
@@ -76,6 +77,7 @@
 
   function subjectDetail(view, ctx) {
     const s = R.subject(ctx.sub[0]);
+    if (!s) { view.innerHTML = ui.empty({ icon: "book", title: "Subject not found", body: "Add a subject to start organising your learning.", action: ui.link("All subjects", "subjects") }); return; }
     if (!s) { view.innerHTML = ui.empty({ icon: "book", title: "Subject not found", action: ui.link("All subjects", "subjects") }); return; }
     const tab = ctx.sub[1] || "overview", mods = R.moduleStatus(s), m = R.subjectMastery(s.id), cards = R.cards(s.id), due = R.dueCards(s.id).length;
     const mats = R.state.materials.filter((x) => x.subject === s.id);
@@ -130,7 +132,8 @@
 
   /* ======================= ROADMAP ======================= */
   R.page("roadmap", { title: "Learning Roadmap", render(view, ctx) {
-    const sid = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0].id;
+    const sid = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0]?.id;
+    if (!sid) { view.innerHTML = `${ui.header({ eyebrow: "My learning", title: "Learning roadmap", desc: "Your topic path will appear here once you add a subject." })}${ui.empty({ icon: "map", title: "Create your first learning path", body: "Add a subject and its modules to build a roadmap that belongs to you.", action: ui.link("Add a subject", "subjects?new=1", { icon: "plus" }) })}`; return; }
     const s = R.subject(sid), mods = R.moduleStatus(s), active = mods.find((m) => m.status === "active");
     const done = mods.filter((m) => m.status === "done").length, overall = R.subjectMastery(sid);
     const milestones = R.state.milestones.filter((m) => m.subject === sid);

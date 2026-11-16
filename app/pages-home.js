@@ -12,7 +12,7 @@
   /* ======================= DASHBOARD ======================= */
   function greetingLine() {
     const st = R.streak(), due = R.dueCards().length, quests = R.todaysQuests(), left = quests.filter((q) => !q.done).length;
-    if (!R.state.activity.length) return "Welcome to your learning workspace. Start with a short review and Recalro will begin tracking your progress.";
+    if (!R.state.activity.length) return "Welcome to your learning workspace. Add a subject or ask the tutor to start building your study routine.";
     if (st.atRisk) return `Your ${st.current}-day streak is waiting. One focused session today keeps it alive.`;
     if (due) return `You have ${R.plural(due, "card")} ready for review${left ? ` and ${R.plural(left, "quest")} left today` : ""}.`;
     if (left) return `${R.plural(left, "daily quest")} left. Small steps, stronger understanding.`;
@@ -58,7 +58,7 @@
           <h1>${esc(R.timeGreeting ? R.timeGreeting() : "Hello")}, ${esc(R.firstName())}</h1>
           <p>${esc(greetingLine())}</p>
           <div class="hero-actions">
-            ${due.length || fresh.length ? ui.link(due.length ? `Review ${R.plural(due.length, "card")}` : "Start learning new cards", due.length ? "review" : "flashcards", { icon: "play", size: "lg" }) : ui.link("Take a quick practice", "practice", { icon: "zap", size: "lg" })}
+            ${due.length || fresh.length ? ui.link(due.length ? `Review ${R.plural(due.length, "card")}` : "Start learning new cards", due.length ? "review" : "flashcards", { icon: "play", size: "lg" }) : R.content.questions.length ? ui.link("Take a quick practice", "practice", { icon: "zap", size: "lg" }) : R.subjects().length ? ui.link("Ask the tutor", "tutor", { icon: "sparkles", size: "lg" }) : ui.link("Add your first subject", "subjects?new=1", { icon: "plus", size: "lg" })}
             ${ui.link("Ask the tutor", "tutor", { tone: "glass", icon: "sparkles", size: "lg" })}
           </div>
         </div>
@@ -72,7 +72,7 @@
         <div class="streak-top">
           <div class="streak-flame ${st.todayDone ? "is-lit" : ""}">${icon("flame")}</div>
           <div><strong data-count="${st.current}">${st.current}</strong><span>day streak</span></div>
-          <a class="league-chip" href="#/app/leaderboards" data-tip="Weekly rank among sample peers">${icon("trophy")}${lg.lg.name} · #${lg.rank}</a>
+          <a class="league-chip" href="#/app/quests" data-tip="Your study streak and daily quests">${icon("trophy")}Daily quests</a>
         </div>
         ${weekDots()}
         <p class="streak-note">${st.todayDone ? `You've studied today. Best streak: ${R.plural(st.best, "day")}.` : st.current ? "Study today to extend your streak." : "Complete any activity to start a streak."}</p>
@@ -85,7 +85,7 @@
         ${statTile({ label: "Study time", value: `${(weekMins / 60).toFixed(1)}<small>h</small>`, sub: "This week · estimated", icon: "clock", tip: "Estimated from the activities you completed", href: "reports" })}
       </div>
 
-      ${ui.card(`<div class="continue-list">${continueList.map(({ s, last }) => {
+      ${recent.length ? ui.card(`<div class="continue-list">${continueList.map(({ s, last }) => {
         const mods = R.moduleStatus(s), active = mods.find((m) => m.status === "active") || mods[mods.length - 1], mastery = R.subjectMastery(s.id);
         return `<article class="continue-item" style="--sc:${sc(s.id)}">
           <div class="ci-icon">${icon("book")}</div>
@@ -94,7 +94,7 @@
             <div class="ci-progress">${ui.progress(mastery, { label: `${s.name} mastery` })}<span>${R.pct(mastery)}</span></div>
             <small>${last ? `Last studied ${R.relTime(last)}` : "Not started yet"}</small></div>
           ${ui.link(last ? "Continue" : "Start", active ? `flashcards?module=${active.id}` : `subjects/${s.id}`, { tone: "soft", size: "sm", iconRight: "arrow-right" })}
-        </article>`; }).join("")}</div>`, { title: "Continue learning", icon: "book", cls: "span-8", action: ui.link("All subjects", "subjects", { tone: "ghost", size: "sm", iconRight: "arrow-right" }) })}
+      </article>`; }).join("")}</div>`, { title: "Continue learning", icon: "book", cls: "span-8", action: ui.link("All subjects", "subjects", { tone: "ghost", size: "sm", iconRight: "arrow-right" }) }) : ui.card(ui.empty({ icon: "book", title: "Your study space starts here", body: "Add a subject to organise your notes, cards and progress in one place.", action: ui.link("Add a subject", "subjects?new=1", { icon: "plus" }) }), { title: "Continue learning", icon: "book", cls: "span-8" })}
 
       ${ui.card(`<ul class="plan-list">${quests.map((q) => `<li class="plan-item ${q.done ? "is-done" : ""}">
           <span class="plan-check">${icon(q.done ? "check" : q.icon)}</span>
@@ -119,11 +119,10 @@
           <div class="game-ov-list">
             <a href="#/app/quests"><span>${icon("check-circle")}Daily quests</span><b>${quests.filter((q) => q.done).length}/${quests.length}</b></a>
             <a href="#/app/achievements"><span>${icon("award")}Achievements</span><b>${unlocked}/${achievements.length}</b></a>
-            <a href="#/app/leaderboards"><span>${icon("trophy")}${lg.lg.name} league</span><b>#${lg.rank}</b></a>
             <a href="#/app/store"><span>${icon("gem")}Gems</span><b>${R.fmt(R.state.gems)}</b></a>
           </div></div>
           ${nextAch ? `<div class="next-ach"><span class="ach-mini">${icon(nextAch.icon)}</span><div><b>Next: ${esc(nextAch.name)}</b><small>${esc(nextAch.desc)}</small>${ui.progress((nextAch.value / nextAch.target) * 100, { tone: "orange", size: "thin", label: nextAch.name })}</div><span class="muted small">${nextAch.value}/${nextAch.target}</span></div>` : ""}
-          <p class="demo-line">${ui.demo("Demo rewards")}</p>`,
+          <p class="demo-line muted small">Rewards are earned through your own study activity.</p>`,
         { title: "Your progress", icon: "award", cls: "span-4" })}
     </div>`;
 
@@ -232,7 +231,8 @@
 
   /* ======================= EXAM READINESS ======================= */
   R.page("readiness", { title: "Exam Readiness", render(view, ctx) {
-    const subjectId = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0].id;
+    const subjectId = ctx.query.subject && R.subject(ctx.query.subject) ? ctx.query.subject : R.subjects()[0]?.id;
+    if (!subjectId) { view.innerHTML = `${ui.header({ eyebrow: "Insights", title: "Exam readiness", desc: "Your readiness will take shape as you add subjects, study cards and answer questions." })}${ui.empty({ icon: "book", title: "Add a subject to begin", body: "Your readiness view uses your own study materials and answers.", action: ui.link("Add your first subject", "subjects?new=1", { icon: "plus" }) })}`; return; }
     const s = R.subject(subjectId), r = R.readiness(subjectId);
     const parts = [["Topic coverage", r.coverage, "Cards in this subject you've studied at least once"], ["Practice accuracy", r.practice, "Correct answers in practice and exams"], ["Review health", r.reviewHealth, "Studied cards that aren't overdue"], ["Study consistency", r.consistency, "Days you studied this subject in the last 2 weeks"]];
     const weakest = parts.filter((p) => p[1] != null).sort((a, b) => a[1] - b[1])[0];
@@ -285,7 +285,7 @@
 
   /* Export everything this workspace has recorded (pre-existing export feature). */
   R.exportData = () => {
-    const report = { exportedAt: new Date().toISOString(), note: "Recalro demo workspace export. Stored only in this browser.", totalXP: R.totalXP(), level: R.levelInfo().level, streak: R.streak(), state: R.state };
+    const report = { exportedAt: new Date().toISOString(), note: "Recalro learning workspace export.", totalXP: R.totalXP(), level: R.levelInfo().level, streak: R.streak(), state: R.state };
     const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }));
     const a = document.createElement("a"); a.href = url; a.download = `recalro-export-${R.dayKey()}.json`; document.body.append(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);

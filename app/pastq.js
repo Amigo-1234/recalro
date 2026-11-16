@@ -15,6 +15,8 @@
 (function () {
   "use strict";
   const R = window.R, ui = R.ui, esc = R.esc, icon = R.icon, D = window.RecalroPastQ;
+  // The bundled question set is a development fixture; only reviewed imports belong in learner accounts.
+  D.collections = []; D.questions = []; D.institutions = [];
   const KEYS = ["A", "B", "C", "D"];
   const phone = () => window.matchMedia("(max-width: 767px)").matches;
   R.content.minutes.pastq = 1.5; // estimated study time per answered question
@@ -37,7 +39,7 @@
     const log = R.state.activity.filter((a) => a.t === "pastq");
     const correct = log.filter((a) => a.correct).length;
     const recent = log.slice(-30), recentAcc = recent.length ? (recent.filter((a) => a.correct).length / recent.length) * 100 : 0;
-    const unique = new Set(log.map((a) => a.qid)).size, coverage = (unique / D.questions.length) * 100;
+    const unique = new Set(log.map((a) => a.qid)).size, coverage = D.questions.length ? (unique / D.questions.length) * 100 : 0;
     return {
       log, attempted: log.length, correct, incorrect: log.length - correct,
       accuracy: log.length ? (correct / log.length) * 100 : null,
@@ -64,6 +66,7 @@
     },
     render(view, ctx) {
       view.classList.add("view-pastq");
+      if (!D.collections.length || !D.questions.length) return PastQuestionsDashboard(view);
       const [sub, arg] = ctx.sub;
       if (sub === "setup") return ExaminationSetup(view, arg);
       if (sub === "run") return CBTWorkspace(view);
@@ -73,6 +76,10 @@
   });
 
   function PastQuestionsDashboard(view) {
+    if (!D.collections.length || !D.questions.length) {
+      view.innerHTML = `<section class="pq-hero"><div class="pq-hero-copy"><span class="pq-inst"><b>RECALRO LEARNING</b>Your study profile</span><h1>Past Questions</h1><p>Reviewed past-question papers will appear here when an approved source is ready.</p><p class="pq-notice">${icon("info")}Only verified papers will be available to practise. You can still study with your own flashcards and the AI tutor.</p><div class="pq-hero-actions">${ui.link("Open the tutor", "tutor", { icon: "sparkles" })}${ui.link("My flashcards", "flashcards", { tone: "soft", icon: "cards" })}</div></div></section>`;
+      return;
+    }
     const p = performance(), study = R.state.profile.onboarding || {};
     const studyLabel = [study.institution, study.details?.Level || study.details?.["Class or grade"]].filter(Boolean).join(" · ");
     const last = [...store().attempts].reverse()[0];
